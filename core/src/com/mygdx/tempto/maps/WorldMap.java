@@ -21,6 +21,7 @@ import com.badlogic.gdx.maps.objects.PolygonMapObject;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.math.Polygon;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonReader;
 import com.badlogic.gdx.utils.JsonValue;
@@ -38,6 +39,7 @@ import com.mygdx.tempto.view.GameScreen;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.Vector;
 
 public class WorldMap {
 
@@ -175,9 +177,8 @@ public class WorldMap {
             entity.update(deltaTime, this);
         }
 
-        if (Gdx.input.isKeyJustPressed(Input.Keys.S)) {//Quick debug to save to file
-            this.writeToFile();
-        }
+        Vector2 cameraMovement = new Vector2(15,15).scl(deltaTime).scl(InputTranslator.GameInputs.inputDirection);
+        this.camera.position.add(cameraMovement.x, cameraMovement.y, 0); //Quick debug to move camera with user input
     }
 
     //////// Input //////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -3,6 +3,7 @@ package com.mygdx.tempto.view;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.InputProcessor;
+import com.badlogic.gdx.controllers.Controllers;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.viewport.FitViewport;
@@ -71,7 +72,8 @@ public class GameScreen extends TemptoScreen {
 
             // Initiate input processing //
         this.gameInput = new InputTranslator();
-        Gdx.input.setInputProcessor(this.gameInput);
+        Gdx.input.setInputProcessor(this.gameInput); //Add main input processor
+        Controllers.addListener(this.gameInput); //Add to controller input
             // Start the pause menu.
         this.pauseMenu = new PauseMenu();
             // The pause menu will always be first in input, but will pass or block input from going past it based on whether it should be active //
@@ -124,6 +126,9 @@ public class GameScreen extends TemptoScreen {
     //////// Updating the game on a frame by frame basis ////////////////////////////////////////////////////////////////////////////////////////////////////////
     @Override
     public void render(float delta) {
+
+        // Update processed input data like direction //
+        InputTranslator.GameInputs.updateProcessedInput();
 
         // Update the 'physical' world with the change in time //
         this.world.update(delta);
