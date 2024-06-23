@@ -6,10 +6,12 @@ import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.ScreenUtils;
+import com.mygdx.tempto.maps.WorldMap;
 
 public class TemptoNova extends ApplicationAdapter {
 	SpriteBatch batch;
 	Texture img;
+	WorldMap testMap;
 	
 	@Override
 	public void create () {
@@ -18,15 +20,18 @@ public class TemptoNova extends ApplicationAdapter {
 		FileHandle file = Gdx.files.local("myfile.txt");
 		file.writeString("My god, it's full of stars", false);
 
+		testMap = new WorldMap("loading_test");
+
 
 	}
 
 	@Override
 	public void render () {
 		ScreenUtils.clear(1, 0, 0, 1);
-		batch.begin();
-		batch.draw(img, 0, 0);
-		batch.end();
+//		batch.begin();
+//		batch.draw(img, 0, 0);
+//		batch.end();
+		testMap.render();
 	}
 	
 	@Override
