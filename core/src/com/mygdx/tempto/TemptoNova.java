@@ -31,7 +31,16 @@ public class TemptoNova extends ApplicationAdapter {
 //		batch.begin();
 //		batch.draw(img, 0, 0);
 //		batch.end();
+		float deltaTime = Gdx.graphics.getDeltaTime();
+		testMap.update(deltaTime);
+
 		testMap.render();
+	}
+
+	/**Saves applicable persistent game data. Should be called reasonably and regularly*/
+	public void save(){
+		//Save preferences
+		testMap.writeToFile();
 	}
 	
 	@Override
@@ -39,4 +48,6 @@ public class TemptoNova extends ApplicationAdapter {
 		batch.dispose();
 		img.dispose();
 	}
+
+
 }
