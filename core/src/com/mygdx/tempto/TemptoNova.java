@@ -6,6 +6,7 @@ import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.ScreenUtils;
+import com.mygdx.tempto.editing.TmxMapWriter;
 import com.mygdx.tempto.maps.WorldMap;
 
 public class TemptoNova extends ApplicationAdapter {
@@ -21,6 +22,7 @@ public class TemptoNova extends ApplicationAdapter {
 		file.writeString("My god, it's full of stars", false);
 
 		testMap = new WorldMap("loading_test");
+		TmxMapWriter testWriter = new TmxMapWriter();
 
 
 	}

@@ -17,13 +17,16 @@ import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonReader;
 import com.badlogic.gdx.utils.JsonValue;
 import com.badlogic.gdx.utils.JsonWriter;
+import com.badlogic.gdx.utils.XmlReader;
 import com.mygdx.tempto.data.SavesToFile;
+import com.mygdx.tempto.editing.TmxMapWriter;
 import com.mygdx.tempto.entity.Entity;
 import com.mygdx.tempto.entity.StaticTerrainElement;
 
 import java.awt.Shape;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 
 public class WorldMap {
 
@@ -32,6 +35,8 @@ public class WorldMap {
 
     /**Base map data, from internal map file*/
     TiledMap tiledMap;
+    /**Writer to save TiledMap data back to a file*/
+    TmxMapWriter mapWriter;
     /**Path to a JSON (extension .dat) file in the local file directory, which is the data file describing the map*/
     String mapDataFilePath;
 //    /**An object containing serializable data about the map that should be stored in a data file when the map is unloaded. At bare minimum, stores the map file path redundantly*/
@@ -67,11 +72,26 @@ public class WorldMap {
         }
         //This map has never been loaded before; load using defaults of the internal map file
         String probableMap = "maps/" + mapID + ".tmx";//Convention for internal map files
+        probableMap = "maps/testmap.tmx";//Quick debug thing to test validity of handmade files
         TmxMapLoader loader = new TmxMapLoader();
         this.tiledMap = loader.load(probableMap);//Attempt to load from what would be assumed to be the map file name
+        XmlReader.Element mapRoot = new XmlReader().parse(Gdx.files.internal(probableMap));
+        System.out.println(mapRoot.toString());
+        for (int i = 0, j = mapRoot.getChildCount(); i < j; i++) {
+            XmlReader.Element element = mapRoot.getChild(i);
+            System.out.println(element.toString());
+        }
+        String mapStr = this.tiledMap.toString();
+        System.out.println(mapStr);
 
         //TODO: Generalize and clean up this process
+        MapProperties mapProps = this.tiledMap.getProperties();
+        for (Iterator<String> it = mapProps.getKeys(); it.hasNext();) {
+            String propName = it.next();
+            System.out.println(propName);
+        }
         for (MapLayer layer : this.tiledMap.getLayers()){
+            System.out.println("Found a layer!");
             if (layer.getName().equalsIgnoreCase("terrain")){
                 for (MapObject obj : layer.getObjects()){
                     if (obj instanceof PolygonMapObject){
@@ -89,6 +109,8 @@ public class WorldMap {
         this.camera.setToOrtho(false, width, height);
         this.camera.position.x = ((float) width) / 2;
         this.camera.position.y = ((float) height) / 2;
+
+        this.mapWriter = new TmxMapWriter();
 
     }
 
@@ -137,6 +159,12 @@ public class WorldMap {
         FileHandle saveFile = Gdx.files.local(this.mapDataFilePath);//Grab filepath
         saveFile.writeString(new Json().prettyPrint(mapData.prettyPrint(JsonWriter.OutputType.json, 50)), false);//Write a pretty print of the json value to that file path
 
+        String mapXML = this.mapWriter.writeTiledMapToString(this.tiledMap);
+
+        String absoluteAssetPath = "C:\\Users\\Owen\\Desktop\\TemptoDev\\CurrentDev\\TemptoNova\\assets\\maps\\";
+        FileHandle file = Gdx.files.absolute(absoluteAssetPath + "testmap.tmx");
+        file.writeString(mapXML, false);
+        //System.out.println(mapXML);
     }
 //
 //    /**Internal class to serialize persistent data about a {@link WorldMap}, to be saved in JSON format using GDX {@link Json} utilities

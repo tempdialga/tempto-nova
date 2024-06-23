@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <map version="1.9" tiledversion="1.9.2" orientation="orthogonal" renderorder="right-down" width="60" height="60" tilewidth="16" tileheight="16" infinite="0" nextlayerid="3" nextobjectid="4">
+ <editorsettings>
+  <export target="loading_test.json" format="json"/>
+ </editorsettings>
  <objectgroup id="2" name="Terrain">
   <object id="1" x="100" y="453">
    <properties>
@@ -13,11 +16,11 @@
    </properties>
    <polygon points="0,0 47,-11 78,33 133,20 177,-196 268,-125 154,131 -17,65"/>
   </object>
-  <object id="3" x="210" y="195">
+  <object id="3" x="260.5" y="222">
    <properties>
     <property name="id" value="lt_terrain_1"/>
    </properties>
-   <polygon points="0,0 5,57 -156,34 -119,-82 273,-65 273,35"/>
+   <polygon points="22,-20 -17.1667,42.6667 -156,34 -119,-82 273,-65 273,35"/>
   </object>
  </objectgroup>
 </map>
