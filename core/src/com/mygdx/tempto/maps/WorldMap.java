@@ -1,10 +1,18 @@
 package com.mygdx.tempto.maps;
 
+import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.InputAdapter;
+import com.badlogic.gdx.InputMultiplexer;
+import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.files.FileHandle;
+import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.Sprite;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapObject;
@@ -17,19 +25,28 @@ import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonReader;
 import com.badlogic.gdx.utils.JsonValue;
 import com.badlogic.gdx.utils.JsonWriter;
+import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.XmlReader;
+import com.badlogic.gdx.utils.viewport.FitViewport;
+import com.mygdx.tempto.TemptoNova;
 import com.mygdx.tempto.data.SavesToFile;
 import com.mygdx.tempto.editing.TmxMapWriter;
 import com.mygdx.tempto.entity.Entity;
 import com.mygdx.tempto.entity.StaticTerrainElement;
+import com.mygdx.tempto.input.InputTranslator;
+import com.mygdx.tempto.view.GameScreen;
 
-import java.awt.Shape;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 
 public class WorldMap {
 
+    //Game structure and input
+
+    /**The {@link GameScreen} which is operating this map.*/
+    GameScreen parent;
+    /**The interface for giving input to the world*/
+    InputMultiplexer worldInput;
 
     //File loading and unloading
 
@@ -39,23 +56,43 @@ public class WorldMap {
     TmxMapWriter mapWriter;
     /**Path to a JSON (extension .dat) file in the local file directory, which is the data file describing the map*/
     String mapDataFilePath;
-//    /**An object containing serializable data about the map that should be stored in a data file when the map is unloaded. At bare minimum, stores the map file path redundantly*/
-//    PersistentMapData mapData;
+
 
     //"In-world" stuff like entities
+
     /**ArrayList of all entities loaded in the map*/
     ArrayList<Entity> entities;
 
     //Rendering utilities:
+
+    FitViewport worldViewport;
     OrthographicCamera camera;
+    SpriteBatch worldBatch;
 
     //Debugging utilities:
+
     ShapeRenderer debugRenderer;
+    Texture debugTexture;
+    Sprite debugSprite;
 
 
     /**Loads a world map from the following:
+     * @param parent The GameScreen this map is being initialized in. (This is usually run from within a GameScreen)
      * @param mapID The ID of the map, such that the constructor looks for a data file in local/data/mapID.dat and a base map file in assets/map/mapID.tmx (unless mapID.dat specifies otherwise)*/
-    public WorldMap(String mapID){
+    public WorldMap(String mapID, GameScreen parent){
+        this.parent = parent;
+
+        // Initialize world input, and add a testing input device to save to file
+        this.worldInput = new InputMultiplexer();
+        this.addWorldInput(0, new InputAdapter(){
+            @Override
+            public boolean keyDown(int keycode) { // When an input is given to save to file, do so
+                if (keycode == InputTranslator.GameInputs.DEBUG_SAVE) {
+                    WorldMap.this.writeToFile();
+                }
+                return false;
+            }
+        });
 
         this.entities = new ArrayList<>();
         this.debugRenderer = new ShapeRenderer();
@@ -103,6 +140,11 @@ public class WorldMap {
             }
         }
 
+        // Assign each entity to this world
+        for (Entity entity : this.entities) {
+            entity.setParentWorld(this);
+        }
+
         MapProperties props = this.tiledMap.getProperties();
         int width = props.get("width", int.class)*props.get("tilewidth", int.class);
         int height = props.get("height", int.class)*props.get("tileheight", int.class);
@@ -110,15 +152,22 @@ public class WorldMap {
         this.camera.position.x = ((float) width) / 2;
         this.camera.position.y = ((float) height) / 2;
 
+        // Create a viewport to go with the world
+        this.worldViewport = new FitViewport(TemptoNova.PIXEL_GAME_WIDTH, TemptoNova.PIXEL_GAME_HEIGHT, this.camera);
+
+        // Create a spritebatch (also mostly for testing things)
+        this.worldBatch = new SpriteBatch();
+
+        //Create a debug texture for testing things
+        this.debugTexture = new Texture("badlogic.jpg");
+        this.debugSprite = new Sprite(this.debugTexture);
+
         this.mapWriter = new TmxMapWriter();
 
     }
 
-//    /**Reads data from an instance of {@link PersistentMapData} to finish instantiating this map*/
-//    private void loadFromPersistentData(PersistentMapData persistentData){
-//        //TODO: Actually make it load stuff
-//
-//    }
+    /////// Game logic ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     /**Updates the world by the given time increment.
      * @param deltaTime The time to step forward in the world (typically using the time since the last frame)*/
     public void update(float deltaTime) {
@@ -131,9 +180,45 @@ public class WorldMap {
         }
     }
 
+    //////// Input //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /**Returns the InputMultiplexer that gives input to the world.*/
+    public InputMultiplexer getWorldInput() {
+        return worldInput;
+    }
+    /**Adds an input listener to the {@link InputMultiplexer} that takes world inputs.
+     * @param index The index to add the input at, where inputs are handled starting from 0 and working up.
+     * @param newInput The input to add. Should take {@link com.mygdx.tempto.input.InputTranslator.GameInputs} codes, as that is what it will be given*/
+    public void addWorldInput(int index, InputProcessor newInput) {
+        this.worldInput.addProcessor(index, newInput);
+    }
+
+    /**Adds an input listener to the {@link InputMultiplexer} that takes world inputs, after the rest of the inputs.
+     * @param newInput The input to add. Should take {@link com.mygdx.tempto.input.InputTranslator.GameInputs} codes, as that is what it will be given*/
+    public void addWorldInput(InputProcessor newInput) {
+        this.worldInput.addProcessor(newInput);
+    }
+
+    /**Removes an input listener from the {@link InputMultiplexer} that handles world inputs.
+     * @param toRemove The input processor to remove from the world inputs.*/
+    public void removeWorldInput(InputProcessor toRemove) {
+        this.worldInput.removeProcessor(toRemove);
+    }
+
+
+    //////// Rendering ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     /**Renders contents of the map to the screen*/
     public void render(){
-        this.debugRenderer.setProjectionMatrix(camera.combined);
+        ScreenUtils.clear(0.2f,0,0.2f,1);
+        // Apply the viewport to the camera
+
+        this.worldViewport.apply();
+
+
+//        Camera worldViewportCamera = this.worldViewport.getCamera();
+//        worldViewportCamera.position.set(this.worldViewport.getWorldWidth()/2, this.worldViewport.getWorldHeight()/2,1f);
+
+        this.debugRenderer.setProjectionMatrix(this.camera.combined);
         this.debugRenderer.setColor(Color.BLACK);
         this.debugRenderer.begin(ShapeRenderer.ShapeType.Line);
         for (Entity entity : this.entities){
@@ -144,7 +229,10 @@ public class WorldMap {
                 this.debugRenderer.polygon(polygon.getTransformedVertices());
             }
         }
+        this.debugRenderer.setColor(Color.BLACK);
+        this.debugRenderer.circle(this.camera.position.x, this.camera.position.y, 1);
         this.debugRenderer.end();
+
     }
 
     public void writeToFile(){
@@ -161,36 +249,26 @@ public class WorldMap {
 
         String mapXML = this.mapWriter.writeTiledMapToString(this.tiledMap);
 
-        String absoluteAssetPath = "C:\\Users\\Owen\\Desktop\\TemptoDev\\CurrentDev\\TemptoNova\\assets\\maps\\";
-        FileHandle file = Gdx.files.absolute(absoluteAssetPath + "testmap.tmx");
+        //String absoluteAssetPath = "C:\\Users\\Owen\\Desktop\\TemptoDev\\CurrentDev\\TemptoNova\\assets\\maps\\";
+        String toMapData = "data/maps/";
+        FileHandle file = Gdx.files.external(toMapData + "testmap.tmx");
+        file.writeString(mapXML, false);
         file.writeString(mapXML, false);
         //System.out.println(mapXML);
     }
-//
-//    /**Internal class to serialize persistent data about a {@link WorldMap}, to be saved in JSON format using GDX {@link Json} utilities
-//     * @param tiledMapFilePath Filepath for the Tiled map file (.tmx). If not otherwise specified, the loader will look for an identically named JSON (extension .dat) file in the local file directory
-//     * @param fileInternal Specifies whether the base tmx file is located internally. True by default, should rarely if ever need to be local or other.
-//     * @param serializedEntities An array list of entities in the map, stored in serialized form. Entity classes determine how their data is serialized; Classes which do not specify will be serialized by gdx library {@link Json}
-//     * */
-//    public record PersistentMapData(
-//            String tiledMapFilePath,
-//            boolean fileInternal,
-//            ArrayList<String> serializedEntities) {
-//
-//
-//    }
-//    public static ArrayList<String> serializeEntities(ArrayList<Entity> entities, ArrayList<String> listToUse){
-//        if (listToUse == null){listToUse = new ArrayList<>();}
-//
-//        Json serializer = new Json();//For now, we probably just need one set of settings for all entities
-//
-//        for (Entity entity : entities) {
-//
-//            String serialEntity = serializer.toJson(entity); //Serialized form of the entity
-//            if (serialEntity != null)
-//                listToUse.add(serialEntity);
-//        }
-//        return listToUse;
-//    }
+
+
+
+    public void dispose() {
+        this.worldBatch.dispose();
+        this.debugRenderer.dispose();
+        this.debugTexture.dispose();
+    }
+
+    /**Called to update the world's rendering utilities, so it can properly render to the screen.
+     * If we */
+    public void resizeWindow(int newWidth, int newHeight) {
+        this.worldViewport.update(newWidth, newHeight);
+    }
 
 }

@@ -1,6 +1,23 @@
-sourceCompatibility = 1.8
+sourceCompatibility = 17
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(17))
+    }
+}
+
+apply plugin: 'java'
+//compileJava {
+//    options.compilerArgs << '--enable-preview'
+//}
+//tasks.withType(JavaCompile).each {
+//
+//}
+
+
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 
 sourceSets.main.java.srcDirs = [ "src/" ]
 
 eclipse.project.name = appName + "-core"
+
+java.targetCompatibility = JavaVersion.VERSION_17

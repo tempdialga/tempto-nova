@@ -82,6 +82,7 @@ public class TmxMapWriter {
                     this.writer.attribute(propName, propValue);
                 }
 
+
                 //Write each object in that layer
                 MapObjects layerObjects = layer.getObjects();
                 for (MapObject object : layerObjects){
@@ -109,12 +110,10 @@ public class TmxMapWriter {
                     }
                     this.writer.pop();
 
-                    //Encode other data about the nature of the object
-                    if (object instanceof PolygonMapObject){
+                    if (object instanceof PolygonMapObject polObj) {
                         this.writer.element("polygon");
 
                         //Write the contents of the polygon to a string in the same format as a tiled map
-                        PolygonMapObject polObj = (PolygonMapObject) object;
                         float[] verts = polObj.getPolygon().getVertices();
                         StringBuilder vertexString = new StringBuilder();
                         vertexString.append(String.valueOf(verts[0])).append(",").append(String.valueOf(-verts[1]));
@@ -124,12 +123,38 @@ public class TmxMapWriter {
                             vertexString.append(" ").append(x).append(",").append(y);
                         }
                         this.writer.attribute("points", vertexString.toString());
-
-
-                        //this.writer.attribute("points", Arrays.toString(polObj.getPolygon().getVertices()));
-
                         this.writer.pop();
                     }
+
+                    //Encode other data about what the object is like, based on what kind of map object it is
+
+                    //Can't get the ide to suppress errors about preview features >:( so back to the if statement chain we go
+                    if (object instanceof PolygonMapObject polObj) {
+                        this.writer.element("polygon");
+                        //Write the contents of the polygon to a string in the same format as a tiled map
+                        float[] verts = polObj.getPolygon().getVertices();
+                        StringBuilder vertexString = new StringBuilder();
+                        vertexString.append(String.valueOf(verts[0])).append(",").append(String.valueOf(-verts[1]));
+                        for (int i = 2; i < verts.length; i += 2) {
+                            float x = verts[i];
+                            float y = -verts[i+1];
+                            vertexString.append(" ").append(x).append(",").append(y);
+                        }
+                        this.writer.attribute("points", vertexString.toString());
+                        this.writer.pop();
+                    }
+
+//                    String objectClass = object.getClass().getSimpleName();
+//                    System.out.println(objectClass);
+//
+//                    switch (objectClass) {
+//                        case "PolygonMapObject" : //If it's a polygon map object
+//                            System.out.println("Saving polygon");
+//                            PolygonMapObject polObj = (PolygonMapObject) object;
+//
+//                            break;
+//                        default: break;
+//                    }
 
                     this.writer.pop();//End object
                 }
@@ -144,4 +169,6 @@ public class TmxMapWriter {
 
         return writer.toString();
     }
+
+
 }

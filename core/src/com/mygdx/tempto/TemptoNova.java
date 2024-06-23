@@ -1,54 +1,58 @@
 package com.mygdx.tempto;
 
-import com.badlogic.gdx.ApplicationAdapter;
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.files.FileHandle;
-import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.utils.ScreenUtils;
-import com.mygdx.tempto.editing.TmxMapWriter;
-import com.mygdx.tempto.maps.WorldMap;
+import com.badlogic.gdx.Game;
+import com.mygdx.tempto.view.GameScreen;
+import com.mygdx.tempto.view.LoadingScreen;
+import com.mygdx.tempto.view.MainMenuScreen;
+import com.mygdx.tempto.view.TemptoScreen;
 
-public class TemptoNova extends ApplicationAdapter {
-	SpriteBatch batch;
-	Texture img;
-	WorldMap testMap;
-	
+public class TemptoNova extends Game {
+
+	//////// General Game Constants /////////
+
+	/**Width and height of the game shown on screen. Not necessarily the dimensions of the window; they will be expanded and letterboxed to fit the window it is displayed in.*/
+	public static final int PIXEL_GAME_WIDTH = 320, PIXEL_GAME_HEIGHT = 200;
+	/**The intended ratio between width and height of the primary game window. Used for things like rendering GUIs*/
+	public static final float ASPECT_RATIO = PIXEL_GAME_WIDTH/((float) PIXEL_GAME_HEIGHT);
+
+	//////// Screens ////////////////
+
+	public static final int LOADING_SCREEN = 0, MAIN_MENU_SCREEN = 1, GAME_SCREEN = 2;
+	private TemptoScreen currentScreen;
+	private int screenType;
+
+
 	@Override
 	public void create () {
-		batch = new SpriteBatch();
-		img = new Texture("badlogic.jpg");
-		FileHandle file = Gdx.files.local("myfile.txt");
-		file.writeString("My god, it's full of stars", false);
-
-		testMap = new WorldMap("loading_test");
-		TmxMapWriter testWriter = new TmxMapWriter();
-
-
-	}
-
-	@Override
-	public void render () {
-		ScreenUtils.clear(1, 0, 0, 1);
-//		batch.begin();
-//		batch.draw(img, 0, 0);
-//		batch.end();
-		float deltaTime = Gdx.graphics.getDeltaTime();
-		testMap.update(deltaTime);
-
-		testMap.render();
-	}
-
-	/**Saves applicable persistent game data. Should be called reasonably and regularly*/
-	public void save(){
-		//Save preferences
-		testMap.writeToFile();
+		this.switchScreen(GAME_SCREEN);
 	}
 	
 	@Override
 	public void dispose () {
-		batch.dispose();
-		img.dispose();
+	}
+
+	public void switchScreen(int screenType) { // When told to switch to a given screen:
+		boolean screenValid = true;
+
+		// Keep track of what the screen just was, in case it actually changes
+		TemptoScreen lastScreen = this.currentScreen;
+
+		// Try to switch to a corresponding screen //
+		switch (screenType) {
+			case LOADING_SCREEN -> this.currentScreen = new LoadingScreen(this);
+			case MAIN_MENU_SCREEN -> this.currentScreen = new MainMenuScreen(this);
+			case GAME_SCREEN -> this.currentScreen = new GameScreen(this);
+			default -> screenValid = false; // If haven't changed screen, don't change the screen type
+		}
+
+		if (screenValid) this.screenType = screenType; // If a new screen was made, change the screen type
+		this.setScreen(this.currentScreen); // Update the application on what screen is currently being used
+
+		// In the current model, screens will not be saved and reused. In the future this may change, but for now, if the screen is changed, the old screen is disposed
+		if (lastScreen != this.currentScreen && lastScreen != null) {// If the screen changed:
+			lastScreen.hide(); //Hide the screen
+			lastScreen.dispose(); //Dispose of the screen, since it will no longer be accessible. (this might change if we decide to hold onto screens after switching)
+		}
 	}
 
 

@@ -13,5 +13,9 @@ public interface Entity{
      * @param deltaTime The time to progress by, typically the time since the last frame
      * @param world The {@link WorldMap} the entity exists in*/
     void update(float deltaTime, WorldMap world);
+    
+    /**Assigns the entity to a world. This will allow it to check for map information, add itself to input processing chains, etc.
+     * @param parent The world the entity is being assigned to; should be the same as the one given in {@link #update(float, WorldMap)}*/
+    void setParentWorld(WorldMap parent);
 
 }
