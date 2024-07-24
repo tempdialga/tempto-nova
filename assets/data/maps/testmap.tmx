@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--  Comment that should be overwritten-->
 <map version="1.9" tiledversion="1.9.2" renderorder="right-down" infinite="0" orientation="orthogonal" hexsidelength="0" tileheight="16" height="60" tilewidth="16" width="60">
 	<objectgroup id="1" name="Terrain">
 		<object id="0" x="100.0" y="453.0">
