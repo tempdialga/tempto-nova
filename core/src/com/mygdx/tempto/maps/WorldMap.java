@@ -1,13 +1,12 @@
 package com.mygdx.tempto.maps;
 
-import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.InputProcessor;
+import com.badlogic.gdx.assets.loaders.resolvers.LocalFileHandleResolver;
 import com.badlogic.gdx.files.FileHandle;
-import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
@@ -31,17 +30,18 @@ import com.badlogic.gdx.utils.XmlReader;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.mygdx.tempto.TemptoNova;
 import com.mygdx.tempto.data.SavesToFile;
+import com.mygdx.tempto.editing.MapEditor;
 import com.mygdx.tempto.editing.TmxMapWriter;
 import com.mygdx.tempto.entity.Entity;
 import com.mygdx.tempto.entity.StaticTerrainElement;
 import com.mygdx.tempto.input.InputTranslator;
+import com.mygdx.tempto.rendering.RendersToScreen;
 import com.mygdx.tempto.view.GameScreen;
 
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.Vector;
 
-public class WorldMap {
+public class WorldMap implements RendersToScreen {
 
     //Game structure and input
 
@@ -50,10 +50,20 @@ public class WorldMap {
     /**The interface for giving input to the world*/
     InputMultiplexer worldInput;
 
+    //Editing
+    /**The GUI that edits the world*/
+    MapEditor editor;
+    /**Whether the map is in edit mode or not. If true, the map will update with a time step of 0*/
+    boolean editing;
+
     //File loading and unloading
 
+    /**ID of the map currently loaded*/
+    String mapID;
     /**Base map data, from internal map file*/
     TiledMap tiledMap;
+    /**The layer chosen as the central layer to store entities, currently just the first layer found that already has an entity in it TODO: choose the map layer in a more sophisticated manner*/
+    MapLayer entityLayer;
     /**Writer to save TiledMap data back to a file*/
     TmxMapWriter mapWriter;
     /**Path to a JSON (extension .dat) file in the local file directory, which is the data file describing the map*/
@@ -70,6 +80,7 @@ public class WorldMap {
     FitViewport worldViewport;
     OrthographicCamera camera;
     SpriteBatch worldBatch;
+    public Texture blankTexture = new Texture("blank.png");
 
     //Debugging utilities:
 
@@ -83,6 +94,7 @@ public class WorldMap {
      * @param mapID The ID of the map, such that the constructor looks for a data file in local/data/mapID.dat and a base map file in assets/map/mapID.tmx (unless mapID.dat specifies otherwise)*/
     public WorldMap(String mapID, GameScreen parent){
         this.parent = parent;
+        this.mapID = mapID;
 
         // Initialize world input, and add a testing input device to save to file
         this.worldInput = new InputMultiplexer();
@@ -90,7 +102,11 @@ public class WorldMap {
             @Override
             public boolean keyDown(int keycode) { // When an input is given to save to file, do so
                 if (keycode == InputTranslator.GameInputs.DEBUG_SAVE) {
-                    WorldMap.this.writeToFile();
+                    WorldMap.this.writeToSaveFile();
+                    if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+                        WorldMap.this.writeToCoreFile(); // Also save anything that needs to be to the core file
+                    }
+                    return true;
                 }
                 return false;
             }
@@ -101,7 +117,7 @@ public class WorldMap {
         this.camera = new OrthographicCamera();
         this.mapDataFilePath = "data/maps/" + mapID + ".dat";//Where it would store persistent data
         FileHandle existingDataFile = Gdx.files.local(this.mapDataFilePath);//Thus, if it has previously stored persistent data, grab it
-        boolean hasExistingData = existingDataFile.exists();
+        boolean hasExistingData = existingDataFile.exists();    
 
         JsonValue existingData;
         if (hasExistingData) {
@@ -110,18 +126,23 @@ public class WorldMap {
             existingData = new JsonValue(JsonValue.ValueType.object);//If not, prepare as if the file was a blank json
         }
         //This map has never been loaded before; load using defaults of the internal map file
-        String probableMap = "maps/" + mapID + ".tmx";//Convention for internal map files
-        probableMap = "maps/testmap.tmx";//Quick debug thing to test validity of handmade files
-        TmxMapLoader loader = new TmxMapLoader();
-        this.tiledMap = loader.load(probableMap);//Attempt to load from what would be assumed to be the map file name
-        XmlReader.Element mapRoot = new XmlReader().parse(Gdx.files.internal(probableMap));
-        System.out.println(mapRoot.toString());
-        for (int i = 0, j = mapRoot.getChildCount(); i < j; i++) {
-            XmlReader.Element element = mapRoot.getChild(i);
-            System.out.println(element.toString());
+        String probableMap = "data/maps/" + mapID + ".tmx";//Convention for internal map files
+        FileHandle localMapFile = Gdx.files.local(probableMap); //Find where it would be locally
+        TmxMapLoader loader;
+        if (localMapFile.exists()) {
+            loader = new TmxMapLoader(new LocalFileHandleResolver()); //If there's a local file with the right name, create a local file to load from that
+        } else {
+            loader = new TmxMapLoader(); //And if not, load from assets
         }
-        String mapStr = this.tiledMap.toString();
-        System.out.println(mapStr);
+        this.tiledMap = loader.load(probableMap);//Attempt to load from what would be assumed to be the map file name
+//        XmlReader.Element mapRoot = new XmlReader().parse(Gdx.files.internal(probableMap));
+//        System.out.println(mapRoot.toString());
+//        for (int i = 0, j = mapRoot.getChildCount(); i < j; i++) {
+//            XmlReader.Element element = mapRoot.getChild(i);
+//            System.out.println(element.toString());
+//        }
+//        String mapStr = this.tiledMap.toString();
+//        System.out.println(mapStr);
 
         //TODO: Generalize and clean up this process
         MapProperties mapProps = this.tiledMap.getProperties();
@@ -132,6 +153,7 @@ public class WorldMap {
         for (MapLayer layer : this.tiledMap.getLayers()){
             System.out.println("Found a layer!");
             if (layer.getName().equalsIgnoreCase("terrain")){
+                this.entityLayer = layer;
                 for (MapObject obj : layer.getObjects()){
                     if (obj instanceof PolygonMapObject){
                         StaticTerrainElement terrainPiece = new StaticTerrainElement((PolygonMapObject) obj, existingData);
@@ -166,6 +188,10 @@ public class WorldMap {
 
         this.mapWriter = new TmxMapWriter();
 
+        //Initialize editing software
+        this.editor = new MapEditor(this);
+        this.worldInput.addProcessor(1, this.editor);
+
     }
 
     /////// Game logic ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -173,6 +199,13 @@ public class WorldMap {
     /**Updates the world by the given time increment.
      * @param deltaTime The time to step forward in the world (typically using the time since the last frame)*/
     public void update(float deltaTime) {
+        // If in editing mode, freezes time
+        if (this.editing) deltaTime = 0;
+
+        // Prompt any mouse movement, since apparently LibGDX isn't doing that properly for some reason
+        this.worldInput.mouseMoved(Gdx.input.getX(), Gdx.input.getY());
+
+        // Update every entity with the amount of time that has passed
         for (Entity entity : this.entities) {
             entity.update(deltaTime, this);
         }
@@ -216,6 +249,8 @@ public class WorldMap {
         this.worldViewport.apply();
 
 
+
+
 //        Camera worldViewportCamera = this.worldViewport.getCamera();
 //        worldViewportCamera.position.set(this.worldViewport.getWorldWidth()/2, this.worldViewport.getWorldHeight()/2,1f);
 
@@ -227,16 +262,32 @@ public class WorldMap {
                 Polygon polygon = ((StaticTerrainElement) entity).polygon;
                 Color color = ((StaticTerrainElement) entity).color;
                 this.debugRenderer.setColor(color);
-                this.debugRenderer.polygon(polygon.getTransformedVertices());
+                int numPoints = polygon.getVertexCount();
+                if (numPoints >= 3)  this.debugRenderer.polygon(polygon.getTransformedVertices());
             }
         }
         this.debugRenderer.setColor(Color.BLACK);
         this.debugRenderer.circle(this.camera.position.x, this.camera.position.y, 1);
         this.debugRenderer.end();
 
+        this.worldBatch.setProjectionMatrix(this.camera.combined);
+        this.worldBatch.begin();
+
+        this.editor.renderToWorld(worldBatch, camera);
+
+        this.worldBatch.end();
+
     }
 
-    public void writeToFile(){
+    /**Renders anything of the world that should be rendered using the screen camera*/
+    @Override
+    public void renderToScreen(SpriteBatch batch, OrthographicCamera screenCamera, float aspectRatio) {
+        this.editor.renderToScreen(batch, screenCamera, aspectRatio); //Render the editor; If the editor isn't active then it won't have to render anything
+    }
+
+
+    //////// File Handling /////////////////////////////
+    public void writeToSaveFile(){
         //Create central json object for the whole map
         JsonValue mapData = new JsonValue(JsonValue.ValueType.object);
         for (Entity entity : this.entities) {
@@ -248,22 +299,44 @@ public class WorldMap {
         FileHandle saveFile = Gdx.files.local(this.mapDataFilePath);//Grab filepath
         saveFile.writeString(new Json().prettyPrint(mapData.prettyPrint(JsonWriter.OutputType.json, 50)), false);//Write a pretty print of the json value to that file path
 
-        String mapXML = this.mapWriter.writeTiledMapToString(this.tiledMap);
-
-        //String absoluteAssetPath = "C:\\Users\\Owen\\Desktop\\TemptoDev\\CurrentDev\\TemptoNova\\assets\\maps\\";
-        String toMapData = "data/maps/";
-        FileHandle file = Gdx.files.external(toMapData + "testmap.tmx");
-        file.writeString(mapXML, false);
-        file.writeString(mapXML, false);
+//        String mapXML = this.mapWriter.writeTiledMapToString(this.tiledMap);
+//
+//        //String absoluteAssetPath = "C:\\Users\\Owen\\Desktop\\TemptoDev\\CurrentDev\\TemptoNova\\assets\\maps\\";
+//        String toMapData = "data/maps/";
+//        FileHandle file = Gdx.files.external(toMapData + "testmap.tmx");
+//        file.writeString(mapXML, false);
+//        file.writeString(mapXML, false);
         //System.out.println(mapXML);
     }
 
+    /**Cycles through entities and, if they have changes to be reflected to the base map file, compiles those changes*/
+    public void writeToCoreFile() {
+        // Check if the map data needs to be changed
+//        for (Entity entity : this.entities) {
+//            if (entity.needToEditBaseFile()) {
+//                entity.updateBaseFile(this.tiledMap, this.entityLayer);
+//            }
+//        }
 
+        // Write the map data to file TODO: Could we do this and guarantee non-destruction of the existing map data, in case it wasn't read properly?
+        String mapXML = this.mapWriter.writeTiledMapToString(this.tiledMap);
+
+        String toMapData = "data/maps/";
+        FileHandle file = Gdx.files.local(toMapData+ this.mapID + ".tmx");
+        System.out.println("Writing to file: " + file.path());
+        file.writeString(mapXML, false);
+    }
+
+    public void writeToSaveAndCoreFile() {
+        this.writeToSaveFile();
+        this.writeToCoreFile();
+    }
 
     public void dispose() {
         this.worldBatch.dispose();
         this.debugRenderer.dispose();
         this.debugTexture.dispose();
+        this.blankTexture.dispose();
     }
 
     /**Called to update the world's rendering utilities, so it can properly render to the screen.
@@ -272,4 +345,46 @@ public class WorldMap {
         this.worldViewport.update(newWidth, newHeight);
     }
 
+    public void toggleEditing() {
+        this.editor.active = !this.editor.active; //Toggle whether the editor is active
+//        if (this.editing) { // Switch back to normal gameplay
+//            this.worldInput.removeProcessor(this.editor);
+//            this.editing = false;
+//        } else { // Switch to editing
+//            this.worldInput.addProcessor(0, this.editor);
+//            this.editing = true;
+//        }
+    }
+
+    //////// Getters n whatnot ///////////////////////////////////
+
+
+    public OrthographicCamera getCamera() {
+        return camera;
+    }
+
+    public String getMapID() {
+        return mapID;
+    }
+
+    public ArrayList<Entity> getEntities() {
+        return entities;
+    }
+
+    public TiledMap getTiledMap() {
+        return tiledMap;
+    }
+
+    public MapLayer getEntityLayer() {
+        return entityLayer;
+    }
+
+    public void addEntity(Entity toAdd) {
+        this.entities.add(toAdd);
+        toAdd.setParentWorld(this);
+    }
+
+    public void removeEntity(Entity toRemove) {
+        this.entities.remove(toRemove);
+    }
 }

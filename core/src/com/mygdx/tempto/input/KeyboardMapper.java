@@ -40,6 +40,11 @@ public class KeyboardMapper {
 
                 Keys.BACKSLASH, GameInputs.DEBUG_SAVE,
 
+                Keys.N, GameInputs.NEW_ITEM,
+                Keys.E, GameInputs.TOGGLE_EDITOR,
+
+                Keys.Z, GameInputs.UNDO,
+
         });
         //// Secondary/"weak" bindings, the ones that duplicate their intuitive input unless you actively tell them to do something else
         addIntArray(keyboardToAbstract, new int[]{

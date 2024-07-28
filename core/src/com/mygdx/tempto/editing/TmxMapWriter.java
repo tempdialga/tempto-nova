@@ -144,18 +144,6 @@ public class TmxMapWriter {
                         this.writer.pop();
                     }
 
-//                    String objectClass = object.getClass().getSimpleName();
-//                    System.out.println(objectClass);
-//
-//                    switch (objectClass) {
-//                        case "PolygonMapObject" : //If it's a polygon map object
-//                            System.out.println("Saving polygon");
-//                            PolygonMapObject polObj = (PolygonMapObject) object;
-//
-//                            break;
-//                        default: break;
-//                    }
-
                     this.writer.pop();//End object
                 }
 

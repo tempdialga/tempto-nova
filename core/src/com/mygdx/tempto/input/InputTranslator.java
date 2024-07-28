@@ -32,7 +32,13 @@ public class InputTranslator extends InputMultiplexer implements ControllerListe
 
                 JUMP = -10,
 
-                DEBUG_SAVE = -11;
+                DEBUG_SAVE = -11,
+
+                NEW_ITEM = -12,
+
+                TOGGLE_EDITOR = -13,
+
+                UNDO = -14;
 
         /**A set of integers containing all inputs known to be active at the moment.
          * An input is added to this set when given through {@link #keyDown(int)}, and removed through {@link #keyUp(int)}*/
@@ -85,12 +91,12 @@ public class InputTranslator extends InputMultiplexer implements ControllerListe
 
     @Override
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-        return false;
+        return super.touchDown(screenX, screenY, pointer, button);
     }
 
     @Override
     public boolean touchUp(int screenX, int screenY, int pointer, int button) {
-        return false;
+        return super.touchUp(screenX, screenY, pointer, button);
     }
 
     @Override

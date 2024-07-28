@@ -61,7 +61,7 @@ public class GameScreen extends TemptoScreen {
             // Note: The WorldMap will handle stored data about the specific map being loaded; What we load here is the global stuff, like the general save file that says stuff like "we were last at this map"
 
             // What map to load (typically, this will be what the save file said the player was last at) //
-        String testMap = "loading_test";
+        String testMap = "testmap";
 
         // Load the world, with context of global save data //
         this.world = new WorldMap(testMap, this);
@@ -75,7 +75,7 @@ public class GameScreen extends TemptoScreen {
         Gdx.input.setInputProcessor(this.gameInput); //Add main input processor
         Controllers.addListener(this.gameInput); //Add to controller input
             // Start the pause menu.
-        this.pauseMenu = new PauseMenu();
+        this.pauseMenu = new PauseMenu(this.parent, this);
             // The pause menu will always be first in input, but will pass or block input from going past it based on whether it should be active //
         this.addPrimaryInput(this.pauseMenu);
             // After the pause menu comes the input given to the world
@@ -86,9 +86,12 @@ public class GameScreen extends TemptoScreen {
             //Initiate viewport, batch and camera that will be used for screen coordinates
         this.overlayBatch = new SpriteBatch();
         this.overlayCamera = new OrthographicCamera();
-        this.overlayViewport = new FitViewport(2*TemptoNova.ASPECT_RATIO,2); //2 units tall, 2*aspect ratio units wide (so units are equal in scale)
+        this.overlayViewport = new FitViewport(TemptoNova.PIXEL_GAME_WIDTH,TemptoNova.PIXEL_GAME_HEIGHT); //2 units tall, 2*aspect ratio units wide (so units are equal in scale)
+        System.out.println("Width: " + this.overlayViewport.getWorldWidth());
+        System.out.println("Height: " + this.overlayViewport.getWorldHeight());
         this.overlayCamera.position.set(0,0,0); //Center at 0, thus making screen coordinates of ([-a,a], [-1,1]) where a is aspect ratio
-        this.overlayCamera.zoom = 1;
+        this.overlayCamera.setToOrtho(false, 2*TemptoNova.ASPECT_RATIO, 2);
+        //this.overlayCamera.zoom = 1;
             //Initiate list of things to render on top of the world
         this.overlays = new ArrayList<>();
         this.overlays.add(this.pauseMenu); // Include tha pause menu in this list
@@ -130,8 +133,10 @@ public class GameScreen extends TemptoScreen {
         // Update processed input data like direction //
         InputTranslator.GameInputs.updateProcessedInput();
 
-        // Update the 'physical' world with the change in time //
-        this.world.update(delta);
+        // Update the 'physical' world with the change in time; If menu is open, freeze time //
+        float worldTimeStep;
+        if (this.pauseMenu.isVisible()) worldTimeStep = 0; else worldTimeStep = delta;
+        this.world.update(worldTimeStep);
 
         // Render the 'physical' world to the screen
         this.world.render();
@@ -139,11 +144,13 @@ public class GameScreen extends TemptoScreen {
         // Render things like GUIs that are overlaid over the world
         this.overlayViewport.apply(); // Apply the viewport
         this.overlayCamera.position.set(0,0,0); // Center the camera
+        this.overlayCamera.update();
 
         this.overlayBatch.setProjectionMatrix(this.overlayCamera.combined); // Apply the camera to the sprite batch
 
         this.overlayBatch.begin();
-        for (RendersToScreen overlay : this.overlays) { // Render each overlay to the screen in one batch call6
+        this.world.renderToScreen(this.overlayBatch, this.overlayCamera, TemptoNova.ASPECT_RATIO); //Render anything the world needs to do using the screen camera
+        for (RendersToScreen overlay : this.overlays) { // Render each overlay to the screen in one batch call
             overlay.renderToScreen(this.overlayBatch, this.overlayCamera, TemptoNova.ASPECT_RATIO);
         }
         this.overlayBatch.end();
@@ -180,12 +187,20 @@ public class GameScreen extends TemptoScreen {
 
     @Override
     public void hide() {
-
+        this.world.writeToSaveFile(); // Write to save file (Final game behavior)
+        this.world.writeToCoreFile(); // Write to core map file (ONLY FOR EDITING)
     }
 
     @Override
     public void dispose() {
         this.world.dispose();
         this.overlayBatch.dispose();
+        this.pauseMenu.dispose();
+    }
+
+    //////// Getters and setters ///////////////////
+
+    public WorldMap getWorld() {
+        return world;
     }
 }
