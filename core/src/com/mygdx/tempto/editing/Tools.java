@@ -1,29 +1,28 @@
 package com.mygdx.tempto.editing;
 
-import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.maps.MapProperties;
 import com.badlogic.gdx.maps.objects.PolygonMapObject;
 import com.badlogic.gdx.math.Polygon;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.utils.IntArray;
 import com.mygdx.tempto.entity.Entity;
 import com.mygdx.tempto.entity.StaticTerrainElement;
-import com.mygdx.tempto.gui.PauseMenu;
 import com.mygdx.tempto.input.InputTranslator;
 import com.mygdx.tempto.maps.WorldMap;
 import com.mygdx.tempto.util.MiscFunctions;
 
-import java.lang.reflect.Array;
-import java.net.IDN;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Objects;
 import java.util.Vector;
-import java.util.regex.Pattern;
 
 import space.earlygrey.shapedrawer.JoinType;
 import space.earlygrey.shapedrawer.ShapeDrawer;
@@ -31,7 +30,7 @@ import space.earlygrey.shapedrawer.ShapeDrawer;
 /**A set of implementations of {@link MapEditingTool}, instantiated once per game, which offer basic functionality such as editing */
 public enum Tools {
 
-    TERRAIN_EDITOR(new MapEditingTool() {
+    ADD_TERRAIN(new MapEditingTool() {
 
         /**The piece of terrain currently being edited. Can be null, if none is currently selected. When a new */
         StaticTerrainElement currentlyEditing = null;
@@ -167,6 +166,11 @@ public enum Tools {
         }
 
         @Override
+        public void activate() {
+
+        }
+
+        @Override
         public void renderToScreen(SpriteBatch batch, OrthographicCamera screenCamera, float aspectRatio) {
 
         }
@@ -207,27 +211,135 @@ public enum Tools {
         }
     }),
 
-    /**The idle editor behavior, where map objects can be selected*/
-    IDLE(new MapEditingTool() {
+    /**Select specific vertices of  */
+    SELECT_VERTICES(new MapEditingTool() {
+
+        /**The entity (ies?) currently selected*/
+        ArrayList<Entity> currentlySelected;
+        /**The details about each entity selected*/
+        HashMap<Entity, IntArray> currentlySelectedDetails;
+
         /**When idling, if the mouse hovers over an entity, it might be selectable*/
         Entity possibleSelection;
         /**If applicable, details on how the entity would be selected.
          * The exact implementation of this might vary, but for a polygon terrain, this would be which indices to select*/
-        int[] selectionDetails;
+        IntArray possibleSelectionDetails;
         /**The utility object to highlight the terrain, etc.*/
         ShapeDrawer shapeDrawer;
 
         /**The different ways of selecting objects. Currently, only REPLACE is implemented, and TODO: this might be better as an editor-wide thing */
         final int REPLACE = 0, ADD = 1, SUBTRACT = 2;
         int selectionMode = REPLACE;
+        /**If the last click down occured outside of any objects to select, the location of clicking down is saved. This way, when the*/
+        Vector2 dragSelectStart;
+
         @Override
         public void touchDown(int screenX, int screenY, int pointer, int button, OrthographicCamera worldCam) {
+            Vector3 worldCoords3D = worldCam.unproject(new Vector3(screenX, screenY, 0));
+            Vector2 worldCoords = new Vector2(worldCoords3D.x, worldCoords3D.y);
 
+
+            if (this.currentlySelected == null) this.currentlySelected = new ArrayList<>();
+            if (this.currentlySelectedDetails == null) this.currentlySelectedDetails = new HashMap<>();
+
+            // Identify mode of selection
+            this.selectionMode = REPLACE;
+            if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+                this.selectionMode = ADD;
+            } else if (Gdx.input.isKeyPressed(Input.Keys.ALT_LEFT)) {
+                this.selectionMode = SUBTRACT;
+            }
+
+
+            if (this.possibleSelection != null) { //If it is currently hovering over something, add/replace/subtract to the selection
+                this.dragSelectStart = null; //Not dragging to select, ergo don't save the starting position
+                switch (this.selectionMode) {
+                    case (REPLACE) -> { //If desiring to replace the current selection, clear the lists and replace with just the new selection
+                        // Unique to replace mode: They might be trying to move the vertices. Try to move the vertices, and then if it can't do that, replace the selection with this one vertex
+                        // If the new selection is contained in the existing selection, it might be trying to move.
+                        // But if the new selection is different, it is definitely trying to replace the selection.
+                        boolean itemAndAllDetailsSelected = true;
+                        if (!this.currentlySelected.contains(this.possibleSelection)) {
+                            itemAndAllDetailsSelected = false;
+                        } else {
+                            boolean allDetailsAlreadySelected = true;
+                            IntArray alreadySelectedDetails = this.currentlySelectedDetails.get(this.possibleSelection);
+                            for (int detail : this.possibleSelectionDetails.shrink()) {
+                                // If any new details are selected, interpret this as trying to replace the selection unambiguously
+                                if (!alreadySelectedDetails.contains(detail)) {
+                                    allDetailsAlreadySelected = false;
+                                    break;
+                                }
+                            }
+                            //Any new details? Then it wasn't already present, replace the existing selection with this one
+                            if (!allDetailsAlreadySelected) {
+                                itemAndAllDetailsSelected = false;
+                            }
+                        }
+
+                        if (!itemAndAllDetailsSelected) {
+                            this.currentlySelected.clear();
+                            this.currentlySelected.add(this.possibleSelection);
+                            this.currentlySelectedDetails.clear();
+                            this.currentlySelectedDetails.put(this.possibleSelection, this.possibleSelectionDetails);
+                        }
+
+
+                        //Switch to tool for dragging vertices of terrain around, which in turn, if dragged a substantial amount, will then move the vertices around by that much
+                        this.toolContext.put("selected", this.currentlySelected);
+                        this.toolContext.put("selectedDetails", this.currentlySelectedDetails);
+                        this.toolContext.put("dragStart", worldCoords);
+                        this.toolContext.put("lastSelected", this.possibleSelection);
+                        this.toolContext.put("lastSelectedDetails", this.possibleSelectionDetails);
+                        this.switchToTool(Tools.DRAG_TERRAIN_VERTICES.toolInstance);
+                    }
+                    case (ADD) -> { //If adding, only add it to the existing selection
+                        if (!this.currentlySelected.contains(this.possibleSelection)) this.currentlySelected.add(this.possibleSelection);
+                        // If some of its vertices were already selected, just add this one instead
+                        if (this.currentlySelectedDetails.containsKey(this.possibleSelection)) {
+                            IntArray alreadySelected = this.currentlySelectedDetails.get(this.possibleSelection);
+                            for (int detail : this.possibleSelectionDetails.shrink()) { //Add each detail that isn't there already, add it
+                                alreadySelected.add(detail);
+                            }
+                        } else { //If it's a new piece of terrain, just go ahead and put the new list in
+                            this.currentlySelectedDetails.put(this.possibleSelection, this.possibleSelectionDetails);
+                        }
+                    }
+                    case (SUBTRACT) -> { //If subtracting, remove from existing selection
+                        // If the item was present
+                        if (this.currentlySelected.contains(this.possibleSelection)) {
+                            IntArray detailsSelected = this.currentlySelectedDetails.get(this.possibleSelection);
+                            detailsSelected.removeAll(this.possibleSelectionDetails);
+                            detailsSelected.shrink();
+                            //If it's the last selection detail on that item, remove it altogether
+                            if (detailsSelected.size <= 0) {
+                                System.out.println("Removing item with id: " + this.possibleSelection.getID());
+                                this.currentlySelected.remove(this.possibleSelection);
+                                this.currentlySelectedDetails.remove(this.possibleSelection);
+                            }
+                        }
+                    }
+                }
+            } else { // If not hypothetically selecting something, reset the selection
+                this.currentlySelected.clear();
+                this.currentlySelectedDetails.clear();
+            }
         }
 
         @Override
         public void touchUp(int screenX, int screenY, int pointer, int button, OrthographicCamera worldCam) {
+            if (this.dragSelectStart != null) { //If it was dragging to select something
+                Vector3 worldCoords = worldCam.unproject(new Vector3(screenX, screenY, 0));
 
+                // Create a rectangle from where the selection started to where it ended
+                float width = worldCoords.x-this.dragSelectStart.x, height = worldCoords.y-this.dragSelectStart.y;
+                Rectangle selectionRectangle = new Rectangle(this.dragSelectStart.x, this.dragSelectStart.y, width, height);
+
+                // Select everything in that rectangle
+                switch(this.selectionMode){
+
+                }
+            }
         }
 
         @Override
@@ -269,8 +381,31 @@ public enum Tools {
                         if (dist < maxSelectDist && dist < selectionDist) { //If it's an acceptable distance away and closer than any other points to select
                             selectionDist = dist;
                             this.possibleSelection = entity; // This entity has been selected
-                            this.selectionDetails = new int[]{i}; // And this index of that entity in particular
+                            this.possibleSelectionDetails = new IntArray(new int[]{i}); // And this index of that entity in particular
                         }
+                    }
+                }
+            }
+        }
+
+        @Override
+        public void activate() {
+            // Check if any vertices and terrain bits have already been selected
+            if (this.toolContext.containsKey("selected")) {
+                this.currentlySelected = (ArrayList<Entity>) this.toolContext.get("selected");
+                this.currentlySelectedDetails = (HashMap<Entity, IntArray>) this.toolContext.get("selectedDetails");
+
+                //If it was just on terrain dragging, check if it actually dragged the terrain, or if it actually wanted to replace the selection
+                if (this.toolContext.get("lastTool").equals(DRAG_TERRAIN_VERTICES.name())) {
+                    boolean movedVertices = (boolean) this.toolContext.get("movedVertices?");
+                    System.out.println("Moved vertices? " + movedVertices);
+                    if (!movedVertices) { //If it didn't move vertices, then it was actually just trying to select specifically that last point
+                        Entity lastSelected = (Entity) this.toolContext.get("lastSelected");
+                        IntArray lastSelectedDetails = (IntArray) this.toolContext.get("lastSelectedDetails");
+                        this.currentlySelected.clear();
+                        this.currentlySelected.add(lastSelected);
+                        this.currentlySelectedDetails.clear();
+                        this.currentlySelectedDetails.put(lastSelected, lastSelectedDetails);
                     }
                 }
             }
@@ -289,6 +424,29 @@ public enum Tools {
                 this.shapeDrawer = new ShapeDrawer(batch, region);
             }
 
+            if (this.currentlySelected != null) {
+                // Highlight whatever is already selected
+                for (Entity entity : this.currentlySelected) {
+                    if (entity instanceof StaticTerrainElement terrain) {
+                        // Vertices of the selected polygon
+                        float[] vertices = terrain.polygon.getTransformedVertices();
+                        // Which vertices to highlight in particular
+                        IntArray selectedVerts = this.currentlySelectedDetails.get(entity);
+
+                        //Highlight the polygon in darker green
+                        this.shapeDrawer.setColor(new Color(0, 0.5f, 0, 1));
+                        float lineWidth = 1;
+                        this.shapeDrawer.polygon(vertices, lineWidth, JoinType.POINTY);
+
+                        this.shapeDrawer.setColor(Color.LIME);
+                        // For each selected vertex, highlight it in lime green
+                        for (int idx : selectedVerts.shrink()) {
+                            this.shapeDrawer.filledCircle(vertices[idx * 2], vertices[idx * 2 + 1], 2 * lineWidth);
+                        }
+                    }
+                }
+            }
+
             //If something is selected, highlight it
             if (this.possibleSelection == null) return;
 
@@ -303,17 +461,204 @@ public enum Tools {
 
                 // Then draw the specific point in bright yellow
                 this.shapeDrawer.setColor(Color.YELLOW);
-                int idx = this.selectionDetails[0]; //TODO: Make this highlight multiple points
-                this.shapeDrawer.filledCircle(vertices[idx*2], vertices[idx*2+1], 2*lineWidth);
+                for (int idx : this.possibleSelectionDetails.shrink()) {
+                    this.shapeDrawer.filledCircle(vertices[idx * 2], vertices[idx * 2 + 1], 2 * lineWidth);
+                }
             }
         }
-    })
+    }),
+
+    /**Switched to after starting to drag a vertex. Switches back to idle after letting go.*/
+    DRAG_TERRAIN_VERTICES(new MapEditingTool() {
+
+        public ArrayList<Entity> selected;
+        public HashMap<Entity, IntArray> selectedVertices;
+
+        /**Specific to point selection: Since clicking to drag vs clicking to select only a point is ambiguous, the last point clicked is saved and handed back*/
+        public Entity lastSelected;
+        public IntArray lastSelectedDetails;
+
+        /**Where the current click/drag started.*/
+        public Vector2 dragStart;
+        /**Where the current click/drag is now compared to when it started*/
+        public Vector2 currentDisplacement = new Vector2();
+        /**The minimum distance the mouse has to move for the drag to be registered as dragging any vertices (as opposed to just picking vertices*/
+        public static final float MIN_MOVE_DIST = 5;
+        /**Whether, at any point while the tool was active, the mouse was far enough from where it started that we can assume the user actually wants to move the vertices*/
+        public boolean movedMouse = false;
+
+        /**Util to render polygons*/
+        ShapeDrawer shapeDrawer;
+
+        /**Edit that takes a selection of terrain elements, and moves them from prior to new vertices*/
+        public class ChangeTerrainVertices extends MapEdit{
+            ArrayList<StaticTerrainElement> terrainElements;
+            HashMap<StaticTerrainElement, float[]> beforeVerts;
+            HashMap<StaticTerrainElement, float[]> afterVerts;
+
+            public ChangeTerrainVertices(ArrayList<StaticTerrainElement> terrainElements, HashMap<StaticTerrainElement, float[]> priorVertices, HashMap<StaticTerrainElement, float[]> afterVerts) {
+                this.terrainElements = new ArrayList<>(terrainElements);//Copy the selection of terrain elements to apply changes to
+                this.beforeVerts = new HashMap<>(priorVertices); //Make a copy of the vertices from before
+
+                this.afterVerts = new HashMap<>(afterVerts); //Make a copy of the vertices from after
+            }
+
+            @Override
+            public void undoEdit(WorldMap map) {
+                // For each terrain element, get the previous vertices it held before the edit, and then set it to those
+                for (StaticTerrainElement terrainElement : this.terrainElements) {
+                    float[] prevVerts = this.beforeVerts.get(terrainElement);
+                    terrainElement.polygon.setVertices(prevVerts);
+                }
+            }
+
+            @Override
+            public void redoEdit(WorldMap map) {
+                // For each terrain element, get the future vertices it holds after the edit, and then set it to those
+                for (StaticTerrainElement terrainElement : this.terrainElements) {
+                    float[] nextVerts = this.afterVerts.get(terrainElement);
+                    terrainElement.polygon.setVertices(nextVerts);
+                }
+            }
+        }
+
+        @Override
+        public void touchDown(int screenX, int screenY, int pointer, int button, OrthographicCamera worldCam) {
+
+        }
+
+        @Override
+        public void touchUp(int screenX, int screenY, int pointer, int button, OrthographicCamera worldCam) {
+            if (this.movedMouse) { //If the mouse has moved at all, edit the vertices of all selected terrain elements
+                //How much to move each vertex
+                Vector3 touchEnd = worldCam.unproject(new Vector3(screenX, screenY, 0));
+                this.currentDisplacement.set(touchEnd.x, touchEnd.y).sub(this.dragStart);
+
+                ArrayList<StaticTerrainElement> toChange = new ArrayList<>();
+                HashMap<StaticTerrainElement, float[]> priorVertices = new HashMap<>();
+                HashMap<StaticTerrainElement, float[]> afterVertices = new HashMap<>();
+                for (Entity entity : this.selected) {
+                    if (entity instanceof StaticTerrainElement terrain) {
+                        // Register to change that terrain
+                        toChange.add(terrain);
+                        // Save what the vertices were like before the change
+                        priorVertices.put(terrain, terrain.polygon.getTransformedVertices().clone());
+                        // Change the vertices of this terrain element according to which vertices were chosen to edit, and how far the mouse has been dragged
+                        float[] newVerts = terrain.polygon.getTransformedVertices().clone();
+                        int[] indicesToChange = this.selectedVertices.get(entity).shrink(); // Which vertices to change
+                        for (int idx : indicesToChange) {
+                            int xi = idx*2, yi = idx*2+1;//Indices of that point in the vertices
+                            // Move that point by the amount dragged
+                            newVerts[xi] += this.currentDisplacement.x;
+                            newVerts[yi] += this.currentDisplacement.y;
+                        }
+                        // Save the changed vertices
+                        afterVertices.put(terrain, newVerts);
+                    }
+                }
+                // Save the change that was made, and apply it to the stack
+                ChangeTerrainVertices newEdit = new ChangeTerrainVertices(toChange, priorVertices, afterVertices);
+                this.editStack.addEdit(newEdit);
+            }
+
+            // Whether or not the terrain was changed, switch back to vertex selection tool
+            HashMap<String, Object> context = this.toolContext;
+            context.put("selected", this.selected);
+            context.put("selectedDetails", this.selectedVertices);
+            context.put("movedVertices?", this.movedMouse);
+            if (this.lastSelected != null) {
+                context.put("lastSelected", this.lastSelected);
+                context.put("lastSelectedDetails", this.lastSelectedDetails);
+            }
+            this.switchToTool(Tools.SELECT_VERTICES.toolInstance);
+        }
+
+        @Override
+        public void buttonDown(int gameInput) {
+
+        }
+
+        @Override
+        public void buttonUp(int gameInput) {
+
+        }
+
+        @Override
+        public void touchDragged(int screenX, int screenY, int pointer, OrthographicCamera worldCam) {
+
+        }
+
+        @Override
+        public void mouseMoved(int screenX, int screenY, OrthographicCamera worldCam) {
+            Vector3 worldCoords = worldCam.unproject(new Vector3(screenX, screenY, 0));
+
+            //Identify how far the mouse currently is from where the drag started
+            this.currentDisplacement.set(worldCoords.x, worldCoords.y).sub(this.dragStart);
+            float dist = this.currentDisplacement.len();
+            //If it's far enough, register that the user actually wants to move vertices
+            if (dist > MIN_MOVE_DIST) {
+                System.out.println("Moved mouse by " + dist + " IGU, this is a valid move");
+                this.movedMouse = true;
+            }
+        }
+
+        @Override
+        public void activate() {
+            if (this.toolContext.containsKey("selected")) {
+                this.selected = (ArrayList<Entity>) this.toolContext.get("selected");
+                this.selectedVertices = (HashMap<Entity, IntArray>) this.toolContext.get("selectedDetails");
+
+                this.dragStart = (Vector2) this.toolContext.get("dragStart");
+                this.movedMouse = false;
+
+                if (this.toolContext.get("lastTool").equals(SELECT_VERTICES.name())) { //If it just came from selecting vertices, which frankly it probably did, register which one it just clicked
+                    this.lastSelected = (Entity) this.toolContext.get("lastSelected");
+                    this.lastSelectedDetails = (IntArray) this.toolContext.get("lastSelectedDetails");
+                }
+            }
+        }
+
+        @Override
+        public void renderToScreen(SpriteBatch batch, OrthographicCamera screenCamera, float aspectRatio) {
+
+        }
+
+        @Override
+        public void renderToWorld(SpriteBatch batch, OrthographicCamera worldCamera) {
+            //Ensure the shape drawer is initialized
+            if (this.shapeDrawer == null) {
+                TextureRegion region = new TextureRegion(this.editStack.getMap().blankTexture, 1, 1); //Use blank texture for shape
+                this.shapeDrawer = new ShapeDrawer(batch, region);
+            }
+            this.shapeDrawer.setColor(Color.LIME);
+            float lineWidth = 1f;
+
+            //For each object being affected, render its hypothetical change
+            for (Entity entity : this.selected) {
+                if (entity instanceof StaticTerrainElement terrain) { //For terrain, that looks like moving each affected vertex by the amount dragged
+                    // Change the vertices of this terrain element according to which vertices were chosen to edit, and how far the mouse has been dragged
+                    float[] newVerts = terrain.polygon.getTransformedVertices().clone();
+                    int[] indicesToChange = this.selectedVertices.get(entity).shrink(); // Which vertices to change
+                    for (int idx : indicesToChange) {
+                        int xi = idx*2, yi = idx*2+1;//Indices of that point in the vertices
+                        // Move that point by the amount dragged
+                        newVerts[xi] += this.currentDisplacement.x;
+                        newVerts[yi] += this.currentDisplacement.y;
+                    }
+                    // Render the changed vertices
+                    this.shapeDrawer.polygon(newVerts, lineWidth, JoinType.POINTY);
+                }
+            }
+        }
+    }),
     ;
     public MapEditingTool toolInstance;
+
 
     Tools(MapEditingTool toolInstance) {
         this.toolInstance = toolInstance;
         this.toolInstance.setName(this.name());
+
     }
 
     public MapEditingTool getInstance() {

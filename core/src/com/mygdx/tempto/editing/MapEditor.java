@@ -12,21 +12,33 @@ import com.mygdx.tempto.maps.WorldMap;
 import com.mygdx.tempto.rendering.RendersToScreen;
 import com.mygdx.tempto.rendering.RendersToWorld;
 
+import java.util.HashMap;
+
 /**A class to edit {@link WorldMap} instances; Consumes all input for the world, takes {@link com.mygdx.tempto.input.InputTranslator.GameInputs}*/
 public class MapEditor implements InputProcessor, RendersToScreen, RendersToWorld {
 
     public boolean active;
     private MapEditingTool currentTool;
+    private HashMap<String, Object> toolContext;
+
     private WorldMap mapToEdit;
 
     /**The list of previous and, if applicable, future edits*/
     private EditStack editStack;
 
     //Display
+
     private BitmapFont defaultFont = new BitmapFont();
 
     public MapEditor(WorldMap mapToEdit) {
-        this.currentTool = Tools.IDLE.getInstance();
+        // Start with the idle tool
+        this.currentTool = Tools.SELECT_VERTICES.getInstance();
+        // Start the context
+        this.toolContext = new HashMap<>();
+        this.toolContext.put("lastTool", "NONE");
+        this.currentTool.toolContext = this.toolContext;
+        this.currentTool.setParent(this);
+        this.currentTool.activate();
         this.mapToEdit = mapToEdit;
         this.editStack = new EditStack(this.mapToEdit);
         this.currentTool.setEditStack(this.editStack);
@@ -127,5 +139,13 @@ public class MapEditor implements InputProcessor, RendersToScreen, RendersToWorl
     public void renderToWorld(SpriteBatch batch, OrthographicCamera worldCamera) {
         if (!this.active) return; //Only render if active
         this.currentTool.renderToWorld(batch, worldCamera);
+    }
+
+    public MapEditingTool getCurrentTool() {
+        return currentTool;
+    }
+
+    public void setCurrentTool(MapEditingTool currentTool) {
+        this.currentTool = currentTool;
     }
 }

@@ -37,6 +37,7 @@ public class EditStack {
         if (this.editIndex < 0) return; //If there aren't any edits left to undo, stop there
         this.edits.get(this.editIndex).undo(this.map); //Undo the last edit
         this.editIndex--; //And move back to the previous edit
+
     }
 
     /**Redoes the next edit, if present, and moves another index forward in the stack.*/
