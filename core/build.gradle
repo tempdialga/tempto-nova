@@ -20,4 +20,8 @@ sourceSets.main.java.srcDirs = [ "src/" ]
 
 eclipse.project.name = appName + "-core"
 
+dependencies {
+    implementation "space.earlygrey:shapedrawer:$shapedrawerVersion"
+}
+
 java.targetCompatibility = JavaVersion.VERSION_17
