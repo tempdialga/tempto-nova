@@ -38,7 +38,9 @@ public class InputTranslator extends InputMultiplexer implements ControllerListe
 
                 TOGGLE_EDITOR = -13,
 
-                UNDO = -14;
+                UNDO = -14,
+
+                DELETE = -15;
 
         /**A set of integers containing all inputs known to be active at the moment.
          * An input is added to this set when given through {@link #keyDown(int)}, and removed through {@link #keyUp(int)}*/

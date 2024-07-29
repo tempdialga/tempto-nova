@@ -1,11 +1,13 @@
 package com.mygdx.tempto.editing;
 
+import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.maps.MapObject;
 import com.badlogic.gdx.maps.MapProperties;
 import com.badlogic.gdx.maps.objects.PolygonMapObject;
 import com.badlogic.gdx.math.Intersector;
@@ -13,6 +15,7 @@ import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.utils.FloatArray;
 import com.badlogic.gdx.utils.IntArray;
 import com.mygdx.tempto.entity.Entity;
 import com.mygdx.tempto.entity.StaticTerrainElement;
@@ -92,11 +95,11 @@ public enum Tools {
         @Override
         public void buttonDown(int gameInput) {
             //When prompted to add a new terrain, start doing so
-            if (gameInput == InputTranslator.GameInputs.NEW_ITEM) {
-                if (this.proposedVertices == null) {//If not creating a new terrain shape, start making one
-                    this.proposedVertices = new float[]{0,0}; //Initialize with dummy location to start
-                }
-            } else if (gameInput == InputTranslator.GameInputs.CONFIRM) {
+//            if (gameInput == InputTranslator.GameInputs.NEW_ITEM) {
+//                if (this.proposedVertices == null) {//If not creating a new terrain shape, start making one
+//                }
+//            } else
+            if (gameInput == InputTranslator.GameInputs.CONFIRM) {
                 //If asked to finish that piece of terrain, stop editing it and add it to the map
                 if (this.proposedVertices != null && this.proposedVertices.length >= 8) { //If it is editing a piece of terrain, and it has 3+ vertices proposed, add it (check for 4 because the last one is the next one to propose, not one that's actually been proposed yet)
 
@@ -119,13 +122,27 @@ public enum Tools {
                     PlaceTerrainPolygon addThisTerrain = new PlaceTerrainPolygon(this.currentlyEditing, baseMapObject);
                     this.editStack.addEdit(addThisTerrain);
 
-                    // Get rid of the current vertices
-                    this.proposedVertices = null;
+                    // Switch to terrain vertex selector
+                    ArrayList<Entity> selection = new ArrayList<>();
+                    selection.add(this.currentlyEditing);
+                    this.toolContext.put("selected", selection);
+                    // Select all of its indices
+                    IntArray vertIndices = new IntArray(confirmedVertices.length/2);
+                    for (int i = 0; i < confirmedVertices.length/2; i++) vertIndices.add(i);
+                    HashMap<Entity, IntArray> selectionDetails = new HashMap<>();
+                    selectionDetails.put(this.currentlyEditing, vertIndices);
+                    this.toolContext.put("selectedDetails", selectionDetails);
+
+                    this.switchToTool(SELECT_VERTICES.toolInstance);
                 }
             } else if (gameInput == InputTranslator.GameInputs.CANCEL) {
                 //Stop editing whatever it is you're editing
                 this.proposedVertices = null;
                 this.currentlyEditing = null;
+                //And switch back to the vertex selection
+                this.toolContext.put("selected", new ArrayList<>());
+                this.toolContext.put("selectedDetails", new HashMap<>());
+                this.switchToTool(SELECT_VERTICES.toolInstance);
             }
         }
 
@@ -169,7 +186,7 @@ public enum Tools {
 
         @Override
         public void activate() {
-
+            this.proposedVertices = new float[]{0,0}; //Initialize with dummy location to start
         }
 
         @Override
@@ -235,16 +252,56 @@ public enum Tools {
         /**If the last click down occured outside of any objects to select, the location of clicking down is saved. This way, when the*/
         Vector2 dragSelectStart;
 
-        @Override
-        public void touchDown(int screenX, int screenY, int pointer, int button, OrthographicCamera worldCam) {
-            ArrayList<Entity> worldEntities = this.editStack.getMap().getEntities();
-            for (Entity entity : worldEntities) {
+        /**A kind of edit that can both remove vertices from terrain, or remove the terrain from the map and file altogether.*/
+        public class DeleteTerrainOrVertices extends MapEdit {
 
-                if (entity instanceof StaticTerrainElement terrainElement) {
-                    float[] verts = terrainElement.polygon.getTransformedVertices();
-                    System.out.println("World contains terrain " + terrainElement.getID() + " at vertices " + Arrays.toString(verts));
+            ArrayList<Entity> removedOutright; //The terrain pieces removed outright
+            HashMap<Entity, MapObject> removedCoreFileObjects; //The MapObjects corresponding to the removed terrain pieces
+            ArrayList<StaticTerrainElement> removeJustVertices; //The terrain pieces which only have vertices removed from them
+            HashMap<StaticTerrainElement, float[]> beforeRemovingVerts; //The vertices of each terrain piece in removeJustVertices before the verts were removed
+            HashMap<StaticTerrainElement, float[]> afterRemovingVerts; //The vertices of each modified terrain piece, but after removing them
+
+
+            public DeleteTerrainOrVertices(ArrayList<Entity> removedOutright, HashMap<Entity, MapObject> removedCoreFileObjects, ArrayList<StaticTerrainElement> removeJustVertices, HashMap<StaticTerrainElement, float[]> beforeRemovingVerts, HashMap<StaticTerrainElement, float[]> afterRemovingVerts) {
+                this.removedOutright = removedOutright;
+                this.removedCoreFileObjects = removedCoreFileObjects;
+                this.removeJustVertices = removeJustVertices;
+                this.beforeRemovingVerts = beforeRemovingVerts;
+                this.afterRemovingVerts = afterRemovingVerts;
+            }
+
+            @Override
+            public void undoEdit(WorldMap map) {
+                // Restore the ones removed outright
+                for (Entity toRestore : this.removedOutright){
+                    map.addEntity(toRestore);
+                    map.getEntityLayer().getObjects().add(this.removedCoreFileObjects.get(toRestore));
+                }
+                // Restore the vertices of the ones that were only modified
+                for (StaticTerrainElement toRestoreVertices : this.removeJustVertices) {
+                    float[] ogVerts = this.beforeRemovingVerts.get(toRestoreVertices);
+                    toRestoreVertices.polygon.setVertices(ogVerts);
                 }
             }
+
+            @Override
+            public void redoEdit(WorldMap map) {
+                // Remove the ones that were removed outright
+                for (Entity toRemove : this.removedOutright){
+                    map.removeEntity(toRemove);
+                    map.getEntityLayer().getObjects().remove(this.removedCoreFileObjects.get(toRemove));
+                }
+                // Remove the vertices of the ones that were only modified
+                for (StaticTerrainElement toRemoveVerts : this.removeJustVertices) {
+                    float[] newVerts = this.afterRemovingVerts.get(toRemoveVerts);
+                    toRemoveVerts.polygon.setVertices(newVerts);
+                }
+            }
+        }
+
+        @Override
+        public void touchDown(int screenX, int screenY, int pointer, int button, OrthographicCamera worldCam) {
+
 
             Vector3 worldCoords3D = worldCam.unproject(new Vector3(screenX, screenY, 0));
             Vector2 worldCoords = new Vector2(worldCoords3D.x, worldCoords3D.y);
@@ -355,6 +412,62 @@ public enum Tools {
 
         @Override
         public void buttonDown(int gameInput) {
+            if (gameInput == InputTranslator.GameInputs.NEW_ITEM) { //Create a new StaticTerrainElement
+                //TODO: do we want to keep the previous selected items selected?
+                this.switchToTool(Tools.ADD_TERRAIN.toolInstance);
+            } else if (gameInput == InputTranslator.GameInputs.DELETE) { //Delete selected
+                ArrayList<Entity> toDeleteOutright = new ArrayList<>();
+                HashMap<Entity, MapObject> toDelteFromCoreFile = new HashMap<>();
+
+                ArrayList<StaticTerrainElement> toOnlyRemoveVertices = new ArrayList<>();
+                HashMap<StaticTerrainElement, float[]> priorVerts = new HashMap<>();
+                HashMap<StaticTerrainElement, float[]> afterVerts = new HashMap<>();
+
+                // Iterate through each selected entity and determine whether to remove vertices or remove outright
+                for (Entity toModify : this.currentlySelected) {
+                    boolean removeOutright = true;
+                    if (toModify instanceof StaticTerrainElement terrainElement) { //If it's a piece of terrain, consider removing only some of the vertices
+                        float[] vertsBefore = terrainElement.polygon.getVertices();
+                        int numVertsBefore = vertsBefore.length/2;
+                        IntArray vertsToRemove = this.currentlySelectedDetails.get(toModify);
+                        int numVertsAfter = numVertsBefore-vertsToRemove.shrink().length;
+                        if (numVertsAfter >= 3) { //If there would still be at least 3 vertices left, go ahead and trim
+                            removeOutright = false; //Do not remove outright
+                            FloatArray newVerts = new FloatArray(numVertsAfter*2); //Create a new array with the length of however many verts would remain
+                            for (int i = 0; i < numVertsBefore; i++) {// For each vertex, add it if it's not listed as a vertex to remove
+                                if (!vertsToRemove.contains(i)) {
+                                    newVerts.add(vertsBefore[i*2]);
+                                    newVerts.add(vertsBefore[i*2+1]);
+                                }
+                            }
+                            float[] trimmedVerts = newVerts.shrink();
+
+                            //Add to the lists of terrain objects to trim vertices from
+                            toOnlyRemoveVertices.add(terrainElement);
+                            priorVerts.put(terrainElement, vertsBefore);
+                            afterVerts.put(terrainElement, trimmedVerts);
+
+                        } else { //If there would be too few left, just remove the terrain outright
+                            removeOutright = true;
+                        }
+                    }
+                    if (removeOutright) {
+                        toDeleteOutright.add(toModify);
+                        MapObject inCoreFile = this.editStack.getMap().getMapObjectForEntity(toModify);
+                        toDelteFromCoreFile.put(toModify, inCoreFile);
+                    }
+                }
+
+                // Add this edit to the stack
+                DeleteTerrainOrVertices deleteSelection = new DeleteTerrainOrVertices(
+                    toDeleteOutright, toDelteFromCoreFile, toOnlyRemoveVertices, priorVerts, afterVerts
+                );
+                this.editStack.addEdit(deleteSelection);
+
+                // Clear this selection TODO: Have this delete edit also restore the selection
+                this.currentlySelected.clear();
+                this.currentlySelectedDetails.clear();
+            }
         }
 
         @Override
@@ -595,15 +708,9 @@ public enum Tools {
             public void redoEdit(WorldMap map) {
                 // For each terrain element, get the future vertices it holds after the edit, and then set it to those
                 for (StaticTerrainElement terrainElement : this.terrainElements) {
-                    System.out.println("Editing terrain id: " + terrainElement.getID());
                     float[] nextVerts = this.afterVerts.get(terrainElement);
-                    System.out.println(Arrays.toString(nextVerts));
                     terrainElement.polygon.setVertices(nextVerts);
                 }
-//                ArrayList<Entity> entities = map.getEntities();
-//                for (Entity entity : entities) {
-//                    System.out.println("map contains: " + entity.getID());
-//                }
             }
         }
 

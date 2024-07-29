@@ -379,6 +379,22 @@ public class WorldMap implements RendersToScreen {
         return entityLayer;
     }
 
+    /**Returns the first {@link MapObject} in the core map file, specifically in {@link #entityLayer}, that corresponds to the given {@link Entity} by ID.
+     * Returns null if none are found in the entity layer.
+     * @param entity The entity to search for
+     */
+    public MapObject getMapObjectForEntity(Entity entity) {
+        for (MapObject object : this.entityLayer.getObjects()) {
+            MapProperties props = object.getProperties();
+            if (props.containsKey("id")) {
+                if (props.get("id", "", String.class).equals(entity.getID())) {
+                    return object;
+                }
+            }
+        }
+        return null;
+    }
+
     public void addEntity(Entity toAdd) {
         this.entities.add(toAdd);
         toAdd.setParentWorld(this);
