@@ -8,6 +8,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.maps.MapProperties;
 import com.badlogic.gdx.maps.objects.PolygonMapObject;
+import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
@@ -20,6 +21,7 @@ import com.mygdx.tempto.maps.WorldMap;
 import com.mygdx.tempto.util.MiscFunctions;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Objects;
 import java.util.Vector;
@@ -211,7 +213,7 @@ public enum Tools {
         }
     }),
 
-    /**Select specific vertices of  */
+    /**Select specific vertices of polygon entities*/
     SELECT_VERTICES(new MapEditingTool() {
 
         /**The entity (ies?) currently selected*/
@@ -235,6 +237,15 @@ public enum Tools {
 
         @Override
         public void touchDown(int screenX, int screenY, int pointer, int button, OrthographicCamera worldCam) {
+            ArrayList<Entity> worldEntities = this.editStack.getMap().getEntities();
+            for (Entity entity : worldEntities) {
+
+                if (entity instanceof StaticTerrainElement terrainElement) {
+                    float[] verts = terrainElement.polygon.getTransformedVertices();
+                    System.out.println("World contains terrain " + terrainElement.getID() + " at vertices " + Arrays.toString(verts));
+                }
+            }
+
             Vector3 worldCoords3D = worldCam.unproject(new Vector3(screenX, screenY, 0));
             Vector2 worldCoords = new Vector2(worldCoords3D.x, worldCoords3D.y);
 
@@ -299,7 +310,7 @@ public enum Tools {
                         if (this.currentlySelectedDetails.containsKey(this.possibleSelection)) {
                             IntArray alreadySelected = this.currentlySelectedDetails.get(this.possibleSelection);
                             for (int detail : this.possibleSelectionDetails.shrink()) { //Add each detail that isn't there already, add it
-                                alreadySelected.add(detail);
+                                if (!alreadySelected.contains(detail)) alreadySelected.add(detail);
                             }
                         } else { //If it's a new piece of terrain, just go ahead and put the new list in
                             this.currentlySelectedDetails.put(this.possibleSelection, this.possibleSelectionDetails);
@@ -369,9 +380,19 @@ public enum Tools {
             float maxSelectDist = 5; // The maximum distance, in world coordinates, the mouse can be away from a vertex to select it
             // Iterate through each entity, and if it might be selected, highlight it
             for (Entity entity : entities) { //Different elements can be selected in different ways
-                if (entity instanceof StaticTerrainElement) {
-                    // For a static terrain element, that just means hovering close to one of the vertices, or a segment
-                    float[] vertices = ((StaticTerrainElement) entity).polygon.getTransformedVertices();
+                if (entity instanceof StaticTerrainElement terrainElement) {
+                    // Check to see if this entity is even remotely selectable, and if not, ignore it
+                    Rectangle boundingBox = terrainElement.polygon.getBoundingRectangle();
+                    boundingBox.x -= maxSelectDist;
+                    boundingBox.y -= maxSelectDist;
+                    boundingBox.width += 2*maxSelectDist;
+                    boundingBox.height += 2*maxSelectDist;
+                    // If a box stretched a little farther than the terrain in every direction doesn't contain the mouse, it won't be selected
+                    if (!boundingBox.contains(worldCoords.x, worldCoords.y)) continue;
+
+                    // For a static terrain element, that just means hovering close to one of the vertices, or a segment, or the whole thing
+                    float[] vertices = terrainElement.polygon.getTransformedVertices();
+                    boolean foundAVertex = false;
                     for (int i = 0; i < vertices.length/2; i++) { // For each point on the terrain:
                         float x = vertices[i*2], y = vertices[i*2 + 1]; //Identify coordinates of that point
                         float dx = worldCoords.x-x, dy = worldCoords.y-y; //Displacement from that point to the mouse
@@ -382,6 +403,44 @@ public enum Tools {
                             selectionDist = dist;
                             this.possibleSelection = entity; // This entity has been selected
                             this.possibleSelectionDetails = new IntArray(new int[]{i}); // And this index of that entity in particular
+                            foundAVertex = true;
+                        }
+                    }
+                    // If a specific vertex was found, don't need to see if a segment or the whole thing is selected
+                    if (foundAVertex) continue;
+                    boolean foundASegment = false;
+                    for (int i = 0; i < vertices.length/2; i++) { // Iterate through each segment:
+                        float x1 = vertices[i*2], y1 = vertices[i*2 + 1]; //Identify coordinates of that point
+                        int j = i + 1;
+                        if (j >= vertices.length/2) j = 0;
+                        float x2 = vertices[j*2], y2 = vertices[j*2+1]; //Identify coordinates of the next point
+
+                        Vector2 nearestOnSegment = Intersector.nearestSegmentPoint(x1, y1, x2, y2, worldCoords.x, worldCoords.y, new Vector2());
+
+                        float dist = nearestOnSegment.sub(worldCoords.x, worldCoords.y).len(); //Displacement from that point to the mouse, and thus distance
+
+                        if (dist < maxSelectDist && dist < selectionDist) { //If it's an acceptable distance away and closer than any other points to select
+                            selectionDist = dist;
+                            this.possibleSelection = entity; // This entity has been selected
+                            this.possibleSelectionDetails = new IntArray(new int[]{i, j}); // And these indices of that entity in particular
+                            foundASegment = true;
+                        }
+                    }
+
+                    //If a specific segment or vertex was found, don't try and select the whole polygon
+                    if (foundASegment) continue;
+                    //If it couldn't select an individual point or segment, see if it can select the whole polygon
+                    if (Intersector.isPointInPolygon(vertices, 0, vertices.length, worldCoords.x, worldCoords.y)) {
+                        //Give selecting polygons least priority
+                        float dist = maxSelectDist;
+                        if (dist <= selectionDist) { //If basically nothign else could be found
+                            selectionDist = dist;
+                            this.possibleSelection = entity;
+                            //Create an int array representing every single vertex on the polygon
+                            int[] allVertices = new int[vertices.length/2];
+                            for (int i = 0; i < allVertices.length; i++) allVertices[i]=i;
+                            //Save that as the selection details
+                            this.possibleSelectionDetails = new IntArray(allVertices);
                         }
                     }
                 }
@@ -423,6 +482,26 @@ public enum Tools {
                 TextureRegion region = new TextureRegion(this.editStack.getMap().blankTexture, 1, 1); //Use blank texture for shape
                 this.shapeDrawer = new ShapeDrawer(batch, region);
             }
+
+            // Extreme debugging measure bc i don't know wtf is going on with this
+            if (Gdx.input.isKeyJustPressed(Input.Keys.L)) {
+                for (Entity entity : this.currentlySelected) {
+                    System.out.println("Currently selected: " + entity.getID());
+                    System.out.println("Contained in map? " + this.editStack.getMap().getEntities().contains(entity));
+                    if (entity instanceof StaticTerrainElement terrainElement) {
+                        float[] verts = terrainElement.polygon.getTransformedVertices();
+                        Vector2 toCam = new Vector2(worldCamera.position.x, worldCamera.position.y).sub(verts[0], verts[1]);
+                        for (int i = 0; i < verts.length/2; i++) {
+                            verts[i*2]+= toCam.x;
+                            verts[i*2+1]+= toCam.y;
+                        }
+                        terrainElement.polygon.setVertices(verts);
+                        System.out.println("Snapping to camera!");
+                        System.out.println("New vertices: " + Arrays.toString(verts));
+                    }
+                }
+            }
+
 
             if (this.currentlySelected != null) {
                 // Highlight whatever is already selected
@@ -516,8 +595,14 @@ public enum Tools {
             public void redoEdit(WorldMap map) {
                 // For each terrain element, get the future vertices it holds after the edit, and then set it to those
                 for (StaticTerrainElement terrainElement : this.terrainElements) {
+                    System.out.println("Editing terrain id: " + terrainElement.getID());
                     float[] nextVerts = this.afterVerts.get(terrainElement);
+                    System.out.println(Arrays.toString(nextVerts));
                     terrainElement.polygon.setVertices(nextVerts);
+                }
+                ArrayList<Entity> entities = map.getEntities();
+                for (Entity entity : entities) {
+                    System.out.println("map contains: " + entity.getID());
                 }
             }
         }
@@ -597,7 +682,6 @@ public enum Tools {
             float dist = this.currentDisplacement.len();
             //If it's far enough, register that the user actually wants to move vertices
             if (dist > MIN_MOVE_DIST) {
-                System.out.println("Moved mouse by " + dist + " IGU, this is a valid move");
                 this.movedMouse = true;
             }
         }
