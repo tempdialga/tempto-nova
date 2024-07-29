@@ -600,10 +600,10 @@ public enum Tools {
                     System.out.println(Arrays.toString(nextVerts));
                     terrainElement.polygon.setVertices(nextVerts);
                 }
-                ArrayList<Entity> entities = map.getEntities();
-                for (Entity entity : entities) {
-                    System.out.println("map contains: " + entity.getID());
-                }
+//                ArrayList<Entity> entities = map.getEntities();
+//                for (Entity entity : entities) {
+//                    System.out.println("map contains: " + entity.getID());
+//                }
             }
         }
 
@@ -627,9 +627,9 @@ public enum Tools {
                         // Register to change that terrain
                         toChange.add(terrain);
                         // Save what the vertices were like before the change
-                        priorVertices.put(terrain, terrain.polygon.getTransformedVertices().clone());
+                        priorVertices.put(terrain, terrain.polygon.getVertices().clone());
                         // Change the vertices of this terrain element according to which vertices were chosen to edit, and how far the mouse has been dragged
-                        float[] newVerts = terrain.polygon.getTransformedVertices().clone();
+                        float[] newVerts = terrain.polygon.getVertices().clone();
                         int[] indicesToChange = this.selectedVertices.get(entity).shrink(); // Which vertices to change
                         for (int idx : indicesToChange) {
                             int xi = idx*2, yi = idx*2+1;//Indices of that point in the vertices
