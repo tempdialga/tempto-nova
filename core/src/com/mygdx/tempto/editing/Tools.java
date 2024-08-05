@@ -1,6 +1,5 @@
 package com.mygdx.tempto.editing;
 
-import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
@@ -26,8 +25,6 @@ import com.mygdx.tempto.util.MiscFunctions;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Objects;
-import java.util.Vector;
 
 import space.earlygrey.shapedrawer.JoinType;
 import space.earlygrey.shapedrawer.ShapeDrawer;
@@ -44,29 +41,7 @@ public enum Tools {
         /**The utility object to highlight the terrain, etc.*/
         ShapeDrawer shapeDrawer;
 
-        //Terrain editor specific map edits
-        public class PlaceTerrainPolygon extends MapEdit {
 
-            StaticTerrainElement terrainElement;
-            PolygonMapObject terrainInBaseFile;
-
-            public PlaceTerrainPolygon(StaticTerrainElement terrainElement, PolygonMapObject terrainInBaseFile) {
-                this.terrainElement = terrainElement;
-                this.terrainInBaseFile = terrainInBaseFile;
-            }
-
-            @Override
-            public void undoEdit(WorldMap map) {
-                map.removeEntity(this.terrainElement);
-                map.getEntityLayer().getObjects().remove(this.terrainInBaseFile);
-            }
-
-            @Override
-            public void redoEdit(WorldMap map) {
-                map.addEntity(this.terrainElement);
-                map.getEntityLayer().getObjects().add(this.terrainInBaseFile);
-            }
-        }
 
         @Override
         public void touchDown(int screenX, int screenY, int pointer, int button, OrthographicCamera worldCam) {
@@ -412,7 +387,9 @@ public enum Tools {
 
         @Override
         public void buttonDown(int gameInput) {
-            if (gameInput == InputTranslator.GameInputs.NEW_ITEM) { //Create a new StaticTerrainElement
+            if (gameInput == InputTranslator.GameInputs.BRUSH) { //Switch to terrain brush
+                this.switchToTool(Tools.TERRAIN_BRUSH.toolInstance);
+            } else if (gameInput == InputTranslator.GameInputs.NEW_ITEM) { //Create a new StaticTerrainElement
                 //TODO: do we want to keep the previous selected items selected?
                 this.switchToTool(Tools.ADD_TERRAIN.toolInstance);
             } else if (gameInput == InputTranslator.GameInputs.DELETE) { //Delete selected
@@ -731,12 +708,15 @@ public enum Tools {
                 HashMap<StaticTerrainElement, float[]> afterVertices = new HashMap<>();
                 for (Entity entity : this.selected) {
                     if (entity instanceof StaticTerrainElement terrain) {
+                        // Ensure its vertices are based around the origin
+                        terrain.polygon.setVertices(terrain.polygon.getTransformedVertices());
+                        terrain.polygon.setPosition(0,0);
                         // Register to change that terrain
                         toChange.add(terrain);
                         // Save what the vertices were like before the change
-                        priorVertices.put(terrain, terrain.polygon.getVertices().clone());
+                        priorVertices.put(terrain, terrain.polygon.getTransformedVertices().clone());
                         // Change the vertices of this terrain element according to which vertices were chosen to edit, and how far the mouse has been dragged
-                        float[] newVerts = terrain.polygon.getVertices().clone();
+                        float[] newVerts = terrain.polygon.getTransformedVertices().clone();
                         int[] indicesToChange = this.selectedVertices.get(entity).shrink(); // Which vertices to change
                         for (int idx : indicesToChange) {
                             int xi = idx*2, yi = idx*2+1;//Indices of that point in the vertices
@@ -842,6 +822,165 @@ public enum Tools {
             }
         }
     }),
+
+    /**Wields a polygon like a brush, and adds or subtracts from existing {@link StaticTerrainElement}s*/
+    TERRAIN_BRUSH(new MapEditingTool() {
+
+        /**The polygon that follows the mouse and is added or subtracted from existing polygons*/
+        Polygon brush;
+        /**Rendering utility*/
+        ShapeDrawer shapeDrawer;
+
+
+
+        @Override
+        public void touchDown(int screenX, int screenY, int pointer, int button, OrthographicCamera worldCam) {
+            //When clicking, check for terrain elements touching the brush and try to add the brush to them
+            ArrayList<Entity> entities = this.editStack.getMap().getEntities();
+
+//            StaticTerrainElement alreadyMerged = null; //Record if a terrain element has already been merged with the brush, and therefore this would need to merge with that too
+//            Polygon toAdd = this.brush;
+            ArrayList<StaticTerrainElement> affectedTerrains = new ArrayList<>(); // Record which existing terrain pieces need to be merged with the brush
+
+
+            for (Entity entity : entities) {
+                if (entity instanceof StaticTerrainElement terrain) { // For each terrain element
+                    Polygon terrPoly = terrain.getPolygon(); // Check if it overlaps the brush
+                    if (!terrPoly.getBoundingRectangle().overlaps(this.brush.getBoundingRectangle())) continue;
+                    if (Intersector.intersectPolygons(terrPoly, this.brush, null)) {
+                        affectedTerrains.add(terrain);
+
+//                        //if (alreadyMerged != null) toAdd = alreadyMerged.polygon; //If the brush has already been added to something
+//                        Polygon union = MiscFunctions.polygonUnion(terrPoly, toAdd);
+//
+//                        //Ensure the terrain is vertexed in absolute coordinates
+//                        terrain.polygon.setVertices(terrain.polygon.getTransformedVertices());
+//                        terrain.polygon.setPosition(0,0);
+//
+//                        //Create edit to replace the terrain with union vertices
+//                        SetTerrainVertices addBrush = new SetTerrainVertices(terrain,
+//                                terrain.polygon.getVertices().clone(),
+//                                union.getVertices().clone());
+//
+//                        //Add that merge
+//                        //subEdits.add(addBrush);
+//                        this.editStack.addEdit(addBrush);
+//
+//                        //If that merge included an existing terrain element, remove that terrain element
+//                        if (alreadyMerged != null) {
+//                            PolygonMapObject alreadyMergedInFile = (PolygonMapObject) this.editStack.getMap().getMapObjectForEntity(alreadyMerged);
+//                            RemoveTerrainPolygon removeMerged = new RemoveTerrainPolygon(alreadyMerged, alreadyMergedInFile);
+//
+//                            //subEdits.add(removeMerged);
+//                            this.editStack.addEdit(removeMerged);
+//                        }
+//                        //Record that this polygon has already been merged with the brush
+//                        alreadyMerged = terrain;
+//                        toAdd = new Polygon(alreadyMerged.polygon.getVertices());
+                    }
+                }
+            }
+
+            //If any terrain are affected, perform a series of merges with them and the brush
+            if (!affectedTerrains.isEmpty()) {
+                //Pick the first affected terrain, and merge the brush into it
+                StaticTerrainElement firstTerrain = affectedTerrains.get(0);
+                Polygon union = MiscFunctions.polygonUnion(firstTerrain.polygon, this.brush);
+
+
+                ArrayList<MapEdit> subEdits = new ArrayList<>(1); //The edits made to merge the brush with any contacting terrain
+
+                //For any remaining terrain, merge their polygons into the first's union and remove them
+                for (int i = 1; i < affectedTerrains.size(); i++) {
+                    //Merge into existing union
+                    StaticTerrainElement terrain = affectedTerrains.get(i);
+                    union = MiscFunctions.polygonUnion(terrain.polygon, union);
+                    //Remove from map
+                    PolygonMapObject terrainInFile = (PolygonMapObject) this.editStack.getMap().getMapObjectForEntity(terrain);
+                    RemoveTerrainPolygon removeMerged = new RemoveTerrainPolygon(terrain, terrainInFile);
+                    subEdits.add(removeMerged);
+                }
+
+                //Replace the first terrain's vertices with the union of all of them
+
+                //Ensure the terrain is vertexed in absolute coordinates
+                firstTerrain.polygon.setVertices(firstTerrain.polygon.getTransformedVertices());
+                firstTerrain.polygon.setPosition(0,0);
+
+                SetTerrainVertices mergeIntoFirst = new SetTerrainVertices(firstTerrain,
+                        firstTerrain.polygon.getVertices().clone(),
+                        union.getVertices().clone());
+                subEdits.add(mergeIntoFirst);
+
+                //Combine all requisite edits into one big edit
+                ComboMapEdit brushMergeEdits = new ComboMapEdit(subEdits);
+                this.editStack.addEdit(brushMergeEdits);
+            }
+
+
+        }
+
+        @Override
+        public void touchUp(int screenX, int screenY, int pointer, int button, OrthographicCamera worldCam) {
+
+        }
+
+        @Override
+        public void buttonDown(int gameInput) {
+            //If cancel/go back, go back to vertex selection
+            if (gameInput == InputTranslator.GameInputs.CANCEL) {
+                switchToTool(SELECT_VERTICES.toolInstance);
+            }
+        }
+
+        @Override
+        public void buttonUp(int gameInput) {
+
+        }
+
+        @Override
+        public void touchDragged(int screenX, int screenY, int pointer, OrthographicCamera worldCam) {
+
+        }
+
+        @Override
+        public void mouseMoved(int screenX, int screenY, OrthographicCamera worldCam) {
+            //Set the brush to follow the mouse
+            Vector3 worldCoords = worldCam.unproject(new Vector3(screenX, screenY, 0));
+            this.brush.setPosition(worldCoords.x, worldCoords.y);
+        }
+
+        @Override
+        public void activate() {
+            //Set the brush to a generic square
+            float radius = 20;
+            this.brush = new Polygon(new float[]{
+                -radius,-radius,
+                -radius, radius,
+                 radius, radius,
+                 radius,-radius
+            });
+        }
+
+        @Override
+        public void renderToScreen(SpriteBatch batch, OrthographicCamera screenCamera, float aspectRatio) {
+
+        }
+
+        @Override
+        public void renderToWorld(SpriteBatch batch, OrthographicCamera worldCamera) {
+            //Ensure the shape drawer is initialized
+            if (this.shapeDrawer == null) {
+                TextureRegion region = new TextureRegion(this.editStack.getMap().blankTexture, 1, 1); //Use blank texture for shape
+                this.shapeDrawer = new ShapeDrawer(batch, region);
+            }
+            this.shapeDrawer.setColor(Color.LIME);
+            float lineWidth = 1f;
+
+            //Draw the brush
+            this.shapeDrawer.polygon(this.brush, lineWidth);
+        }
+    }),
     ;
     public MapEditingTool toolInstance;
 
@@ -854,5 +993,78 @@ public enum Tools {
 
     public MapEditingTool getInstance() {
         return this.toolInstance;
+    }
+
+    //////// Common Edit Utilities ////////////////////////
+    /**Moves the given {@link StaticTerrainElement} from one polygon to a new one*/
+    private static class SetTerrainVertices extends MapEdit {
+
+        StaticTerrainElement terrainElement;
+        float[] before;
+        float[] after;
+
+        public SetTerrainVertices(StaticTerrainElement terrainElement, float[] before, float[] after) {
+            this.terrainElement = terrainElement;
+            this.before = before;
+            this.after = after;
+        }
+
+        @Override
+        public void undoEdit(WorldMap map) {
+            this.terrainElement.polygon.setVertices(this.before);
+        }
+
+        @Override
+        public void redoEdit(WorldMap map) {
+            this.terrainElement.polygon.setVertices(this.after);
+        }
+    }
+
+    /**Places a new piece of terrain in the map*/
+    private static class PlaceTerrainPolygon extends MapEdit {
+
+        StaticTerrainElement terrainElement;
+        PolygonMapObject terrainInBaseFile;
+
+        public PlaceTerrainPolygon(StaticTerrainElement terrainElement, PolygonMapObject terrainInBaseFile) {
+            this.terrainElement = terrainElement;
+            this.terrainInBaseFile = terrainInBaseFile;
+        }
+
+        @Override
+        public void undoEdit(WorldMap map) {
+            map.removeEntity(this.terrainElement);
+            map.getEntityLayer().getObjects().remove(this.terrainInBaseFile);
+        }
+
+        @Override
+        public void redoEdit(WorldMap map) {
+            map.addEntity(this.terrainElement);
+            map.getEntityLayer().getObjects().add(this.terrainInBaseFile);
+        }
+    }
+
+    /**Removes a piece of terrain from the map*/
+    private static class RemoveTerrainPolygon extends MapEdit {
+
+        StaticTerrainElement terrainElement;
+        PolygonMapObject terrainInBaseFile;
+
+        public RemoveTerrainPolygon(StaticTerrainElement terrainElement, PolygonMapObject terrainInBaseFile) {
+            this.terrainElement = terrainElement;
+            this.terrainInBaseFile = terrainInBaseFile;
+        }
+
+        @Override
+        public void undoEdit(WorldMap map) {
+            map.addEntity(this.terrainElement);
+            map.getEntityLayer().getObjects().add(this.terrainInBaseFile);
+        }
+
+        @Override
+        public void redoEdit(WorldMap map) {
+            map.removeEntity(this.terrainElement);
+            map.getEntityLayer().getObjects().remove(this.terrainInBaseFile);
+        }
     }
 }

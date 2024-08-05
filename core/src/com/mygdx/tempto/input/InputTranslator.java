@@ -40,7 +40,9 @@ public class InputTranslator extends InputMultiplexer implements ControllerListe
 
                 UNDO = -14,
 
-                DELETE = -15;
+                DELETE = -15,
+
+                BRUSH = -16;
 
         /**A set of integers containing all inputs known to be active at the moment.
          * An input is added to this set when given through {@link #keyDown(int)}, and removed through {@link #keyUp(int)}*/
