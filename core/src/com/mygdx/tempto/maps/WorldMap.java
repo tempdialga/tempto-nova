@@ -43,6 +43,8 @@ import java.util.Iterator;
 
 public class WorldMap implements RendersToScreen {
 
+    public static final float TILE_SIZE = 16;
+
     //Game structure and input
 
     /**The {@link GameScreen} which is operating this map.*/

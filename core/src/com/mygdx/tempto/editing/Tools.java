@@ -843,40 +843,21 @@ public enum Tools {
             ArrayList<StaticTerrainElement> affectedTerrains = new ArrayList<>(); // Record which existing terrain pieces need to be merged with the brush
 
 
+            //Check for the brush's total possible area of effect, by expanding around tolerance
+            Rectangle brushEffectArea = new Rectangle(this.brush.getBoundingRectangle());
+            float tol = MiscFunctions.DEFAULT_MERGE_TOLERANCE;
+            brushEffectArea.x-=tol;
+            brushEffectArea.y-=tol;
+            brushEffectArea.width+=tol*2;
+            brushEffectArea.height+=tol*2;
+
             for (Entity entity : entities) {
                 if (entity instanceof StaticTerrainElement terrain) { // For each terrain element
                     Polygon terrPoly = terrain.getPolygon(); // Check if it overlaps the brush
-                    if (!terrPoly.getBoundingRectangle().overlaps(this.brush.getBoundingRectangle())) continue;
-                    if (Intersector.intersectPolygons(terrPoly, this.brush, null)) {
+                    if (!terrPoly.getBoundingRectangle().overlaps(brushEffectArea)) continue;
+                    if (Intersector.intersectPolygons(terrPoly, this.brush, null)
+                        || Intersector.intersectPolygonEdges(new FloatArray(terrPoly.getTransformedVertices()), new FloatArray(this.brush.getTransformedVertices()))) {
                         affectedTerrains.add(terrain);
-
-//                        //if (alreadyMerged != null) toAdd = alreadyMerged.polygon; //If the brush has already been added to something
-//                        Polygon union = MiscFunctions.polygonUnion(terrPoly, toAdd);
-//
-//                        //Ensure the terrain is vertexed in absolute coordinates
-//                        terrain.polygon.setVertices(terrain.polygon.getTransformedVertices());
-//                        terrain.polygon.setPosition(0,0);
-//
-//                        //Create edit to replace the terrain with union vertices
-//                        SetTerrainVertices addBrush = new SetTerrainVertices(terrain,
-//                                terrain.polygon.getVertices().clone(),
-//                                union.getVertices().clone());
-//
-//                        //Add that merge
-//                        //subEdits.add(addBrush);
-//                        this.editStack.addEdit(addBrush);
-//
-//                        //If that merge included an existing terrain element, remove that terrain element
-//                        if (alreadyMerged != null) {
-//                            PolygonMapObject alreadyMergedInFile = (PolygonMapObject) this.editStack.getMap().getMapObjectForEntity(alreadyMerged);
-//                            RemoveTerrainPolygon removeMerged = new RemoveTerrainPolygon(alreadyMerged, alreadyMergedInFile);
-//
-//                            //subEdits.add(removeMerged);
-//                            this.editStack.addEdit(removeMerged);
-//                        }
-//                        //Record that this polygon has already been merged with the brush
-//                        alreadyMerged = terrain;
-//                        toAdd = new Polygon(alreadyMerged.polygon.getVertices());
                     }
                 }
             }
@@ -947,13 +928,22 @@ public enum Tools {
         public void mouseMoved(int screenX, int screenY, OrthographicCamera worldCam) {
             //Set the brush to follow the mouse
             Vector3 worldCoords = worldCam.unproject(new Vector3(screenX, screenY, 0));
+
+            //If control is held, snap to the nearest tile
+            if (Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT)) {
+                worldCoords.scl(1 / WorldMap.TILE_SIZE);
+                worldCoords.x = (int) worldCoords.x;
+                worldCoords.y = (int) worldCoords.y;
+                worldCoords.scl(WorldMap.TILE_SIZE);
+            }
+
             this.brush.setPosition(worldCoords.x, worldCoords.y);
         }
 
         @Override
         public void activate() {
             //Set the brush to a generic square
-            float radius = 20;
+            float radius = WorldMap.TILE_SIZE;
             this.brush = new Polygon(new float[]{
                 -radius,-radius,
                 -radius, radius,

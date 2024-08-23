@@ -1,8 +1,10 @@
 package com.mygdx.tempto.util;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.FloatArray;
 import com.badlogic.gdx.utils.IntArray;
 
@@ -36,10 +38,19 @@ public class MiscFunctions {
         return true; //If every character is an integer from 0-9 permitting a minus sign in front, it should be an integer :)
     }
 
+    public static final float DEFAULT_MERGE_TOLERANCE = 0.1f;
+
     /**Returns the union, not including holes, of the two given clockwise wound polygons.
      * The return is a new object, and the two existing polygons are not modified.
      */
     public static Polygon polygonUnion(Polygon a, Polygon b) {
+        return polygonUnion(a, b, DEFAULT_MERGE_TOLERANCE);
+    }
+    /**Returns the union, not including holes, of the two given clockwise wound polygons.
+     * The return is a new object, and the two existing polygons are not modified.
+     * @param tolerance How far apart points or segments can be from each other before they are considered to overlap
+     */
+    public static Polygon polygonUnion(Polygon a, Polygon b, float tolerance) {
         // Brief utility class to store information about points and intersections
         class UnionPoint {
             public Vector2 pos;
@@ -89,6 +100,11 @@ public class MiscFunctions {
                 }
                 return null;
             }
+
+            @Override
+            public String toString() {
+                return "{idx: "+this.index+", "+this.pos+", inter: "+this.isIntersection+"}";
+            }
         }
 
 
@@ -99,72 +115,215 @@ public class MiscFunctions {
 
         // Populate them with the original points
         for (int i = 0; i < a.getVertexCount(); i++) allAPoints.add(new UnionPoint(a.getVertex(i, new Vector2()), i).setParent(allAPoints));
+        System.out.println("Polygon A:" + allAPoints);
         for (int i = 0; i < b.getVertexCount(); i++) allBPoints.add(new UnionPoint(b.getVertex(i, new Vector2()), i).setParent(allBPoints));
+        System.out.println("Polygon B:" + allBPoints);
+
+        ArrayList<UnionPoint> originalAPoints = new ArrayList<>(allAPoints);
+        ArrayList<UnionPoint> originalBPoints = new ArrayList<>(allBPoints);
 
         // Populate them with any intersections between the polygons
-        float tolerance = 0.1f; //How close together points or a point and a segment can be before we assume they're the same point.
+        //float tolerance = 0.1f; //How close together points or a point and a segment can be before we assume they're the same point.
+
+        //First, check each pair of points for if they overlap
         for (int ai = 0; ai < a.getVertexCount(); ai++) {
+            //The current point of A
             Vector2 aPoint = a.getVertex(ai, new Vector2());
+//            //The next point after A
+//            int aj = ai + 1;
+//            if (aj >= a.getVertexCount()) aj = 0;
+//            Vector2 aNextPoint = a.getVertex(aj, new Vector2());
+
             for (int bi = 0; bi < b.getVertexCount(); bi++) {
+                System.out.println("Checking a: " + ai + ", b: " + bi + ", and their next points");
+                //The current point of B
                 Vector2 bPoint = b.getVertex(bi, new Vector2());
 
-                //First, check if these points on a and b overlap
-                if (aPoint.epsilonEquals(bPoint, tolerance)) { //If a point on a is right on a point on b
-                    //The lists of a and b both still have original indices, so we can grab by index
-                    allAPoints.get(ai).setMatch(allBPoints.get(bi));
-                    allBPoints.get(bi).setMatch(allAPoints.get(ai));
-                    continue;
-                }
+//                //The next point after B
+//                int bj = bi + 1;
+//                if (bj >= b.getVertexCount()) bj = 0;
+//
+//                Vector2 bNextPoint = b.getVertex(bj, new Vector2());
 
-                //Then, if they don't, check if a overlaps the segment following b
+                //Check if a and b overlap with each other
+                {
+                    if (aPoint.epsilonEquals(bPoint, tolerance)) { //If a point on a is right on b
+                        //The lists of a and b both still have original indices, so we can grab by index
+                        originalAPoints.get(ai).setMatch(originalBPoints.get(bi));
+                        originalBPoints.get(bi).setMatch(originalAPoints.get(ai));
+                        System.out.println("A and B overlap, B: " + originalBPoints.get(bi));
+                        continue;
+                    }
+//
+//                    if (aNextPoint.epsilonEquals(bNextPoint, tolerance)) { //If the next points overlap
+//                        //The lists of a and b both still have original indices, so we can grab by index
+//                        originalAPoints.get(aj).setMatch(originalBPoints.get(bj));
+//                        originalBPoints.get(bj).setMatch(originalAPoints.get(aj));
+//                        System.out.println("A and B overlap, B: " + originalBPoints.get(bi));
+//                        continue;
+//                    }
+//
+//                    if (aNextPoint.epsilonEquals(bPoint, tolerance)) { //Next A, and current B
+//                        //The lists of a and b both still have original indices, so we can grab by index
+//                        originalAPoints.get(aj).setMatch(originalBPoints.get(bi));
+//                        originalBPoints.get(bi).setMatch(originalAPoints.get(aj));
+//                        System.out.println("A and B overlap, B: " + originalBPoints.get(bi));
+//                        continue;
+//                    }
+//
+//                    if (aPoint.epsilonEquals(bNextPoint, tolerance)) { //Current A, and next B
+//                        //The lists of a and b both still have original indices, so we can grab by index
+//                        originalAPoints.get(ai).setMatch(originalBPoints.get(bj));
+//                        originalBPoints.get(bj).setMatch(originalAPoints.get(ai));
+//                        System.out.println("A and B overlap, B: " + originalBPoints.get(bi));
+//                        continue;
+//                    }
+                }
+            }
+        }
+        //Second, once having checked for points that overlapped as is, check for points that overlap with segments
+        for (int ai = 0; ai < a.getVertexCount(); ai++) {
+            //The current point of A
+            Vector2 aPoint = a.getVertex(ai, new Vector2());
+
+            //The next point after A
+            int aj = ai + 1;
+            if (aj >= a.getVertexCount()) aj = 0;
+            Vector2 aNextPoint = a.getVertex(aj, new Vector2());
+
+            for (int bi = 0; bi < b.getVertexCount(); bi++) {
+                System.out.println("Checking a: " + ai + ", b: " + bi + ", and their next points");
+                //The current point of B
+                Vector2 bPoint = b.getVertex(bi, new Vector2());
+
+                //The next point after B
                 int bj = bi + 1;
                 if (bj >= b.getVertexCount()) bj = 0;
+
                 Vector2 bNextPoint = b.getVertex(bj, new Vector2());
-                if (Intersector.distanceSegmentPoint(bPoint, bNextPoint, aPoint) < tolerance) {
-                    //Create a new point for B
-                    Vector2 bSeg = new Vector2(bNextPoint).sub(bPoint);
-                    Vector2 bToA = new Vector2(aPoint).sub(bPoint);
-                    float bSegLen = bSeg.len();
-                    float t = bSeg.dot(bToA) / (bSegLen*bSegLen); // How far from b to bNext this intersection is
+                {//Then, if they don't, check if a overlaps the segment following b
+                    if (Intersector.distanceSegmentPoint(bPoint, bNextPoint, aPoint) < tolerance) {
 
-                    UnionPoint bIntersect = new UnionPoint(aPoint, bi+t); // UnionPoint to go on polygon B
+                        //Create a new point for B
+                        Vector2 bSeg = new Vector2(bNextPoint).sub(bPoint);
+                        Vector2 bToA = new Vector2(aPoint).sub(bPoint);
+                        float bSegLen = bSeg.len();
+                        float t = bSeg.dot(bToA) / (bSegLen * bSegLen); // How far from b to bNext this intersection is
+                        //If the t is 0 or 1, it's a point on point and should have already been found
+                        if (!(t == 0 || t == 1)) {
 
-                    // Find the corresponding point on A, and match the two together
-                    UnionPoint correspondingA = UnionPoint.getPointAtPosition(allAPoints, aPoint);
-                    bIntersect.setMatch(correspondingA);
-                    correspondingA.setMatch(bIntersect);
+                            UnionPoint bIntersect = new UnionPoint(aPoint, bi + t); // UnionPoint to go on polygon B
 
-                    // Add new B point to B's expansion
-                    bIntersect.addToPolygon(allBPoints);
-                    continue;
+                            // Find the corresponding point on A, and match the two together
+                            UnionPoint correspondingA = UnionPoint.getPointAtPosition(allAPoints, aPoint);
+                            bIntersect.setMatch(correspondingA);
+                            correspondingA.setMatch(bIntersect);
+
+                            // Add new B point to B's expansion
+                            bIntersect.addToPolygon(allBPoints);
+                            System.out.println("A on segment B, B: " + bIntersect);
+                            continue;
+                        }
+                    }
+
+                    //Then, if they don't, check if b overlaps the segment following a
+                    if (Intersector.distanceSegmentPoint(aPoint, aNextPoint, bPoint) < tolerance) {
+
+                        //Create a new point for B
+                        Vector2 aSeg = new Vector2(aNextPoint).sub(aPoint);
+                        Vector2 aToB = new Vector2(bPoint).sub(aPoint);
+                        float aSegLen = aSeg.len();
+                        float t = aSeg.dot(aToB) / (aSegLen * aSegLen); // How far from b to bNext this intersection is
+                        //If the t is 0 or 1, it's a point on point and should have already been found
+                        if (!(t == 0 || t == 1)) {
+
+                            UnionPoint aIntersect = new UnionPoint(bPoint, ai + t); // UnionPoint to go on polygon B
+
+                            // Find the corresponding point on B, and match the two together
+                            UnionPoint correspondingB = UnionPoint.getPointAtPosition(allBPoints, bPoint);
+                            aIntersect.setMatch(correspondingB);
+                            correspondingB.setMatch(aIntersect);
+
+                            // Add new A point to A's expansion
+                            aIntersect.addToPolygon(allAPoints);
+                            System.out.println("B on segment A, B added: " + correspondingB);
+
+                            continue;
+                        }
+                    }
+                    /*
+                    //Then, if they don't, check if the next b overlaps the segment following a
+                    if (Intersector.distanceSegmentPoint(aPoint, aNextPoint, bNextPoint) < tolerance) {
+
+                        //Represent the segment following A, and where BNext is on that segment
+                        Vector2 aSeg = new Vector2(aNextPoint).sub(aPoint);
+                        Vector2 aToB = new Vector2(bNextPoint).sub(aPoint);
+                        float aSegLen = aSeg.len();
+                        float t = aSeg.dot(aToB) / (aSegLen * aSegLen); // How far from a to aNext this intersection is
+
+                        UnionPoint aIntersect = new UnionPoint(bNextPoint, ai + t); // UnionPoint to go on polygon A
+
+                        // Find the corresponding point on B, and match the two together
+                        UnionPoint correspondingB = UnionPoint.getPointAtPosition(allBPoints, bNextPoint);
+                        aIntersect.setMatch(correspondingB);
+                        correspondingB.setMatch(aIntersect);
+
+                        // Add new A point to A's expansion
+                        aIntersect.addToPolygon(allBPoints);
+                        System.out.println("B on segment A, B referenced: " + correspondingB);
+
+                        continue;
+                    }
+
+                    //Then, if they don't, check if the next a overlaps the segment following b
+                    if (Intersector.distanceSegmentPoint(bPoint, bNextPoint, aNextPoint) < tolerance) {
+
+                        //Represent the segment following A, and where BNext is on that segment
+                        Vector2 bSeg = new Vector2(bNextPoint).sub(bPoint);
+                        Vector2 bToA = new Vector2(aNextPoint).sub(bPoint);
+                        float aSegLen = bSeg.len();
+                        float t = bSeg.dot(bToA) / (aSegLen * aSegLen); // How far from a to aNext this intersection is
+
+                        UnionPoint bIntersect = new UnionPoint(aNextPoint, bi + t); // UnionPoint to go on polygon B
+
+                        // Find the corresponding point on B, and match the two together
+                        UnionPoint correspondingB = UnionPoint.getPointAtPosition(allBPoints, bNextPoint);
+                        aIntersect.setMatch(correspondingB);
+                        correspondingB.setMatch(aIntersect);
+
+                        // Add new A point to A's expansion
+                        aIntersect.addToPolygon(allBPoints);
+                        System.out.println("B on segment A, B referenced: " + correspondingB);
+
+                        continue;
+                    }*/
                 }
+            }
+        }
+        //Third, check for if any segments overlap
+        for (int ai = 0; ai < a.getVertexCount(); ai++) {
+            //The current point of B
+            Vector2 aPoint = a.getVertex(ai, new Vector2());
+            //The next point after A
+            int aj = ai+1;
+            if (aj >= a.getVertexCount()) aj = 0;
+            Vector2 aNextPoint = a.getVertex(aj, new Vector2());
 
-                //Then, if they don't, check if b overlaps the segment following a
-                int aj = ai + 1;
-                if (aj >= a.getVertexCount()) aj = 0;
-                Vector2 aNextPoint = a.getVertex(aj, new Vector2());
-                if (Intersector.distanceSegmentPoint(aPoint, aNextPoint, bPoint) < tolerance) {
-                    //Create a new point for B
-                    Vector2 aSeg = new Vector2(aNextPoint).sub(aPoint);
-                    Vector2 aToB = new Vector2(bPoint).sub(aPoint);
-                    float aSegLen = aSeg.len();
-                    float t = aSeg.dot(aToB) / (aSegLen*aSegLen); // How far from b to bNext this intersection is
+            for (int bi = 0; bi < b.getVertexCount(); bi++) {
+                System.out.println("Checking a: " + ai + ", b: " + bi + " for segment overlaps");
+                //The current point of B
+                Vector2 bPoint = b.getVertex(bi, new Vector2());
 
-                    UnionPoint aIntersect = new UnionPoint(bPoint, ai+t); // UnionPoint to go on polygon B
+                //The next point after B
+                int bj = bi+1;
+                if (bj >= b.getVertexCount()) bj = 0;
 
-                    // Find the corresponding point on B, and match the two together
-                    UnionPoint correspondingB = UnionPoint.getPointAtPosition(allBPoints, bPoint);
-                    aIntersect.setMatch(correspondingB);
-                    correspondingB.setMatch(aIntersect);
+                Vector2 bNextPoint = b.getVertex(bj, new Vector2());
 
-                    // Add new A point to A's expansion
-                    aIntersect.addToPolygon(allBPoints);
-                    continue;
-                }
-
-                //Then finally, if they don't, check if the segments following a and b intersect with eachother
+                //Check if the segments following a and b intersect with eachother
                 Vector2 intersectionABSegments = new Vector2();
                 if (Intersector.intersectSegments(aPoint, aNextPoint, bPoint, bNextPoint, intersectionABSegments)) {
+
                     // Identify where the intersection lies each on a's segment and on b's segment
                     Vector2 iFromA = new Vector2(intersectionABSegments).sub(aPoint);
                     Vector2 iFromB = new Vector2(intersectionABSegments).sub(bPoint);
@@ -172,6 +331,8 @@ public class MiscFunctions {
                     Vector2 bSeg = new Vector2(bNextPoint).sub(bPoint);
                     float aT = iFromA.len() / aSeg.len();
                     float bT = iFromB.len() / bSeg.len();
+                    // If either of the T's are 1 or 0, this means the intersection will have already been found by other means
+                    if (aT == 0 || aT == 1 || bT == 0 || bT == 1) continue;
                     // Establish points for polygons a and b
                     UnionPoint aUP = new UnionPoint(intersectionABSegments, ai+aT);
                     UnionPoint bUP = new UnionPoint(intersectionABSegments, bi+bT);
@@ -180,9 +341,12 @@ public class MiscFunctions {
                     // Add to respective polygons
                     aUP.addToPolygon(allAPoints);
                     bUP.addToPolygon(allBPoints);
+                    System.out.println("Segments A and B overlap, B added: " + bUP);
                 }
             }
         }
+
+        System.out.println("B coordinates including intersections: " + allBPoints);
 
         // Find a point on one that isn't contained on the other, and start from there
         UnionPoint startPoint = null;
@@ -190,18 +354,22 @@ public class MiscFunctions {
         for (UnionPoint aUP : allAPoints) { //For each point in A,
             if ((!aUP.isIntersection) &&  //If the point isn't an intersection,
                     (!Intersector.isPointInPolygon(baseBVerts, 0, baseBVerts.length, aUP.pos.x, aUP.pos.y))) { //And isn't inside of B,
-                //We can start from there
-                startPoint = aUP;
-                break;
+                //If there hasn't been found a start point yet, or if this new point is farther left than the existing start point,
+                if (startPoint == null || aUP.pos.x < startPoint.pos.x) {
+                    //We can start from there
+                    startPoint = aUP;
+                }
             }
         }
         if (startPoint == null) { //If all the points on A are intersections or contained by B, check b's points
             for (UnionPoint bUP : allBPoints) { //For each point in A,
                 if ((!bUP.isIntersection) &&  //If the point isn't an intersection,
                         (!Intersector.isPointInPolygon(baseAVerts, 0, baseAVerts.length, bUP.pos.x, bUP.pos.y))) { //And isn't inside of B,
-                    //We can start from there
-                    startPoint = bUP;
-                    break;
+                    //If there hasn't been found a start point yet, or if this new point is farther left than the existing start point,
+                    if (startPoint == null || bUP.pos.x < startPoint.pos.x) {
+                        //We can start from there
+                        startPoint = bUP;
+                    }
                 }
             }
         }
@@ -213,7 +381,16 @@ public class MiscFunctions {
         if (prevIndex < 0) prevIndex = startPoint.parent.size()-1;
         UnionPoint lastPoint = startPoint.parent.get(prevIndex);// Record the last point, starting with the previous point to the starting point. Since it's not an intersection, going back 1 on the same polygon should work
         boolean loopedBackToFirst = false;
-        while (!loopedBackToFirst) {
+        System.out.println("First point index: " + startPoint.index + ", on polygon " + startPoint.parent);
+        int numIterations = 0;
+        int maxIterations = 100;
+        while (!loopedBackToFirst) {//TODO: when adding an edge polygon, this loop gets stuck
+            numIterations++;
+            System.out.println("Num iterations: " + numIterations);
+            if (numIterations >= maxIterations) {
+                loopedBackToFirst = true;
+                Gdx.app.exit();
+            }
             //Identify what the next point would be
             UnionPoint nextPoint;
             //Identify the next point on this polygon, but don't use that quite yet:
@@ -249,6 +426,7 @@ public class MiscFunctions {
 
             //Add the current point
             finalVerts.add(currentPoint.pos.x, currentPoint.pos.y);
+            System.out.println("New point index: " + currentPoint.index + ", on polygon: " + currentPolygon);
             //If the next point would be back to the first, call it there. If not, switch to the next point and repeat
             if (nextPoint == startPoint) {
                 loopedBackToFirst = true;
@@ -257,9 +435,31 @@ public class MiscFunctions {
                 currentPoint = nextPoint;
             }
         }
+        // Check for any redundant points
+        finalVerts.shrink();
+        FloatArray prunedFinalVerts = new FloatArray();
+        int numVerts = finalVerts.size/2;
+        for (int i = 0; i < numVerts; i++) { //For each point, check if it's not on the line between the points before and after it, and if so add it
+            //Point before
+            int h = i-1;
+            if (h < 0) h = numVerts-1;
+            float hx = finalVerts.get(h*2), hy = finalVerts.get(h*2+1);
+            //Point after
+            int k = i+1;
+            if (k >= numVerts) k = 0;
+            float kx = finalVerts.get(k*2), ky = finalVerts.get(k*2+1);
+            //The point itself
+            float ix = finalVerts.get(i*2), iy = finalVerts.get(i*2+1);
+
+            //If the point isn't outright on that segment
+            float maxDistToSegment = tolerance/10f;
+            if (Intersector.distanceSegmentPoint(hx, hy, kx, ky, ix, iy) >= maxDistToSegment) {
+                prunedFinalVerts.add(ix, iy);
+            }
+        }
 
         // After building the vertices, save them to a new polygon and return that
-        return new Polygon(finalVerts.shrink());
+        return new Polygon(prunedFinalVerts.shrink());
     }
 
     /***/
