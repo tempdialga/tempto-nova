@@ -24,7 +24,10 @@ import com.mygdx.tempto.util.MiscFunctions;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Vector;
+import java.util.function.Predicate;
 
 import space.earlygrey.shapedrawer.JoinType;
 import space.earlygrey.shapedrawer.ShapeDrawer;
@@ -86,7 +89,7 @@ public enum Tools {
                     // Create a PolygonMapObject that would encode this in the base map file
                     PolygonMapObject baseMapObject = new PolygonMapObject(terrainPolygon);
                     MapProperties props = baseMapObject.getProperties();
-                    props.put("id", nextAvailableID());
+                    props.put("id", nextAvailableTerrainID(this.editStack.getMap()));
                     props.put("x", terrainPolygon.getX());
                     props.put("y", terrainPolygon.getY());
 
@@ -121,28 +124,7 @@ public enum Tools {
             }
         }
 
-        public String nextAvailableID() {
-            int IDNumber = 0; //Each id consists of some identifier + a number; to make an id first we need to see if any objects currently have ids using the same pre-number portion (and then go one number higher)
 
-            WorldMap mapToEdit = this.editStack.getMap();
-            String baseID = mapToEdit.getMapID() + "_terrain_"; // Identified as map + terrain + number
-
-            // TODO: do we want to check the entity layer, or the entire base file, instead?
-            for (Entity entity : mapToEdit.getEntities()) {
-                String entityID = entity.getID(); //Check each entity's id:
-                if (entityID.startsWith(baseID) && entityID.length() > baseID.length()) { //If the first part of string matches (and there is a modifier)
-                    String modifier = entityID.substring(baseID.length()); // Find the modifier (most likely an id number)
-                    if (MiscFunctions.isInteger(modifier)) {
-                        int entityIDNum = Integer.parseInt(modifier);
-                        if (entityIDNum >= IDNumber) {
-                            IDNumber = entityIDNum + 1;
-                        }
-                    }
-                }
-            }
-            String newTerrainID = baseID + IDNumber;
-            return newTerrainID;
-        }
 
         @Override
         public void buttonUp(int gameInput) {
@@ -218,6 +200,10 @@ public enum Tools {
         /**If applicable, details on how the entity would be selected.
          * The exact implementation of this might vary, but for a polygon terrain, this would be which indices to select*/
         IntArray possibleSelectionDetails;
+        /**If the suggested entity {@link #possibleSelectionDetails} was forcibly found using the tab key.
+         * I.e., if multiple objects could have been selected, but the user used the tab key to specifically pick one of them.
+         * This will keep priority on that possible selection until it can no longer be selected*/
+        boolean forciblySelected;
         /**The utility object to highlight the terrain, etc.*/
         ShapeDrawer shapeDrawer;
 
@@ -460,81 +446,57 @@ public enum Tools {
         @Override
         public void mouseMoved(int screenX, int screenY, OrthographicCamera worldCam) {
             // Reset whether it can be selected
-            this.possibleSelection = null;
+            //this.possibleSelection = null;
 
             // Identify where the mouse is in the world
             Vector3 worldCoords = worldCam.unproject(new Vector3(screenX, screenY, 0));
 
             ArrayList<Entity> entities = this.editStack.getMap().getEntities();
             float selectionDist = Float.MAX_VALUE; // For deciding which object is selected, sometimes it might come down to distance
-            float maxSelectDist = 5; // The maximum distance, in world coordinates, the mouse can be away from a vertex to select it
-            // Iterate through each entity, and if it might be selected, highlight it
-            for (Entity entity : entities) { //Different elements can be selected in different ways
-                if (entity instanceof StaticTerrainElement terrainElement) {
-                    // Check to see if this entity is even remotely selectable, and if not, ignore it
-                    Rectangle boundingBox = terrainElement.polygon.getBoundingRectangle();
-                    boundingBox.x -= maxSelectDist;
-                    boundingBox.y -= maxSelectDist;
-                    boundingBox.width += 2*maxSelectDist;
-                    boundingBox.height += 2*maxSelectDist;
-                    // If a box stretched a little farther than the terrain in every direction doesn't contain the mouse, it won't be selected
-                    if (!boundingBox.contains(worldCoords.x, worldCoords.y)) continue;
+            float maxSelectDist = TERRAIN_SELECTION_DISTANCE; // The maximum distance, in world coordinates, the mouse can be away from a vertex to select it
 
-                    // For a static terrain element, that just means hovering close to one of the vertices, or a segment, or the whole thing
-                    float[] vertices = terrainElement.polygon.getTransformedVertices();
-                    boolean foundAVertex = false;
-                    for (int i = 0; i < vertices.length/2; i++) { // For each point on the terrain:
-                        float x = vertices[i*2], y = vertices[i*2 + 1]; //Identify coordinates of that point
-                        float dx = worldCoords.x-x, dy = worldCoords.y-y; //Displacement from that point to the mouse
-
-                        float dist = (float)Math.sqrt(dx * dx + dy * dy); //How far from the mouse it is
-
-                        if (dist < maxSelectDist && dist < selectionDist) { //If it's an acceptable distance away and closer than any other points to select
-                            selectionDist = dist;
-                            this.possibleSelection = entity; // This entity has been selected
-                            this.possibleSelectionDetails = new IntArray(new int[]{i}); // And this index of that entity in particular
-                            foundAVertex = true;
-                        }
-                    }
-                    // If a specific vertex was found, don't need to see if a segment or the whole thing is selected
-                    if (foundAVertex) continue;
-                    boolean foundASegment = false;
-                    for (int i = 0; i < vertices.length/2; i++) { // Iterate through each segment:
-                        float x1 = vertices[i*2], y1 = vertices[i*2 + 1]; //Identify coordinates of that point
-                        int j = i + 1;
-                        if (j >= vertices.length/2) j = 0;
-                        float x2 = vertices[j*2], y2 = vertices[j*2+1]; //Identify coordinates of the next point
-
-                        Vector2 nearestOnSegment = Intersector.nearestSegmentPoint(x1, y1, x2, y2, worldCoords.x, worldCoords.y, new Vector2());
-
-                        float dist = nearestOnSegment.sub(worldCoords.x, worldCoords.y).len(); //Displacement from that point to the mouse, and thus distance
-
-                        if (dist < maxSelectDist && dist < selectionDist) { //If it's an acceptable distance away and closer than any other points to select
-                            selectionDist = dist;
-                            this.possibleSelection = entity; // This entity has been selected
-                            this.possibleSelectionDetails = new IntArray(new int[]{i, j}); // And these indices of that entity in particular
-                            foundASegment = true;
-                        }
-                    }
-
-                    //If a specific segment or vertex was found, don't try and select the whole polygon
-                    if (foundASegment) continue;
-                    //If it couldn't select an individual point or segment, see if it can select the whole polygon
-                    if (Intersector.isPointInPolygon(vertices, 0, vertices.length, worldCoords.x, worldCoords.y)) {
-                        //Give selecting polygons least priority
-                        float dist = maxSelectDist;
-                        if (dist <= selectionDist) { //If basically nothign else could be found
-                            selectionDist = dist;
-                            this.possibleSelection = entity;
-                            //Create an int array representing every single vertex on the polygon
-                            int[] allVertices = new int[vertices.length/2];
-                            for (int i = 0; i < allVertices.length; i++) allVertices[i]=i;
-                            //Save that as the selection details
-                            this.possibleSelectionDetails = new IntArray(allVertices);
-                        }
-                    }
+            // Identify all entities that can be selected
+            HashMap<Entity, SelectionDetail> canSelectDetails = new HashMap<>();
+            ArrayList<Entity> canSelect = canBeSelected(new Vector2(worldCoords.x, worldCoords.y), entities, new ArrayList<>(), canSelectDetails);
+            // Focus on the terrain elements that can be selected
+            ArrayList<StaticTerrainElement> selectableTerrain = new ArrayList<>();
+            for (Entity entity : canSelect) {
+                if (entity instanceof StaticTerrainElement terrain) {
+                    selectableTerrain.add(terrain);
                 }
             }
+
+
+            // Find which entity is the most reasonable to select
+
+            //If the last selection can't be selected anymore, don't consider it
+            if (!canSelect.contains(this.possibleSelection)) {
+                this.possibleSelection = null;
+                this.forciblySelected = false;
+            }
+            //If the current possible selection wasn't forcibly chosen, check if a different entity makes more sense to select
+            if (!this.forciblySelected){
+                // Iterate through each entity, and if it should be selected over the current selection go for it
+                for (StaticTerrainElement terrainElement : selectableTerrain) {
+                    if (terrainElement == this.possibleSelection) continue; //No need to compare with itself
+                    SelectionDetail entityDetails = canSelectDetails.get(terrainElement);
+                    SelectionDetail currentDetails = canSelectDetails.get(this.possibleSelection);
+                    // If the selection priority of the other entity is higher, look at that one first
+                    if (this.possibleSelection == null || entityDetails.priority > currentDetails.priority) this.possibleSelection = terrainElement;
+                }
+            }
+            //If the tab button is pressed (And there are other entities to select), switch to another entity which can be selected
+            if (Gdx.input.isKeyJustPressed(Input.Keys.TAB) && !selectableTerrain.isEmpty()) {
+                int currentIdx = selectableTerrain.indexOf(this.possibleSelection);
+                int nextIdx = currentIdx+1;
+                if (nextIdx >= selectableTerrain.size()) nextIdx = 0;
+                this.possibleSelection = selectableTerrain.get(nextIdx);
+                this.forciblySelected = true;
+            }
+
+            //If settled on a terrain piece to look at, identify the details about it
+            if (this.possibleSelection != null) this.possibleSelectionDetails = (IntArray) canSelectDetails.get(this.possibleSelection).otherDetails;
+
         }
 
         @Override
@@ -896,6 +858,22 @@ public enum Tools {
                 //Combine all requisite edits into one big edit
                 ComboMapEdit brushMergeEdits = new ComboMapEdit(subEdits);
                 this.editStack.addEdit(brushMergeEdits);
+            } else { //If no overlaps found, add the brush polygon as is
+                Polygon brushPoly = new Polygon(this.brush.getTransformedVertices());
+
+                // Create a PolygonMapObject that would encode this in the base map file
+                PolygonMapObject baseMapObject = new PolygonMapObject(brushPoly);
+                MapProperties props = baseMapObject.getProperties();
+                props.put("id", nextAvailableTerrainID(this.editStack.getMap()));
+                props.put("x", brushPoly.getX());
+                props.put("y", brushPoly.getY());
+
+                // Create a new polygon terrain using those
+                StaticTerrainElement newTerrain = new StaticTerrainElement(baseMapObject, null);
+
+                // Create an edit which adds that polygon terrain to the map and map file
+                PlaceTerrainPolygon addThisTerrain = new PlaceTerrainPolygon(newTerrain, baseMapObject);
+                this.editStack.addEdit(addThisTerrain);
             }
 
 
@@ -1056,5 +1034,148 @@ public enum Tools {
             map.removeEntity(this.terrainElement);
             map.getEntityLayer().getObjects().remove(this.terrainInBaseFile);
         }
+    }
+
+    /**Utility method that searches the given {@link WorldMap} for the n*/
+    public static String nextAvailableTerrainID(WorldMap mapToEdit) {
+        int IDNumber = 0; //Each id consists of some identifier + a number; to make an id first we need to see if any objects currently have ids using the same pre-number portion (and then go one number higher)
+
+        String baseID = mapToEdit.getMapID() + "_terrain_"; // Identified as map + terrain + number
+
+        // TODO: do we want to check the entity layer, or the entire base file, instead?
+        for (Entity entity : mapToEdit.getEntities()) {
+            String entityID = entity.getID(); //Check each entity's id:
+            if (entityID.startsWith(baseID) && entityID.length() > baseID.length()) { //If the first part of string matches (and there is a modifier)
+                String modifier = entityID.substring(baseID.length()); // Find the modifier (most likely an id number)
+                if (MiscFunctions.isInteger(modifier)) {
+                    int entityIDNum = Integer.parseInt(modifier);
+                    if (entityIDNum >= IDNumber) {
+                        IDNumber = entityIDNum + 1;
+                    }
+                }
+            }
+        }
+        String newTerrainID = baseID + IDNumber;
+        return newTerrainID;
+    }
+
+    /**Utility method to add a polygon to a {@link StaticTerrainElement}*/
+    private static SetTerrainVertices addToTerrain(Polygon toAdd, StaticTerrainElement terrain, PolygonMapObject inMapFile) {
+
+        return null;
+    }
+
+    /**How far, in IGU, the cursor can be from a piece of terrain for it to still be selected. TODO: switch to some kind of screen-pixel distance*/
+    public static final float TERRAIN_SELECTION_DISTANCE = 5f;
+    /**A utility class to store details about a selected entity. Stores the selection priority, "distance" information, and an extra Object for any additional information required*/
+    private static class SelectionDetail {
+
+        /**The selected is a piece of terrain, but not any part of it in particular.*/
+        public static final float TERRAIN_BASE = 1;
+        /**The selected is a piece of terrain, and a specific edge thereof.*/
+        public static final float TERRAIN_EDGE = 2;
+        /**The selected is a piece of terrain, and a specific *point* thereof.*/
+        public static final float TERRAIN_VERTEX = 3;
+
+        public float priority;
+        public float distance;
+        /**Additional information as necessary to interpret the selection. Examples for common entities:
+         * {@link StaticTerrainElement}: An {@link IntArray} of selected vertices.*/
+        public Object otherDetails;
+
+        public SelectionDetail(float priority, float distance, Object otherDetails) {
+            this.priority = priority;
+            this.distance = distance;
+            this.otherDetails = otherDetails;
+        }
+    }
+    /**A utility method that identifies which entities can be selected from the given list of entities, by the given mouse location.
+     * @param mouseLocation The location of the mouse, in IGU (In Game Units)
+     * @param entities The list of entities to consider
+     * @param selectedEntities The list to store selectable entities in. Will be the list returned at the end, unless null is given, in which case a new list will be created.
+     * @param selectionDetails A hashmap in which to store {@link SelectionDetail} for each selected entity, if desired. If null, will not store such details.*/
+    private static ArrayList<Entity> canBeSelected(Vector2 mouseLocation, ArrayList<Entity> entities, ArrayList<Entity> selectedEntities, HashMap<Entity, SelectionDetail> selectionDetails) {
+        //Clear or handle the existing selection
+        selectedEntities.clear();
+
+        //Iterate through each entity, and determine for each if they should reasonably be selected
+        for (Entity entity : entities) {
+            //In the case of terrain, selection means the cursor is inside or near the terrain piece
+            if (entity instanceof StaticTerrainElement terrain) {
+                //Check if the cursor is even in the vicinity of the polygon
+                float extra = TERRAIN_SELECTION_DISTANCE;
+                Rectangle terrainSelectionRange = new Rectangle(terrain.polygon.getBoundingRectangle());
+                terrainSelectionRange.height+= extra*2;
+                terrainSelectionRange.width += extra*2;
+                terrainSelectionRange.x -= extra;
+                terrainSelectionRange.y -= extra;
+                if (!terrainSelectionRange.contains(mouseLocation)) continue;
+
+                float[] verts = terrain.polygon.getTransformedVertices();
+
+                boolean selectedTerrainYet = false;
+                //First, check if it's really close to a specific point
+                for (int i = 0; i < verts.length/2; i++) {
+                    //Coordinates of point
+                    float ix = verts[i*2], iy = verts[i*2+1];
+                    //Check if mouse is close to those coordinates
+                    Vector2 toPoint = new Vector2(ix, iy).sub(mouseLocation);
+                    if (toPoint.len() < extra) {
+                        //Add the entity to possible selection
+                        selectedEntities.add(terrain);
+                        //If map is given, record details about the selection
+                        if (selectionDetails != null) {
+                            SelectionDetail details = new SelectionDetail(SelectionDetail.TERRAIN_VERTEX, toPoint.len(), new IntArray(new int[]{i}));
+                            selectionDetails.put(terrain, details);
+                        }
+                        //Note that we've found a terrain
+                        selectedTerrainYet = true;
+                        break;
+                    }
+                }
+                if (selectedTerrainYet) continue; //If a specific vertex was found, continue
+
+                //Then, check if it's close to any of the edges
+                for (int i = 0; i < verts.length/2; i++) {
+                    //Points of the edge
+                    float ix = verts[i*2], iy = verts[i*2+1];
+                    int j = i+1;
+                    if (j >= verts.length/2) j = 0;
+                    float jx = verts[j*2], jy = verts[j*2+1];
+                    //Check if mouse is close to that edge
+                    float toEdge = Intersector.distanceSegmentPoint(ix, iy, jx, jy, mouseLocation.x, mouseLocation.y);
+                    if (toEdge < extra) {
+                        //Add the entity to possible selection
+                        selectedEntities.add(terrain);
+                        //If map is given, record details about the selection
+                        if (selectionDetails != null) {
+                            SelectionDetail details = new SelectionDetail(SelectionDetail.TERRAIN_VERTEX, toEdge, new IntArray(new int[]{i, j}));
+                            selectionDetails.put(terrain, details);
+                        }
+                        //Note that we've found a terrain
+                        selectedTerrainYet = true;
+                        break;
+                    }
+                }
+                if (selectedTerrainYet) continue;//If a specific edge was found, continue
+
+                //If not selecting a specific point or edge, check if it's just generally hovering over the terrain
+                if (Intersector.isPointInPolygon(verts, 0, verts.length, mouseLocation.x, mouseLocation.y)) {
+                    //Consider the entity selectable
+                    selectedEntities.add(terrain);
+                    //Record details about it
+                    if (selectionDetails != null ){
+                        IntArray allVerts = new IntArray(verts.length/2);
+                        for (int i = 0; i < verts.length/2; i++) allVerts.add(i);
+
+                        SelectionDetail details = new SelectionDetail(SelectionDetail.TERRAIN_BASE, 0, allVerts);
+                        selectionDetails.put(terrain, details);
+                    }
+                    continue;
+                }
+            }
+        }
+
+        return selectedEntities;
     }
 }
