@@ -46,6 +46,7 @@ public class KeyboardMapper {
                 Keys.Z, GameInputs.UNDO,
                 Keys.DEL, GameInputs.DELETE,
                 Keys.B, GameInputs.BRUSH,
+                Keys.V, GameInputs.VERTEX,
         });
         //// Secondary/"weak" bindings, the ones that duplicate their intuitive input unless you actively tell them to do something else
         addIntArray(keyboardToAbstract, new int[]{

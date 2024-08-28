@@ -472,10 +472,10 @@ public enum Tools {
             //If the last selection can't be selected anymore, don't consider it
             if (!canSelect.contains(this.possibleSelection)) {
                 this.possibleSelection = null;
-                this.forciblySelected = false;
+                //this.forciblySelected = false;
             }
             //If the current possible selection wasn't forcibly chosen, check if a different entity makes more sense to select
-            if (!this.forciblySelected){
+            if (this.possibleSelection == null){
                 // Iterate through each entity, and if it should be selected over the current selection go for it
                 for (StaticTerrainElement terrainElement : selectableTerrain) {
                     if (terrainElement == this.possibleSelection) continue; //No need to compare with itself
@@ -491,7 +491,7 @@ public enum Tools {
                 int nextIdx = currentIdx+1;
                 if (nextIdx >= selectableTerrain.size()) nextIdx = 0;
                 this.possibleSelection = selectableTerrain.get(nextIdx);
-                this.forciblySelected = true;
+                //this.forciblySelected = true;
             }
 
             //If settled on a terrain piece to look at, identify the details about it
@@ -792,90 +792,99 @@ public enum Tools {
         Polygon brush;
         /**Rendering utility*/
         ShapeDrawer shapeDrawer;
-
+        /**The pieces of terrain that could be subject to addition. Always includes a null instance, to represent creating a new terrain instead of adding to an existing one*/
+        ArrayList<StaticTerrainElement> terrainCandiates;
+        /**The terrain element currently speculated to add the brush to*/
+        StaticTerrainElement mainCandidate;
 
 
         @Override
         public void touchDown(int screenX, int screenY, int pointer, int button, OrthographicCamera worldCam) {
-            //When clicking, check for terrain elements touching the brush and try to add the brush to them
-            ArrayList<Entity> entities = this.editStack.getMap().getEntities();
-
-//            StaticTerrainElement alreadyMerged = null; //Record if a terrain element has already been merged with the brush, and therefore this would need to merge with that too
-//            Polygon toAdd = this.brush;
-            ArrayList<StaticTerrainElement> affectedTerrains = new ArrayList<>(); // Record which existing terrain pieces need to be merged with the brush
-
-
-            //Check for the brush's total possible area of effect, by expanding around tolerance
-            Rectangle brushEffectArea = new Rectangle(this.brush.getBoundingRectangle());
-            float tol = MiscFunctions.DEFAULT_MERGE_TOLERANCE;
-            brushEffectArea.x-=tol;
-            brushEffectArea.y-=tol;
-            brushEffectArea.width+=tol*2;
-            brushEffectArea.height+=tol*2;
-
-            for (Entity entity : entities) {
-                if (entity instanceof StaticTerrainElement terrain) { // For each terrain element
-                    Polygon terrPoly = terrain.getPolygon(); // Check if it overlaps the brush
-                    if (!terrPoly.getBoundingRectangle().overlaps(brushEffectArea)) continue;
-                    if (Intersector.intersectPolygons(terrPoly, this.brush, null)
-                        || Intersector.intersectPolygonEdges(new FloatArray(terrPoly.getTransformedVertices()), new FloatArray(this.brush.getTransformedVertices()))) {
-                        affectedTerrains.add(terrain);
-                    }
-                }
+            // On touchdown, add the brush to whatever terrain is desired, or if none are, as a new terrain itself
+            MapEdit edit;
+            if (this.mainCandidate != null) { // Candidate terrain specified: add to that terrain
+                System.out.println("Adding brush to terrain: " + Arrays.toString(this.mainCandidate.polygon.getTransformedVertices()));
+                edit = addToTerrain(this.brush, this.mainCandidate);
+            } else { // Candidate terrain unspecified, add brush as a new terrain
+                System.out.println("Adding brush as new terrain");
+                edit = addTerrain(this.brush, this.editStack.getMap());
             }
-
-            //If any terrain are affected, perform a series of merges with them and the brush
-            if (!affectedTerrains.isEmpty()) {
-                //Pick the first affected terrain, and merge the brush into it
-                StaticTerrainElement firstTerrain = affectedTerrains.get(0);
-                Polygon union = MiscFunctions.polygonUnion(firstTerrain.polygon, this.brush);
-
-
-                ArrayList<MapEdit> subEdits = new ArrayList<>(1); //The edits made to merge the brush with any contacting terrain
-
-                //For any remaining terrain, merge their polygons into the first's union and remove them
-                for (int i = 1; i < affectedTerrains.size(); i++) {
-                    //Merge into existing union
-                    StaticTerrainElement terrain = affectedTerrains.get(i);
-                    union = MiscFunctions.polygonUnion(terrain.polygon, union);
-                    //Remove from map
-                    PolygonMapObject terrainInFile = (PolygonMapObject) this.editStack.getMap().getMapObjectForEntity(terrain);
-                    RemoveTerrainPolygon removeMerged = new RemoveTerrainPolygon(terrain, terrainInFile);
-                    subEdits.add(removeMerged);
-                }
-
-                //Replace the first terrain's vertices with the union of all of them
-
-                //Ensure the terrain is vertexed in absolute coordinates
-                firstTerrain.polygon.setVertices(firstTerrain.polygon.getTransformedVertices());
-                firstTerrain.polygon.setPosition(0,0);
-
-                SetTerrainVertices mergeIntoFirst = new SetTerrainVertices(firstTerrain,
-                        firstTerrain.polygon.getVertices().clone(),
-                        union.getVertices().clone());
-                subEdits.add(mergeIntoFirst);
-
-                //Combine all requisite edits into one big edit
-                ComboMapEdit brushMergeEdits = new ComboMapEdit(subEdits);
-                this.editStack.addEdit(brushMergeEdits);
-            } else { //If no overlaps found, add the brush polygon as is
-                Polygon brushPoly = new Polygon(this.brush.getTransformedVertices());
-
-                // Create a PolygonMapObject that would encode this in the base map file
-                PolygonMapObject baseMapObject = new PolygonMapObject(brushPoly);
-                MapProperties props = baseMapObject.getProperties();
-                props.put("id", nextAvailableTerrainID(this.editStack.getMap()));
-                props.put("x", brushPoly.getX());
-                props.put("y", brushPoly.getY());
-
-                // Create a new polygon terrain using those
-                StaticTerrainElement newTerrain = new StaticTerrainElement(baseMapObject, null);
-
-                // Create an edit which adds that polygon terrain to the map and map file
-                PlaceTerrainPolygon addThisTerrain = new PlaceTerrainPolygon(newTerrain, baseMapObject);
-                this.editStack.addEdit(addThisTerrain);
-            }
-
+            //Add the edit to the stack
+            this.editStack.addEdit(edit);
+//
+//            //Check for the brush's total possible area of effect, by expanding around tolerance
+//            Rectangle brushEffectArea = new Rectangle(this.brush.getBoundingRectangle());
+//            float tol = MiscFunctions.DEFAULT_MERGE_TOLERANCE;
+//            brushEffectArea.x-=tol;
+//            brushEffectArea.y-=tol;
+//            brushEffectArea.width+=tol*2;
+//            brushEffectArea.height+=tol*2;
+//
+//            for (Entity entity : entities) {
+//                if (entity instanceof StaticTerrainElement terrain) { // For each terrain element
+//                    Polygon terrPoly = terrain.getPolygon(); // Check if it overlaps the brush
+//                    if (!terrPoly.getBoundingRectangle().overlaps(brushEffectArea)) continue;
+//                    if (Intersector.intersectPolygons(terrPoly, this.brush, null)
+//                        || Intersector.intersectPolygonEdges(new FloatArray(terrPoly.getTransformedVertices()), new FloatArray(this.brush.getTransformedVertices()))) {
+//                        affectedTerrains.add(terrain);
+//                    }
+//                }
+//            }
+//
+//            //If any terrain are affected, perform a series of merges with them and the brush
+//            if (!affectedTerrains.isEmpty()) {
+//                //Pick the first affected terrain, and merge the brush into it
+//                StaticTerrainElement firstTerrain = affectedTerrains.get(0);
+//                Polygon union = MiscFunctions.polygonUnion(firstTerrain.polygon, this.brush);
+//
+//
+//                ArrayList<MapEdit> subEdits = new ArrayList<>(1); //The edits made to merge the brush with any contacting terrain
+//
+//                //For any remaining terrain, merge their polygons into the first's union and remove them
+//                for (int i = 1; i < affectedTerrains.size(); i++) {
+//                    //Merge into existing union
+//                    StaticTerrainElement terrain = affectedTerrains.get(i);
+//                    union = MiscFunctions.polygonUnion(terrain.polygon, union);
+//                    //Remove from map
+//                    PolygonMapObject terrainInFile = (PolygonMapObject) this.editStack.getMap().getMapObjectForEntity(terrain);
+//                    RemoveTerrainPolygon removeMerged = new RemoveTerrainPolygon(terrain, terrainInFile);
+//                    subEdits.add(removeMerged);
+//                }
+//
+//                //Replace the first terrain's vertices with the union of all of them
+//
+//                //Ensure the terrain is vertexed in absolute coordinates
+//                firstTerrain.polygon.setVertices(firstTerrain.polygon.getTransformedVertices());
+//                firstTerrain.polygon.setPosition(0,0);
+//
+//                SetTerrainVertices mergeIntoFirst = new SetTerrainVertices(firstTerrain,
+//                        firstTerrain.polygon.getVertices().clone(),
+//                        union.getVertices().clone());
+//                subEdits.add(mergeIntoFirst);
+//
+//                //Combine all requisite edits into one big edit
+//                ComboMapEdit brushMergeEdits = new ComboMapEdit(subEdits);
+//                this.editStack.addEdit(brushMergeEdits);
+//            } else { //If no overlaps found, add the brush polygon as is
+//                Polygon brushPoly = new Polygon(this.brush.getTransformedVertices());
+//
+//                PlaceTerrainPolygon addBrush = addTerrain(brushPoly, this.editStack.getMap());
+////
+////                // Create a PolygonMapObject that would encode this in the base map file
+////                PolygonMapObject baseMapObject = new PolygonMapObject(brushPoly);
+////                MapProperties props = baseMapObject.getProperties();
+////                props.put("id", nextAvailableTerrainID(this.editStack.getMap()));
+////                props.put("x", brushPoly.getX());
+////                props.put("y", brushPoly.getY());
+////
+////                // Create a new polygon terrain using those
+////                StaticTerrainElement newTerrain = new StaticTerrainElement(baseMapObject, null);
+////
+////                // Create an edit which adds that polygon terrain to the map and map file
+////                PlaceTerrainPolygon addThisTerrain = new PlaceTerrainPolygon(newTerrain, baseMapObject);
+//                this.editStack.addEdit(addBrush);
+//            }
+//
 
         }
 
@@ -886,8 +895,9 @@ public enum Tools {
 
         @Override
         public void buttonDown(int gameInput) {
-            //If cancel/go back, go back to vertex selection
-            if (gameInput == InputTranslator.GameInputs.CANCEL) {
+            //If cancel/go back or vertex, go back to vertex selection
+            if (gameInput == InputTranslator.GameInputs.CANCEL ||
+                gameInput == InputTranslator.GameInputs.VERTEX) {
                 switchToTool(SELECT_VERTICES.toolInstance);
             }
         }
@@ -914,8 +924,34 @@ public enum Tools {
                 worldCoords.y = (int) worldCoords.y;
                 worldCoords.scl(WorldMap.TILE_SIZE);
             }
-
             this.brush.setPosition(worldCoords.x, worldCoords.y);
+
+            //Check if it could have selected any terrain pieces last time. This distinguishes between if the user couldn't pick any, or if they actively didn't want to (wanted to make a new terrain from the brush overlapping smt else)
+            if (this.terrainCandiates == null) this.terrainCandiates = new ArrayList<>();
+            boolean priorSelectionEmpty = this.terrainCandiates.size() <= 1;
+
+            //Check which terrain pieces could be added to
+            ArrayList<Entity> entities = this.editStack.getMap().getEntities();
+            //Entities which overlap this brush
+            ArrayList<Entity> overlappingEntities = canBeSelectedByPolygon(this.brush, entities, new ArrayList<>(), null);
+            //Pick the terrain elements from that selection
+            this.terrainCandiates.clear();
+            for (Entity entity : overlappingEntities) if (entity instanceof StaticTerrainElement terrain) this.terrainCandiates.add(terrain);
+            this.terrainCandiates.add(null);//Add a null instance to represent adding to nothing, i.e. making a new object
+            boolean currentSelectionNotEmpty = this.terrainCandiates.size() > 1;
+
+            //If the user moved mouse off of the current terrain, or from empty space onto a terrain, switch current selection
+            if (!this.terrainCandiates.contains(this.mainCandidate) || (priorSelectionEmpty && currentSelectionNotEmpty)) {
+                this.mainCandidate = this.terrainCandiates.get(0);
+            }
+            //Allow the user to scroll between them using the tab key
+            if (Gdx.input.isKeyJustPressed(Input.Keys.TAB)) {
+                int currentIdx = this.terrainCandiates.indexOf(this.mainCandidate);
+                currentIdx++;
+                if (currentIdx >= this.terrainCandiates.size()) currentIdx = 0;
+                this.mainCandidate = this.terrainCandiates.get(currentIdx);
+            }
+
         }
 
         @Override
@@ -943,10 +979,15 @@ public enum Tools {
                 this.shapeDrawer = new ShapeDrawer(batch, region);
             }
             this.shapeDrawer.setColor(Color.LIME);
-            float lineWidth = 1f;
+            float lineWidth = 2.5f;
+
+            //Draw the candidate
+            if (this.mainCandidate != null) this.shapeDrawer.polygon(this.mainCandidate.polygon, lineWidth);
 
             //Draw the brush
             this.shapeDrawer.polygon(this.brush, lineWidth);
+
+
         }
     }),
     ;
@@ -1060,9 +1101,35 @@ public enum Tools {
     }
 
     /**Utility method to add a polygon to a {@link StaticTerrainElement}*/
-    private static SetTerrainVertices addToTerrain(Polygon toAdd, StaticTerrainElement terrain, PolygonMapObject inMapFile) {
+    private static SetTerrainVertices addToTerrain(Polygon toAdd, StaticTerrainElement terrain) {
+        Polygon before = new Polygon(terrain.polygon.getTransformedVertices());
+        float[] beforeVerts = before.getTransformedVertices();
+        Polygon after = MiscFunctions.polygonUnion(before, toAdd);
+        float[] afterVerts = after.getTransformedVertices();
 
-        return null;
+        SetTerrainVertices edit = new SetTerrainVertices(terrain, beforeVerts, afterVerts);
+        return edit;
+    }
+
+    /**Utility method to quickly build an edit for adding a piece of terrain from the given polygon*/
+    private static PlaceTerrainPolygon addTerrain(Polygon form, WorldMap map) {
+        //Copy the polygon, to avoid duplicating references
+        form = new Polygon(form.getTransformedVertices());
+        //Identify the id to give new terrain
+        String id = nextAvailableTerrainID(map);
+        //Generate map data
+        PolygonMapObject mapData = new PolygonMapObject(form);
+        MapProperties props = mapData.getProperties();
+        props.put("x", form.getX());
+        props.put("y", form.getY());
+        props.put("id", id);
+        //Create a corresponding StaticTerrainElement
+        StaticTerrainElement terrain = new StaticTerrainElement(mapData);
+
+        //Generate the map edit
+        PlaceTerrainPolygon edit = new PlaceTerrainPolygon(terrain, mapData);
+
+        return edit;
     }
 
     /**How far, in IGU, the cursor can be from a piece of terrain for it to still be selected. TODO: switch to some kind of screen-pixel distance*/
@@ -1078,14 +1145,12 @@ public enum Tools {
         public static final float TERRAIN_VERTEX = 3;
 
         public float priority;
-        public float distance;
         /**Additional information as necessary to interpret the selection. Examples for common entities:
          * {@link StaticTerrainElement}: An {@link IntArray} of selected vertices.*/
         public Object otherDetails;
 
-        public SelectionDetail(float priority, float distance, Object otherDetails) {
+        public SelectionDetail(float priority, Object otherDetails) {
             this.priority = priority;
-            this.distance = distance;
             this.otherDetails = otherDetails;
         }
     }
@@ -1125,7 +1190,7 @@ public enum Tools {
                         selectedEntities.add(terrain);
                         //If map is given, record details about the selection
                         if (selectionDetails != null) {
-                            SelectionDetail details = new SelectionDetail(SelectionDetail.TERRAIN_VERTEX, toPoint.len(), new IntArray(new int[]{i}));
+                            SelectionDetail details = new SelectionDetail(SelectionDetail.TERRAIN_VERTEX, new IntArray(new int[]{i}));
                             selectionDetails.put(terrain, details);
                         }
                         //Note that we've found a terrain
@@ -1149,7 +1214,7 @@ public enum Tools {
                         selectedEntities.add(terrain);
                         //If map is given, record details about the selection
                         if (selectionDetails != null) {
-                            SelectionDetail details = new SelectionDetail(SelectionDetail.TERRAIN_VERTEX, toEdge, new IntArray(new int[]{i, j}));
+                            SelectionDetail details = new SelectionDetail(SelectionDetail.TERRAIN_VERTEX, new IntArray(new int[]{i, j}));
                             selectionDetails.put(terrain, details);
                         }
                         //Note that we've found a terrain
@@ -1168,10 +1233,51 @@ public enum Tools {
                         IntArray allVerts = new IntArray(verts.length/2);
                         for (int i = 0; i < verts.length/2; i++) allVerts.add(i);
 
-                        SelectionDetail details = new SelectionDetail(SelectionDetail.TERRAIN_BASE, 0, allVerts);
+                        SelectionDetail details = new SelectionDetail(SelectionDetail.TERRAIN_BASE, allVerts);
                         selectionDetails.put(terrain, details);
                     }
                     continue;
+                }
+            }
+        }
+
+        return selectedEntities;
+    }
+
+    /**Analogous to {@link #canBeSelected(Vector2, ArrayList, ArrayList, HashMap)}, but by overlap with a polygonal selection region.
+     * Some priorities are different, e.g. all TerrainElements have the same priority.*/
+    private static ArrayList<Entity> canBeSelectedByPolygon(Polygon selectionBounds, ArrayList<Entity> entities, ArrayList<Entity> selectedEntities, HashMap<Entity, SelectionDetail> selectionDetails) {
+        selectedEntities.clear();
+
+        // Rectangle to use to screen entities that aren't even close
+        Rectangle selectionScreen = selectionBounds.getBoundingRectangle();
+        float tol = MiscFunctions.DEFAULT_MERGE_TOLERANCE;
+        selectionScreen.x -= tol; selectionScreen.y -= tol;
+        selectionScreen.width += 2*tol; selectionScreen.height += 2*tol;
+
+        // Iterate through each entity, and check if it would be selected by the given polygon
+        for (Entity entity : entities) {
+            // For terrain elements, the polygons should overlap, and the points contained in the selection are details
+            if (entity instanceof StaticTerrainElement terrain) {
+                // Quickly check if these polygons could reasonably overlap
+                if (!terrain.polygon.getBoundingRectangle().overlaps(selectionScreen)) continue;
+                // Check if the terrain polygon and selection intersect
+                if (Intersector.intersectPolygons(terrain.polygon, selectionBounds, null)
+                    || Intersector.intersectPolygonEdges(new FloatArray(terrain.polygon.getTransformedVertices()), new FloatArray(selectionBounds.getTransformedVertices()))) { // TODO: Should we store and use the overlap?
+                    //Add the terrain to selection
+                    selectedEntities.add(terrain);
+                    //If no details are required, then stop here
+                    if (selectionDetails == null) continue;
+                    //Then, identify which points on the polygon, if any, fall in the selection
+                    float[] verts = terrain.polygon.getTransformedVertices();
+                    IntArray selectedVerts = new IntArray();
+                    for (int i = 0; i < verts.length/2; i++) {
+                        float x = verts[i*2], y = verts[i*2+1];
+                        //If this point falls inside the selection, add the index to details
+                        if (Intersector.isPointInPolygon(verts, 0, verts.length, x, y)) {
+                            selectedVerts.add(i);
+                        }
+                    }
                 }
             }
         }
