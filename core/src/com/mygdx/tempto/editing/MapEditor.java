@@ -17,6 +17,7 @@ import com.mygdx.tempto.gui.button.ButtonMenu;
 import com.mygdx.tempto.gui.button.GUIClickable;
 import com.mygdx.tempto.gui.button.RectangleButton;
 import com.mygdx.tempto.gui.button.RectangleTextButton;
+import com.mygdx.tempto.gui.text.TextUtils;
 import com.mygdx.tempto.input.InputTranslator;
 import com.mygdx.tempto.maps.WorldMap;
 import com.mygdx.tempto.rendering.RendersToScreen;
@@ -193,7 +194,7 @@ public class MapEditor implements InputProcessor, RendersToScreen, RendersToWorl
             /**How tall the taskbar should be, i.e. how far to stretch down from the top after padding*/
             private static final float BAR_HEIGHT = 0.2f;
             /**How tall the text should be, proportionally to the height of the bar*/
-            private static final float TEXT_HEIGHT_IN_BAR = 1f;
+            private static final float TEXT_HEIGHT_IN_BAR = 1.0f;
             /**Default color for a button*/
             private static final Color DEFAULT_BUTTON_COLOR = new Color(Color.LIGHT_GRAY).mul(Color.CORAL);
             /**Color for a button that's selected*/
@@ -293,18 +294,18 @@ public class MapEditor implements InputProcessor, RendersToScreen, RendersToWorl
 
                         //Set the font dimensions, and test how they actually render
                         float idealTextHeight = BAR_HEIGHT*TEXT_HEIGHT_IN_BAR; //The full size of the text
-                        font.getData().setScale(idealTextHeight * font.getScaleY() / font.getLineHeight());
-                        //Prepare to render really far offscreen to check how it'll actually look dimension wise
-                        GlyphLayout testRender = font.draw(batch, rectButton.buttonText, screenCamera.position.x+999999, screenCamera.position.y+999999);
-
-                        //Using those found dimensions, actually render the text
-                        float textHeight = testRender.height;
-                        float textVertPadding = 0.5f*(BAR_HEIGHT-textHeight);
-                        //System.out.println("Vertical text padding: " + textVertPadding + ", vs button and text height: " + BAR_HEIGHT + ", " + textHeight);
-                        //System.out.println("Text final height: " + testRender.height);
-                        float textLeftPadding = (buttonArea.width - testRender.width)*0.5f; //How far from the left of the button this text should be to be centered
-                        float textX = buttonArea.x + textLeftPadding;
-                        float textY = buttonArea.y + buttonArea.height - textVertPadding;
+//                        font.getData().setScale(idealTextHeight * font.getScaleY() / font.getLineHeight());
+//                        //Prepare to render really far offscreen to check how it'll actually look dimension wise
+//                        GlyphLayout testRender = font.draw(batch, rectButton.buttonText, screenCamera.position.x+999999, screenCamera.position.y+999999);
+//
+//                        //Using those found dimensions, actually render the text
+//                        float textHeight = testRender.height;
+//                        float textVertPadding = 0.5f*(BAR_HEIGHT-textHeight);
+//                        //System.out.println("Vertical text padding: " + textVertPadding + ", vs button and text height: " + BAR_HEIGHT + ", " + textHeight);
+//                        //System.out.println("Text final height: " + testRender.height);
+//                        float textLeftPadding = (buttonArea.width - testRender.width)*0.5f; //How far from the left of the button this text should be to be centered
+//                        float textX = buttonArea.x + textLeftPadding;
+//                        float textY = buttonArea.y + buttonArea.height - textVertPadding;
 
 
                         //Once dimensions and locations are set, render the text over the button
@@ -312,8 +313,11 @@ public class MapEditor implements InputProcessor, RendersToScreen, RendersToWorl
                         font.setColor(BUTTON_TEXT_COLOR);
                         font.setUseIntegerPositions(false);
 
+                        //Use TextUtils to render
+                        TextUtils.renderTextCentered(buttonArea, font, rectButton.buttonText, idealTextHeight, batch, screenCamera);
+
                         //font.draw(batch, rectButton.buttonText, buttonArea.x, buttonArea.y);
-                        font.draw(batch, rectButton.buttonText, textX, textY);
+                        //font.draw(batch, rectButton.buttonText, textX, textY);
                     }
                 }
             }
