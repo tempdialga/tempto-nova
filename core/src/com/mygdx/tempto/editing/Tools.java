@@ -89,7 +89,7 @@ public enum Tools {
                     // Create a PolygonMapObject that would encode this in the base map file
                     PolygonMapObject baseMapObject = new PolygonMapObject(terrainPolygon);
                     MapProperties props = baseMapObject.getProperties();
-                    props.put("id", nextAvailableTerrainID(this.editStack.getMap()));
+                    props.put("id", this.editStack.getMap().nextAvailableProceduralID("terrain"));
                     props.put("x", terrainPolygon.getX());
                     props.put("y", terrainPolygon.getY());
 
@@ -1077,29 +1077,6 @@ public enum Tools {
         }
     }
 
-    /**Utility method that searches the given {@link WorldMap} for the n*/
-    public static String nextAvailableTerrainID(WorldMap mapToEdit) {
-        int IDNumber = 0; //Each id consists of some identifier + a number; to make an id first we need to see if any objects currently have ids using the same pre-number portion (and then go one number higher)
-
-        String baseID = mapToEdit.getMapID() + "_terrain_"; // Identified as map + terrain + number
-
-        // TODO: do we want to check the entity layer, or the entire base file, instead?
-        for (Entity entity : mapToEdit.getEntities()) {
-            String entityID = entity.getID(); //Check each entity's id:
-            if (entityID.startsWith(baseID) && entityID.length() > baseID.length()) { //If the first part of string matches (and there is a modifier)
-                String modifier = entityID.substring(baseID.length()); // Find the modifier (most likely an id number)
-                if (MiscFunctions.isInteger(modifier)) {
-                    int entityIDNum = Integer.parseInt(modifier);
-                    if (entityIDNum >= IDNumber) {
-                        IDNumber = entityIDNum + 1;
-                    }
-                }
-            }
-        }
-        String newTerrainID = baseID + IDNumber;
-        return newTerrainID;
-    }
-
     /**Utility method to add a polygon to a {@link StaticTerrainElement}*/
     private static SetTerrainVertices addToTerrain(Polygon toAdd, StaticTerrainElement terrain) {
         Polygon before = new Polygon(terrain.polygon.getTransformedVertices());
@@ -1116,7 +1093,7 @@ public enum Tools {
         //Copy the polygon, to avoid duplicating references
         form = new Polygon(form.getTransformedVertices());
         //Identify the id to give new terrain
-        String id = nextAvailableTerrainID(map);
+        String id = map.nextAvailableProceduralID("terrain");
         //Generate map data
         PolygonMapObject mapData = new PolygonMapObject(form);
         MapProperties props = mapData.getProperties();

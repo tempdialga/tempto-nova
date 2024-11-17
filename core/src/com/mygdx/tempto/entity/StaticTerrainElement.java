@@ -17,10 +17,16 @@ import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonValue;
 import com.badlogic.gdx.utils.Null;
 import com.mygdx.tempto.data.SavesToFile;
+import com.mygdx.tempto.entity.physics.Collidable;
+import com.mygdx.tempto.entity.physics.PointProcedure;
+import com.mygdx.tempto.entity.physics.SegmentProcedure;
 import com.mygdx.tempto.input.InputTranslator;
 import com.mygdx.tempto.maps.WorldMap;
+import com.mygdx.tempto.util.MiscFunctions;
 
-public class StaticTerrainElement implements Entity, SavesToFile {
+import org.eclipse.collections.api.map.MapIterable;
+
+public class StaticTerrainElement implements Entity, SavesToFile, Collidable {
 
     public Polygon polygon;//TODO: generalize, this is only a temporary thing to make sure map loading works
     public Color color;
@@ -149,4 +155,62 @@ public class StaticTerrainElement implements Entity, SavesToFile {
     }
 
 
+    @Override
+    public void forEachSegment(SegmentProcedure procedure) {
+        Polygon pol = this.getPolygon();
+        Vector2 A = new Vector2(), B = new Vector2();
+        for (int i = 0; i < pol.getVertexCount(); i++) {
+            int j = i + 1;
+            if (j >= pol.getVertexCount()) j = 0;
+
+            A = pol.getVertex(i, A);
+            B = pol.getVertex(j, B);
+
+            procedure.forEach(
+                    A.x, A.y, //Coords of A
+                    B.x, B.y, //Coords of B
+                    0,0,0,0, //Polygon terrain static (for now)
+                    i, j, //Indices of A and B
+                    SegmentProcedure.CC_NORMAL //Polygon terrain is clockwise wound, so the normal vector to the vector A->B is rotated 90⁰ counterclockwise to A->B
+            );
+
+        }
+    }
+
+    @Override
+    public void forEachPoint(PointProcedure procedure) {
+        Polygon pol = this.getPolygon();
+        Vector2 A = new Vector2();
+        for (int i = 0; i < pol.getVertexCount(); i++) {
+
+            A = pol.getVertex(i, A);
+
+            procedure.forEach(
+                    i, //Index of A
+                    A.x, A.y, //Coords of A
+                    0,0 //Polygon terrain static (for now)
+            );
+
+        }
+    }
+
+    @Override
+    public Vector2 getPosAtIndex(float index, boolean exactPoint) {
+        int exactIdx = (int) (index + 0.5f);
+        Vector2 A = this.getPolygon().getVertex(exactIdx, new Vector2());
+        if (exactPoint) return A;
+
+        int nextIdx = exactIdx + 1;
+        if (nextIdx >= this.getPolygon().getVertexCount()) nextIdx = 0;
+        Vector2 B = this.getPolygon().getVertex(nextIdx, new Vector2());
+
+        float T = index - (float) exactIdx;
+
+        return MiscFunctions.interpolateLinearPath(A, B, T);
+    }
+
+    @Override
+    public Vector2 getVelAtIndex(float index, boolean exactPoint) {
+        return new Vector2(0,0);
+    }
 }

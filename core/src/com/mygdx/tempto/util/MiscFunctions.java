@@ -466,4 +466,29 @@ public class MiscFunctions {
     public static Polygon addPolygonBtoA(Polygon a, Polygon b) {
         return null;
     }
+
+    public static Vector2 projectAontoB(Vector2 a, Vector2 b) {
+        Vector2 bNorm = new Vector2(b).nor();
+        return bNorm.scl(a.dot(bNorm));
+    }
+
+    public static float tOnLinearPath(Vector2 start, Vector2 end, Vector2 position) {
+        return tOnLinearPath(start, end, position, false);
+    }
+    public static float tOnLinearPath(Vector2 start, Vector2 end, Vector2 position, boolean snapToPath) {
+        //Convert to coordinates relative to the start of the path
+        Vector2 posRel = new Vector2(position).sub(start);
+        Vector2 endRel = new Vector2(end).sub(start);
+        //If A can't be assumed to be already on the exact path from start to end, find the projection onto that path
+        if (snapToPath) posRel = projectAontoB(posRel, endRel);
+
+        //Divide the square lengths to take square root once instead of twice
+        return (float) Math.sqrt(posRel.len2() / endRel.len2());
+    }
+
+    /**Returns a point at the given T, linearly interpolated, between the given start and end points.*/
+    public static Vector2 interpolateLinearPath(Vector2 start, Vector2 end, float T) {
+        return new Vector2(end).sub(start).scl(T).add(start);
+    }
+
 }

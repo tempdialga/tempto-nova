@@ -21,6 +21,7 @@ import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonReader;
 import com.badlogic.gdx.utils.JsonValue;
@@ -34,8 +35,12 @@ import com.mygdx.tempto.editing.MapEditor;
 import com.mygdx.tempto.editing.TmxMapWriter;
 import com.mygdx.tempto.entity.Entity;
 import com.mygdx.tempto.entity.StaticTerrainElement;
+import com.mygdx.tempto.entity.TestPoint;
+import com.mygdx.tempto.entity.physics.Collidable;
 import com.mygdx.tempto.input.InputTranslator;
 import com.mygdx.tempto.rendering.RendersToScreen;
+import com.mygdx.tempto.rendering.RendersToWorld;
+import com.mygdx.tempto.util.MiscFunctions;
 import com.mygdx.tempto.view.GameScreen;
 
 import java.util.ArrayList;
@@ -55,8 +60,6 @@ public class WorldMap implements RendersToScreen {
     //Editing
     /**The GUI that edits the world*/
     MapEditor editor;
-    /**Whether the map is in edit mode or not. If true, the map will update with a time step of 0*/
-    boolean editing;
 
     //File loading and unloading
 
@@ -76,6 +79,11 @@ public class WorldMap implements RendersToScreen {
 
     /**ArrayList of all entities loaded in the map*/
     ArrayList<Entity> entities;
+    /**ArrayList of all terrain and other implementors of {@link Collidable} which entities can collide with*/
+    ArrayList<Collidable> collidables;
+
+    /**Gravitational acceleration, in in-game units (IGU) per second*/
+    static final float DEFAULT_GRAVITY = 10;
 
     //Rendering utilities:
 
@@ -115,6 +123,7 @@ public class WorldMap implements RendersToScreen {
         });
 
         this.entities = new ArrayList<>();
+        this.collidables = new ArrayList<>();
         this.debugRenderer = new ShapeRenderer();
         this.camera = new OrthographicCamera();
         this.mapDataFilePath = "data/maps/" + mapID + ".dat";//Where it would store persistent data
@@ -166,6 +175,8 @@ public class WorldMap implements RendersToScreen {
             }
         }
 
+        this.entities.add(new TestPoint(new Vector2(0,0), this));
+
         // Assign each entity to this world
         for (Entity entity : this.entities) {
             entity.setParentWorld(this);
@@ -202,10 +213,13 @@ public class WorldMap implements RendersToScreen {
      * @param deltaTime The time to step forward in the world (typically using the time since the last frame)*/
     public void update(float deltaTime) {
         // If in editing mode, freezes time
-        if (this.editing) deltaTime = 0;
+        if (this.isEditing()) deltaTime = 0;
 
         // Prompt any mouse movement, since apparently LibGDX isn't doing that properly for some reason
         this.worldInput.mouseMoved(Gdx.input.getX(), Gdx.input.getY());
+
+        // Update terrain
+        this.updateCollisionList();
 
         // Update every entity with the amount of time that has passed
         for (Entity entity : this.entities) {
@@ -275,6 +289,11 @@ public class WorldMap implements RendersToScreen {
         this.worldBatch.setProjectionMatrix(this.camera.combined);
         this.worldBatch.begin();
 
+        for (Entity entity : this.entities) {
+            if (entity instanceof RendersToWorld renderable) {
+                renderable.renderToWorld(this.worldBatch, this.camera);
+            }
+        }
         this.editor.renderToWorld(worldBatch, camera);
 
         this.worldBatch.end();
@@ -334,6 +353,8 @@ public class WorldMap implements RendersToScreen {
         this.writeToCoreFile();
     }
 
+    //// Other Utility ////
+
     public void dispose() {
         this.worldBatch.dispose();
         this.debugRenderer.dispose();
@@ -347,6 +368,9 @@ public class WorldMap implements RendersToScreen {
         this.worldViewport.update(newWidth, newHeight);
     }
 
+    public boolean isEditing() {
+        return this.editor.active;
+    }
     public void toggleEditing() {
         this.editor.active = !this.editor.active; //Toggle whether the editor is active
 //        if (this.editing) { // Switch back to normal gameplay
@@ -356,6 +380,11 @@ public class WorldMap implements RendersToScreen {
 //            this.worldInput.addProcessor(0, this.editor);
 //            this.editing = true;
 //        }
+    }
+
+    public Vector2 screenToWorldCoords(float screenX, float screenY) {
+        Vector3 mousePos = this.camera.unproject(new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0));//Find the world position they're looking at
+        return new Vector2(mousePos.x, mousePos.y);
     }
 
     //////// Getters n whatnot ///////////////////////////////////
@@ -402,7 +431,49 @@ public class WorldMap implements RendersToScreen {
         toAdd.setParentWorld(this);
     }
 
+    /**Finds the next available procedural ID around the given base, in the format '[mapID]_[base]_[number]'
+     * @param base The base of the ID, e.g. a terrain might try to assign ID's with the base 'terrain' */
+    public String nextAvailableProceduralID(String base) {
+        int IDNumber = 0; //Each id consists of some identifier + a number; to make an id first we need to see if any objects currently have ids using the same pre-number portion (and then go one number higher)
+
+        String baseID = this.getMapID() + "_" + base + "_"; // Identified as map + terrain + number
+
+        // TODO: do we want to check the entity layer, or the entire base file, instead?
+        for (Entity entity : this.getEntities()) {
+            String entityID = entity.getID(); //Check each entity's id:
+            if (entityID.startsWith(baseID) && entityID.length() > baseID.length()) { //If the first part of string matches (and there is a modifier)
+                String modifier = entityID.substring(baseID.length()); // Find the modifier (most likely an id number)
+                if (MiscFunctions.isInteger(modifier)) {
+                    int entityIDNum = Integer.parseInt(modifier);
+                    if (entityIDNum >= IDNumber) {
+                        IDNumber = entityIDNum + 1;
+                    }
+                }
+            }
+        }
+        String newID = baseID + IDNumber;
+        return newID;
+    }
+
     public void removeEntity(Entity toRemove) {
         this.entities.remove(toRemove);
+    }
+
+    public ArrayList<Collidable> getCollidables() {
+        return collidables;
+    }
+
+    /**Clears the current collidables list, and refills it from the list of entities.*/
+    public void updateCollisionList() {
+        this.collidables.clear();
+        for (Entity entity : this.entities) {
+            if (entity instanceof Collidable coll) {
+                this.collidables.add(coll);
+            }
+        }
+    }
+
+    public float getGravity() {
+        return DEFAULT_GRAVITY;
     }
 }
