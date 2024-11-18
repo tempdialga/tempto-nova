@@ -1,5 +1,6 @@
 package com.mygdx.tempto.entity.physics;
 
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 
 /**An interface for anything that entities can collide with, such as terrain.*/
@@ -29,6 +30,8 @@ public interface Collidable {
     default Vector2 getVelAtIndex(float index){
         return getVelAtIndex(index, false);
     }
+
+    Rectangle getBoundingRectangle();
 
 
 }

@@ -12,6 +12,7 @@ import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapImageLayer;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.math.Polygon;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonValue;
@@ -212,5 +213,10 @@ public class StaticTerrainElement implements Entity, SavesToFile, Collidable {
     @Override
     public Vector2 getVelAtIndex(float index, boolean exactPoint) {
         return new Vector2(0,0);
+    }
+
+    @Override
+    public Rectangle getBoundingRectangle() {
+        return this.getPolygon().getBoundingRectangle();
     }
 }

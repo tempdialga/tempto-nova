@@ -26,7 +26,7 @@ public class TestPoint implements Entity, RendersToWorld {
 
     public TestPoint(Vector2 pos, WorldMap parent) {
         this.setParentWorld(parent);
-        this.body = new BodyPoint(BodyPoint.POINT, 0, new Vector2(pos));
+        this.body = new BodyPoint(BodyPoint.CIRCLE, 2, new Vector2(pos));
         this.vel = new Vector2();
         parent.addWorldInput(new InputAdapter(){
             @Override
@@ -47,12 +47,34 @@ public class TestPoint implements Entity, RendersToWorld {
         this.vel.y -= world.getGravity()*deltaTime;
         this.body.applyVelocity(this.vel, deltaTime);
 
-        BodyPoint.PointOnSegmentCollision collision = this.body.findCollision(world.getCollidables());
+        BodyPoint.PointCollision collision = this.body.findCollision(world.getCollidables());
 
-        if (collision != null) {
-            this.body.getPos().set(collision.collisionPos());
-            this.vel.set(0,0);
+        int maxIterations = 1000;
+        int c = 0;
+
+        while (collision != null) {
+//            System.out.println("Collision at "+collision.collisionPos()+", going from "+this.body.getLastFramePos()+" to "+this.body.getPos());
+            Vector2 obstruction = new Vector2(collision.pointPos()).sub(this.body.getPos());
+            Vector2 normal = collision.normalToSurface();
+            Vector2 normalObstruction = MiscFunctions.projectAontoB(obstruction, normal);
+
+            this.body.getPos().add(normalObstruction);
+            this.body.getPos().add(normal.x*BodyPoint.DEFAULT_COLLISION_BUFFER, normal.y*BodyPoint.DEFAULT_COLLISION_BUFFER);
+
+            Vector2 normalVel = MiscFunctions.projectAontoB(this.vel, normal);
+
+            //Elastic collision
+            float restit_coeff = 0.9f;
+            this.vel.sub(normalVel.scl(2*restit_coeff));
+            collision = this.body.findCollision(world.getCollidables());
+
+            if (c++ > maxIterations) {
+                System.out.println(">"+maxIterations+" iterations to resolve collision");
+                break;
+            }
         }
+
+        this.body.endFrame();
     }
 
 
@@ -76,6 +98,8 @@ public class TestPoint implements Entity, RendersToWorld {
 
         }
         drawer.setColor(Color.WHITE);
-        drawer.filledCircle(this.body.getPos(), 2);
+        float radius = this.body.getRadius();
+        if (radius <= 0) radius = 2;
+        drawer.filledCircle(this.body.getPos(), radius);
     }
 }

@@ -83,7 +83,10 @@ public class WorldMap implements RendersToScreen {
     ArrayList<Collidable> collidables;
 
     /**Gravitational acceleration, in in-game units (IGU) per second*/
-    static final float DEFAULT_GRAVITY = 10;
+    static final float DEFAULT_GRAVITY = 45;
+
+    /**The maximum amount of time that a world can progress in a single timestep, in seconds*/
+    public static final float MAX_FRAME_TIME = 0.2f;
 
     //Rendering utilities:
 
@@ -212,6 +215,9 @@ public class WorldMap implements RendersToScreen {
     /**Updates the world by the given time increment.
      * @param deltaTime The time to step forward in the world (typically using the time since the last frame)*/
     public void update(float deltaTime) {
+        // Only allow time to progress a certain amount per frame at most
+        if (deltaTime > MAX_FRAME_TIME) deltaTime = MAX_FRAME_TIME;
+
         // If in editing mode, freezes time
         if (this.isEditing()) deltaTime = 0;
 

@@ -6,12 +6,11 @@ import com.badlogic.gdx.utils.Null;
 import com.mygdx.tempto.util.MiscFunctions;
 
 import java.util.ArrayList;
-import java.util.Vector;
 
 /**A physics utility class for colliding with */
 public class BodyPoint {
 
-    public static final float DEFAULT_COLLISION_BUFFER = 1f/16f;
+    public static final float DEFAULT_COLLISION_BUFFER = 1f/32f;
 
     public static final int POINT = 0;
     public static final int CIRCLE = 1;
@@ -53,11 +52,11 @@ public class BodyPoint {
 
 
 
-    /**Check's the given point's movement for, but does not apply, collisions with the given collidables. Instead, returns a record {@link PointOnSegmentCollision} of information about the first collision found.
+    /**Check's the given point's movement for, but does not apply, collisions with the given collidables. Instead, returns a record {@link PointCollision} of information about the first collision found.
      * If it would not collide with anything, returns null.
      * */
-    public PointOnSegmentCollision findCollision(ArrayList<Collidable> collidables) {
-        final PointOnSegmentCollision[] firstCollision = {null};
+    public PointCollision findCollision(ArrayList<Collidable> collidables) {
+        final PointCollision[] firstCollision = {null};
 
         Vector2 before = this.lastFramePos;
         Vector2 after = this.pos;
@@ -83,7 +82,88 @@ public class BodyPoint {
                                 float collIndex = ((float) indexA) + MiscFunctions.tOnLinearPath(new Vector2(ax, ay), new Vector2(bx, by), collisionPoint);
 
                                 if (firstCollision[0] == null || firstCollision[0].collisionT() > T) {
-                                    firstCollision[0] = new PointOnSegmentCollision(BodyPoint.this, coll, collIndex, T, collisionPoint);
+                                    Vector2 norm = new Vector2(bx, by).sub(ax, ay).nor().rotate90(normDirection);
+                                    Vector2 movement = new Vector2(after).sub(before);
+                                    if (normDirection == NO_NORMAL) {
+                                        //If no norm direction specified, go with the opposite of whatever direction the point is going
+                                        norm = MiscFunctions.projectAontoB(movement, norm).nor().scl(-1);
+                                    }
+
+                                    //Only log collision if movement is against normal
+                                    if (norm.dot(movement) < 0) {
+                                        firstCollision[0] = new PointCollision(BodyPoint.this, coll, collIndex, T, collisionPoint, collisionPoint, norm);
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+                case CIRCLE -> {
+                    coll.forEachSegment(new SegmentProcedure() {
+                        @Override
+                        public void forEach(float ax, float ay, float bx, float by, float av_x, float av_y, float bv_x, float bv_y, int indexA, int indexB, int normDirection) {
+                            Vector2 norm = new Vector2(bx, by).sub(ax, ay).nor().rotate90(normDirection);
+                            Vector2 movement = new Vector2(after).sub(before);
+                            if (normDirection == NO_NORMAL) {
+                                //If no norm direction specified, go with the opposite of whatever direction the point is going
+                                norm = MiscFunctions.projectAontoB(movement, norm).nor().scl(-1);
+                            }
+                            if (norm.dot(movement) >= 0) {
+                                //Only search for collisions going against the normal direction
+                                return;
+                            }
+
+                            Vector2 radius = new Vector2(norm).scl(-1*BodyPoint.this.radius);
+                            Vector2 closestBefore = new Vector2(beforeBuffered).add(radius);
+                            Vector2 closestAfter = new Vector2(after).add(radius);
+
+
+                            Vector2 contactPoint = new Vector2();
+                            if (Intersector.intersectSegments(
+                                    closestBefore.x, closestBefore.y,
+                                    closestAfter.x, closestAfter.y,
+                                    ax, ay,
+                                    bx, by,
+                                    contactPoint
+                            )) {
+                                float T = MiscFunctions.tOnLinearPath(closestBefore, closestAfter, contactPoint);
+                                float collIndex = ((float) indexA) + MiscFunctions.tOnLinearPath(new Vector2(ax, ay), new Vector2(bx, by), contactPoint);
+
+                                if (firstCollision[0] == null || firstCollision[0].collisionT() > T) {
+                                    firstCollision[0] = new PointCollision(BodyPoint.this, coll, collIndex, T, contactPoint, new Vector2(contactPoint.sub(radius)), norm);
+                                }
+                            }
+                        }
+                    });
+                    coll.forEachPoint(new PointProcedure() {
+                        @Override
+                        public void forEach(int index, float x, float y, float v_x, float v_y, Vector2... orthogonals) {
+
+                            if (Intersector.distanceSegmentPoint(
+                                    beforeBuffered.x, beforeBuffered.y,
+                                    after.x, after.y,
+                                    x, y
+                            ) < BodyPoint.this.radius) {
+                                //Find where it hits, in terms of perpendicular to and parallel to the path
+                                float perpToPath = Intersector.distanceLinePoint(
+                                        beforeBuffered.x, beforeBuffered.y,
+                                        after.x, after.y,
+                                        x,y
+                                );
+                                float paraToPath = (float) Math.sqrt(BodyPoint.this.radius*BodyPoint.this.radius - perpToPath*perpToPath);
+
+
+                                Vector2 pathDir = new Vector2(beforeBuffered).sub(after).nor(); //Pointing backwards
+                                int sideOfPath = Intersector.pointLineSide(beforeBuffered.x, beforeBuffered.y, after.x, after.y, x,y);
+                                Vector2 perpDir = new Vector2(pathDir).rotate90(sideOfPath);
+
+                                Vector2 radius = new Vector2(perpDir.scl(perpToPath)).add(pathDir.scl(paraToPath)); //Pointing away from contact
+
+                                Vector2 pointPos = new Vector2(x, y).add(radius);
+                                float T = MiscFunctions.tOnLinearPath(before, after, pointPos);
+
+                                if (firstCollision[0] == null || firstCollision[0].collisionT() > T) {
+                                    firstCollision[0] = new PointCollision(BodyPoint.this, coll, index, T, new Vector2(x, y), pointPos, radius.nor());
                                 }
                             }
                         }
@@ -109,10 +189,22 @@ public class BodyPoint {
         this.pos.add(vel.x*deltaTime, vel.y*deltaTime);
     }
 
-    /**A record storing information about a hypothetical collision between a point and target*/
-    public record PointOnSegmentCollision(BodyPoint point, Collidable target, float collisionIndex, float collisionT, Vector2 collisionPos) {}
+    /**A record storing information about a hypothetical collision between a point and segment target*/
+    public record PointCollision(BodyPoint point, Collidable target, float collisionIndex, float collisionT, Vector2 contactPos, Vector2 pointPos, Vector2 normalToSurface) {}
 
     public Vector2 getPos() {
         return pos;
+    }
+
+    public Vector2 getLastFramePos() {
+        return lastFramePos;
+    }
+
+    public int getShape() {
+        return shape;
+    }
+
+    public float getRadius() {
+        return radius;
     }
 }
