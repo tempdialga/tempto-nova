@@ -79,7 +79,6 @@ public class BodyPoint {
                                     collisionPoint
                             )) {
                                 float T = MiscFunctions.tOnLinearPath(before, after, collisionPoint);
-                                float collIndex = ((float) indexA) + MiscFunctions.tOnLinearPath(new Vector2(ax, ay), new Vector2(bx, by), collisionPoint);
 
                                 if (firstCollision[0] == null || firstCollision[0].collisionT() > T) {
                                     Vector2 norm = new Vector2(bx, by).sub(ax, ay).nor().rotate90(normDirection);
@@ -91,7 +90,15 @@ public class BodyPoint {
 
                                     //Only log collision if movement is against normal
                                     if (norm.dot(movement) < 0) {
-                                        firstCollision[0] = new PointCollision(BodyPoint.this, coll, collIndex, T, collisionPoint, collisionPoint, norm);
+                                        float tAtoB = MiscFunctions.tOnLinearPath(new Vector2(ax, ay), new Vector2(bx, by), collisionPoint);
+                                        float collIndex = ((float) indexA) + tAtoB;
+
+                                        Vector2 contactVel = new Vector2(
+                                                av_x*(1-tAtoB) + bv_x*tAtoB,
+                                                av_y*(1-tAtoB) + bv_y*tAtoB
+                                        );
+
+                                        firstCollision[0] = new PointCollision(BodyPoint.this, coll, collIndex, T, collisionPoint, contactVel, collisionPoint, norm);
                                     }
                                 }
                             }
@@ -127,10 +134,16 @@ public class BodyPoint {
                                     contactPoint
                             )) {
                                 float T = MiscFunctions.tOnLinearPath(closestBefore, closestAfter, contactPoint);
-                                float collIndex = ((float) indexA) + MiscFunctions.tOnLinearPath(new Vector2(ax, ay), new Vector2(bx, by), contactPoint);
 
                                 if (firstCollision[0] == null || firstCollision[0].collisionT() > T) {
-                                    firstCollision[0] = new PointCollision(BodyPoint.this, coll, collIndex, T, contactPoint, new Vector2(contactPoint.sub(radius)), norm);
+                                    float tAtoB = MiscFunctions.tOnLinearPath(new Vector2(ax, ay), new Vector2(bx, by), contactPoint);
+                                    float collIndex = ((float) indexA) + tAtoB;
+                                    Vector2 contactVel = new Vector2(
+                                            av_x*(1-tAtoB) + bv_x*tAtoB,
+                                            av_y*(1-tAtoB) + bv_y*tAtoB
+                                    );
+
+                                    firstCollision[0] = new PointCollision(BodyPoint.this, coll, collIndex, T, contactPoint, contactVel, new Vector2(contactPoint.sub(radius)), norm);
                                 }
                             }
                         }
@@ -163,7 +176,7 @@ public class BodyPoint {
                                 float T = MiscFunctions.tOnLinearPath(before, after, pointPos);
 
                                 if (firstCollision[0] == null || firstCollision[0].collisionT() > T) {
-                                    firstCollision[0] = new PointCollision(BodyPoint.this, coll, index, T, new Vector2(x, y), pointPos, radius.nor());
+                                    firstCollision[0] = new PointCollision(BodyPoint.this, coll, index, T, new Vector2(x, y), new Vector2(v_x, v_y), pointPos, radius.nor());
                                 }
                             }
                         }
@@ -190,7 +203,7 @@ public class BodyPoint {
     }
 
     /**A record storing information about a hypothetical collision between a point and segment target*/
-    public record PointCollision(BodyPoint point, Collidable target, float collisionIndex, float collisionT, Vector2 contactPos, Vector2 pointPos, Vector2 normalToSurface) {}
+    public record PointCollision(BodyPoint point, Collidable target, float collisionIndex, float collisionT, Vector2 contactPos, Vector2 contactCollision, Vector2 pointPos, Vector2 normalToSurface) {}
 
     public Vector2 getPos() {
         return pos;

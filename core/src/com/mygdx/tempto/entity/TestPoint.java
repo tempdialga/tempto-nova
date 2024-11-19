@@ -49,6 +49,7 @@ public class TestPoint implements Entity, RendersToWorld {
 
         BodyPoint.PointCollision collision = this.body.findCollision(world.getCollidables());
 
+        int maxSlipIterations = 20;
         int maxIterations = 1000;
         int c = 0;
 
@@ -56,18 +57,28 @@ public class TestPoint implements Entity, RendersToWorld {
 //            System.out.println("Collision at "+collision.collisionPos()+", going from "+this.body.getLastFramePos()+" to "+this.body.getPos());
             Vector2 obstruction = new Vector2(collision.pointPos()).sub(this.body.getPos());
             Vector2 normal = collision.normalToSurface();
-            Vector2 normalObstruction = MiscFunctions.projectAontoB(obstruction, normal);
 
-            this.body.getPos().add(normalObstruction);
-            this.body.getPos().add(normal.x*BodyPoint.DEFAULT_COLLISION_BUFFER, normal.y*BodyPoint.DEFAULT_COLLISION_BUFFER);
+            if (c < maxSlipIterations) {
+                Vector2 normalObstruction = MiscFunctions.projectAontoB(obstruction, normal);
+                this.body.getPos().add(normalObstruction);
+                this.body.getPos().add(normal.x*BodyPoint.DEFAULT_COLLISION_BUFFER, normal.y*BodyPoint.DEFAULT_COLLISION_BUFFER);
+            } else {
+                this.body.getPos().add(obstruction);
+            }
+
+
 
             Vector2 normalVel = MiscFunctions.projectAontoB(this.vel, normal);
 
             //Elastic collision
             float restit_coeff = 0.9f;
             this.vel.sub(normalVel.scl(2*restit_coeff));
-            collision = this.body.findCollision(world.getCollidables());
 
+
+            collision = this.body.findCollision(world.getCollidables());
+            if (c > maxSlipIterations && c < maxSlipIterations+10) {
+                System.out.println(c+" iterations needed, more than allowed for slipping");
+            }
             if (c++ > maxIterations) {
                 System.out.println(">"+maxIterations+" iterations to resolve collision");
                 break;
