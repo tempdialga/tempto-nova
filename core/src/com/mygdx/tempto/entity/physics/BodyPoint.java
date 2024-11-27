@@ -51,7 +51,6 @@ public class BodyPoint {
 
 
 
-
     /**Check's the given point's movement for, but does not apply, collisions with the given collidables. Instead, returns a record {@link PointCollision} of information about the first collision found.
      * If it would not collide with anything, returns null.
      * */
@@ -69,7 +68,7 @@ public class BodyPoint {
                 case POINT -> {
                     coll.forEachSegment(new SegmentProcedure() {
                         @Override
-                        public void forEach(float ax, float ay, float bx, float by, float av_x, float av_y, float bv_x, float bv_y, int indexA, int indexB, int normDirection) {
+                        public void actOnSegment(float ax, float ay, float bx, float by, float av_x, float av_y, float bv_x, float bv_y, int indexA, int indexB, int normDirection) {
                             Vector2 collisionPoint = new Vector2();
                             if (Intersector.intersectSegments(
                                     beforeBuffered.x, beforeBuffered.y,
@@ -108,7 +107,7 @@ public class BodyPoint {
                 case CIRCLE -> {
                     coll.forEachSegment(new SegmentProcedure() {
                         @Override
-                        public void forEach(float ax, float ay, float bx, float by, float av_x, float av_y, float bv_x, float bv_y, int indexA, int indexB, int normDirection) {
+                        public void actOnSegment(float ax, float ay, float bx, float by, float av_x, float av_y, float bv_x, float bv_y, int indexA, int indexB, int normDirection) {
                             Vector2 norm = new Vector2(bx, by).sub(ax, ay).nor().rotate90(normDirection);
                             Vector2 movement = new Vector2(after).sub(before);
                             if (normDirection == NO_NORMAL) {
@@ -122,6 +121,7 @@ public class BodyPoint {
 
                             Vector2 radius = new Vector2(norm).scl(-1*BodyPoint.this.radius);
                             Vector2 closestBefore = new Vector2(beforeBuffered).add(radius);
+                            Vector2 farthestBefore = new Vector2(beforeBuffered).sub(radius);
                             Vector2 closestAfter = new Vector2(after).add(radius);
 
 
@@ -186,6 +186,64 @@ public class BodyPoint {
         }
 
         return firstCollision[0];
+    }
+
+    /**Checks for any overlaps between a volumetric point's static position and any collidables, and moves the point to avoid them.
+     * Only checks points of shape {@link #CIRCLE} and other volumetric shapes, and only against surfaces with a normal direction.
+     * Intended to be called after modifying the point's pos with {@link #findCollision(ArrayList)}
+     *
+     * @param collidables The list of collidables to check for overlap with
+     * @param maxIterations The maximum number of iterations to check for overlap (i.e. if it's caught between two surfaces)*/
+
+    public void resolveOverlap(ArrayList<Collidable> collidables, int maxIterations) {
+        if (this.shape != CIRCLE) return;
+
+        Vector2 pos = this.pos;
+        float rad = this.radius;
+
+        final boolean[] foundOverlap = {true};
+        int numIterations = 0;
+        while (foundOverlap[0]) {
+            foundOverlap[0] = false;
+
+            for (Collidable coll : collidables) {
+                coll.forEachSegment(new SegmentProcedure() {
+                    @Override
+                    public void actOnSegment(float ax, float ay, float bx, float by, float av_x, float av_y, float bv_x, float bv_y, int indexA, int indexB, int normalDirection) {
+                        //Only screen for overlap facing the normal direction
+                        if (Intersector.pointLineSide(ax, ay, bx, by, pos.x, pos.y) != normalDirection) return;
+
+                        Vector2 nearestToPoint = Intersector.nearestSegmentPoint(
+                                ax, ay,
+                                bx, by,
+                                pos.x, pos.y,
+                                new Vector2()
+                        );
+
+                        Vector2 segToPos = new Vector2(pos).sub(nearestToPoint);
+                        float dist = segToPos.len();
+
+                        //If point is closer than allowed, move it the rest of the required distance
+                        if (dist < rad) {
+                            segToPos.nor().scl(rad - dist + DEFAULT_COLLISION_BUFFER);
+                            pos.add(segToPos);
+                            foundOverlap[0] = true;
+                        }
+                    }
+                });
+            }
+
+            numIterations++;
+            if (numIterations > maxIterations) break;
+        }
+    }
+
+    /**Checks for any overlaps between a volumetric point's static position and any collidables, and moves the point to avoid them.
+     * Only checks points of shape {@link #CIRCLE} and other volumetric shapes, and only against surfaces with a normal direction.
+     * Intended to be called after {@link #findCollision(ArrayList)}*/
+
+    public void resolveOverlap(ArrayList<Collidable> collidables) {
+        this.resolveOverlap(collidables, 100);
     }
 
     /**Ends the frame by resetting {@link #lastFramePos} to the current {@link #pos} value*/

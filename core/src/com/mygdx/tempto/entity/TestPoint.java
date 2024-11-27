@@ -85,7 +85,9 @@ public class TestPoint implements Entity, RendersToWorld {
             }
         }
 
+        this.body.resolveOverlap(world.getCollidables());
         this.body.endFrame();
+
     }
 
 

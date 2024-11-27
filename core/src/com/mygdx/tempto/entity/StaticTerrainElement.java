@@ -1,10 +1,7 @@
 package com.mygdx.tempto.entity;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.maps.Map;
 import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapProperties;
 import com.badlogic.gdx.maps.objects.PolygonMapObject;
@@ -14,7 +11,6 @@ import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonValue;
 import com.badlogic.gdx.utils.Null;
 import com.mygdx.tempto.data.SavesToFile;
@@ -24,8 +20,6 @@ import com.mygdx.tempto.entity.physics.SegmentProcedure;
 import com.mygdx.tempto.input.InputTranslator;
 import com.mygdx.tempto.maps.WorldMap;
 import com.mygdx.tempto.util.MiscFunctions;
-
-import org.eclipse.collections.api.map.MapIterable;
 
 public class StaticTerrainElement implements Entity, SavesToFile, Collidable {
 
@@ -167,7 +161,7 @@ public class StaticTerrainElement implements Entity, SavesToFile, Collidable {
             A = pol.getVertex(i, A);
             B = pol.getVertex(j, B);
 
-            procedure.forEach(
+            procedure.actOnSegment(
                     A.x, A.y, //Coords of A
                     B.x, B.y, //Coords of B
                     0,0,0,0, //Polygon terrain static (for now)
