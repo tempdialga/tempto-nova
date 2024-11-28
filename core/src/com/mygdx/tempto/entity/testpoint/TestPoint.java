@@ -1,19 +1,24 @@
-package com.mygdx.tempto.entity;
+package com.mygdx.tempto.entity.testpoint;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
+import com.mygdx.tempto.entity.Entity;
 import com.mygdx.tempto.entity.physics.BodyPoint;
+import com.mygdx.tempto.entity.pose.Posable;
+import com.mygdx.tempto.entity.pose.Pose;
 import com.mygdx.tempto.maps.WorldMap;
 import com.mygdx.tempto.rendering.RendersToWorld;
 import com.mygdx.tempto.util.MiscFunctions;
 
 import space.earlygrey.shapedrawer.ShapeDrawer;
 
-public class TestPoint implements Entity, RendersToWorld {
+public class TestPoint implements Entity, RendersToWorld, Posable {
 
     public static ShapeDrawer drawer;
 
@@ -23,6 +28,7 @@ public class TestPoint implements Entity, RendersToWorld {
     protected Vector2 vel;
     protected WorldMap parent;
     protected String ID;
+    protected Pose currentPose;
 
     public TestPoint(Vector2 pos, WorldMap parent) {
         this.setParentWorld(parent);
@@ -33,10 +39,21 @@ public class TestPoint implements Entity, RendersToWorld {
             public boolean touchDown(int screenX, int screenY, int pointer, int button) {
                 if (TestPoint.this.parent.isEditing()) return false;
 
-                Vector2 clickPos = TestPoint.this.parent.screenToWorldCoords(screenX, screenY);
-                TestPoint.this.vel.set(0,0);
-                TestPoint.this.body.getPos().set(clickPos);
-                TestPoint.this.body.endFrame();
+                if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+                    Vector2 clickPos = TestPoint.this.parent.screenToWorldCoords(screenX, screenY);
+                    TestPoint.this.currentPose = new GlideToPoint(
+                            TestPoint.this,
+                            new Vector2(TestPoint.this.body.getPos()),
+                            clickPos,
+                            5
+                    );
+                } else {
+                    TestPoint.this.currentPose = null;
+                    Vector2 clickPos = TestPoint.this.parent.screenToWorldCoords(screenX, screenY);
+                    TestPoint.this.vel.set(0, 0);
+                    TestPoint.this.body.getPos().set(clickPos);
+                    TestPoint.this.body.endFrame();
+                }
                 return true;
             }
         });
@@ -44,8 +61,24 @@ public class TestPoint implements Entity, RendersToWorld {
 
     @Override
     public void update(float deltaTime, WorldMap world) {
-        this.vel.y -= world.getGravity()*deltaTime;
-        this.body.applyVelocity(this.vel, deltaTime);
+        if (this.currentPose instanceof GlideToPoint glide) {
+//            Vector2 before = glide.getOutputPoint(GlideToPoint.MOVING_FOOT_OUTPUT);
+            this.currentPose.update(deltaTime);
+            Vector2 after = glide.getOutputPoint(GlideToPoint.MOVING_FOOT_OUTPUT);
+            this.body.getPos().set(after);
+            this.vel.set(glide.getVel());
+
+            if (glide.getT() >= 1) {
+                if (glide.isReversed()) {
+                    this.currentPose = null;
+                } else {
+                    glide.reverse();
+                }
+            }
+        } else {
+            this.vel.y -= world.getGravity() * deltaTime;
+            this.body.applyVelocity(this.vel, deltaTime);
+        }
 
         BodyPoint.PointCollision collision = this.body.findCollision(world.getCollidables());
 

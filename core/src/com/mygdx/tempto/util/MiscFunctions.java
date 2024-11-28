@@ -19,6 +19,10 @@ public class MiscFunctions {
         return Math.max(Math.min(value, max), min);
     }
 
+    public static float clamp(float value, float min, float max) {
+        return Math.max(Math.min(value, max), min);
+    }
+
     /**Returns if the given string represents an integer value*/
     public static boolean isInteger(String str) {
         if (str == null) return false; //Can't be an integer if there's nothing
