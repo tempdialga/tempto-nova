@@ -12,7 +12,7 @@ public class TemptoNova extends Game {
 	//////// General Game Constants /////////
 
 	/**Width and height of the game shown on screen. Not necessarily the dimensions of the window; they will be expanded and letterboxed to fit the window it is displayed in.*/
-	public static final int PIXEL_GAME_WIDTH = 520, PIXEL_GAME_HEIGHT = 200;
+	public static final int PIXEL_GAME_WIDTH = 640, PIXEL_GAME_HEIGHT = 360;
 	/**The intended ratio between width and height of the primary game window. Used for things like rendering GUIs*/
 	public static final float ASPECT_RATIO = PIXEL_GAME_WIDTH/((float) PIXEL_GAME_HEIGHT);
 
