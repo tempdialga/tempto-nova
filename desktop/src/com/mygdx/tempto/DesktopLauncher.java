@@ -9,7 +9,8 @@ public class DesktopLauncher {
 	public static void main (String[] arg) {
 		Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
 		config.setForegroundFPS(60);
-		config.setTitle("Tempto Nova");
+		config.setWindowedMode(TemptoNova.PIXEL_GAME_WIDTH*2, TemptoNova.PIXEL_GAME_HEIGHT*2);
+		config.setTitle("TemptoNova");
 		new Lwjgl3Application(new TemptoNova(), config);
 	}
 }

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--  Comment that should be overwritten-->
+<map version="1.9" tiledversion="1.9.2" renderorder="right-down" infinite="0" orientation="orthogonal" hexsidelength="0" tileheight="16" height="60" tilewidth="16" width="60">
+	<objectgroup id="1" name="Terrain">
+		<object id="0" x="100.0" y="453.0">
+			<properties>
+				<property name="height" value="0.0"/>
+				<property name="id" value="lt_terrain_2"/>
+				<property name="width" value="0.0"/>
+			</properties>
+			<polygon points="0.0,0.0 60.0,3.0 78.0,51.0 176.0,52.0 183.0,99.0 -15.0,103.0"/>
+		</object>
+		<object id="1" x="342.0" y="541.0">
+			<properties>
+				<property name="height" value="0.0"/>
+				<property name="id" value="lt_terrain_3"/>
+				<property name="width" value="0.0"/>
+			</properties>
+			<polygon points="0.0,0.0 47.0,-11.0 78.0,33.0 133.0,20.0 177.0,-196.0 268.0,-125.0 154.0,131.0 -17.0,65.0"/>
+		</object>
+		<object id="2" x="260.5" y="222.0">
+			<properties>
+				<property name="height" value="0.0"/>
+				<property name="id" value="lt_terrain_1"/>
+				<property name="width" value="0.0"/>
+			</properties>
+			<polygon points="22.0,-20.0 -17.1667,42.6667 -156.0,34.0 -119.0,-82.0 273.0,-65.0 273.0,35.0"/>
+		</object>
+	</objectgroup>
+</map>
