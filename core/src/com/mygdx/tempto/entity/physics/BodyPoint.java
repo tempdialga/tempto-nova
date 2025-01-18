@@ -261,7 +261,7 @@ public class BodyPoint {
     }
 
     /**A record storing information about a hypothetical collision between a point and segment target*/
-    public record PointCollision(BodyPoint point, Collidable target, float collisionIndex, float collisionT, Vector2 contactPos, Vector2 contactCollision, Vector2 pointPos, Vector2 normalToSurface) {}
+    public record PointCollision(BodyPoint point, Collidable target, float collisionIndex, float collisionT, Vector2 contactPos, Vector2 contactVel, Vector2 pointPos, Vector2 normalToSurface) {}
 
     public Vector2 getPos() {
         return pos;

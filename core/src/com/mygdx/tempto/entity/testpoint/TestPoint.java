@@ -20,8 +20,6 @@ import space.earlygrey.shapedrawer.ShapeDrawer;
 
 public class TestPoint implements Entity, RendersToWorld, Posable {
 
-    public static ShapeDrawer drawer;
-
     public static final String TEST_POINT_ID_BASE = "testPoint";
 
     protected BodyPoint body;
@@ -138,11 +136,7 @@ public class TestPoint implements Entity, RendersToWorld, Posable {
 
     @Override
     public void renderToWorld(SpriteBatch batch, OrthographicCamera worldCamera) {
-        if (drawer == null) {
-            drawer = new ShapeDrawer(batch);
-            drawer.setTextureRegion(new TextureRegion(this.parent.blankTexture));
-
-        }
+        ShapeDrawer drawer = this.parent.shapeDrawer;
         drawer.setColor(Color.WHITE);
         float radius = this.body.getRadius();
         if (radius <= 0) radius = 2;

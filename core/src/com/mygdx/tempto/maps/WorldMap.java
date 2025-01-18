@@ -12,6 +12,7 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapObject;
@@ -34,6 +35,7 @@ import com.mygdx.tempto.editing.MapEditor;
 import com.mygdx.tempto.editing.TmxMapWriter;
 import com.mygdx.tempto.entity.Entity;
 import com.mygdx.tempto.entity.StaticTerrainElement;
+import com.mygdx.tempto.entity.player.Player;
 import com.mygdx.tempto.entity.testpoint.TestPoint;
 import com.mygdx.tempto.entity.physics.Collidable;
 import com.mygdx.tempto.input.InputTranslator;
@@ -44,6 +46,8 @@ import com.mygdx.tempto.view.GameScreen;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+
+import space.earlygrey.shapedrawer.ShapeDrawer;
 
 public class WorldMap implements RendersToScreen {
 
@@ -92,6 +96,7 @@ public class WorldMap implements RendersToScreen {
     FitViewport worldViewport;
     OrthographicCamera camera;
     SpriteBatch worldBatch;
+    public ShapeDrawer shapeDrawer;
     public Texture blankTexture = new Texture("blank.png");
 
     //Debugging utilities:
@@ -178,6 +183,7 @@ public class WorldMap implements RendersToScreen {
         }
 
         this.entities.add(new TestPoint(new Vector2(0,0), this));
+        this.entities.add(new Player(new Vector2(), this));
 
         // Assign each entity to this world
         for (Entity entity : this.entities) {
@@ -196,6 +202,10 @@ public class WorldMap implements RendersToScreen {
 
         // Create a spritebatch (also mostly for testing things)
         this.worldBatch = new SpriteBatch();
+
+        // Create a centralized shape renderer to use for stuff
+        this.shapeDrawer = new ShapeDrawer(this.worldBatch);
+        this.shapeDrawer.setTextureRegion(new TextureRegion(this.blankTexture));
 
         //Create a debug texture for testing things
         this.debugTexture = new Texture("badlogic.jpg");
