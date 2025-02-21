@@ -9,6 +9,8 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector2;
 import com.mygdx.tempto.entity.Entity;
 import com.mygdx.tempto.entity.physics.BodyPoint;
+import com.mygdx.tempto.entity.pose.Pose;
+import com.mygdx.tempto.entity.pose.PoseCatalog;
 import com.mygdx.tempto.maps.WorldMap;
 import com.mygdx.tempto.rendering.RendersToWorld;
 
@@ -46,6 +48,7 @@ public class Player extends InputAdapter implements Entity, RendersToWorld {
         this.primaryContact = new BodyPoint(BodyPoint.CIRCLE, FOOT_RADIUS, new Vector2(centerPos).sub(0, LEG_LENGTH));
         this.overallVel = new Vector2();
         this.setParentWorld(parent);
+        PoseCatalog.PLAYER_STAND.writeToFile();
     }
 
     /***/
