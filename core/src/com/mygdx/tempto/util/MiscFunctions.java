@@ -8,6 +8,8 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.FloatArray;
 import com.badlogic.gdx.utils.IntArray;
 
+import org.ejml.simple.SimpleMatrix;
+
 import java.util.ArrayList;
 import java.util.Vector;
 
@@ -493,6 +495,25 @@ public class MiscFunctions {
     /**Returns a point at the given T, linearly interpolated, between the given start and end points.*/
     public static Vector2 interpolateLinearPath(Vector2 start, Vector2 end, float T) {
         return new Vector2(end).sub(start).scl(T).add(start);
+    }
+
+    /**Concatenates LibGDX {@link Vector2} instances into a column {@link org.ejml.simple.SimpleMatrix}, optionally with a 1 added at the end.*/
+    public static SimpleMatrix concatVector2sColumn(Vector2[] vectors, boolean add1Entry) {
+        int columnLength = vectors.length*2 + (add1Entry ? 1 : 0);
+
+        SimpleMatrix columnVec = SimpleMatrix.filled(columnLength, 1, 0);
+        for (int i = 0; i < vectors.length; i++) {
+            Vector2 vec = vectors[i];
+            columnVec.set(i*2, 0, vec.x);
+            columnVec.set(i*2+1, 0, vec.y);
+        }
+        if (add1Entry) columnVec.set(columnLength-1, 0, 1);
+
+        return columnVec;
+    }
+
+    public static SimpleMatrix concatVector2sColumn(Vector2[] vectors) {
+        return concatVector2sColumn(vectors, false);
     }
 
 }
