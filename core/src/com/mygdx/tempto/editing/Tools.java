@@ -1,9 +1,11 @@
 package com.mygdx.tempto.editing;
 
+import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.maps.MapObject;
@@ -18,6 +20,7 @@ import com.badlogic.gdx.utils.FloatArray;
 import com.badlogic.gdx.utils.IntArray;
 import com.mygdx.tempto.entity.Entity;
 import com.mygdx.tempto.entity.StaticTerrainElement;
+import com.mygdx.tempto.entity.pose.PoseCatalog;
 import com.mygdx.tempto.input.InputTranslator;
 import com.mygdx.tempto.maps.WorldMap;
 import com.mygdx.tempto.util.MiscFunctions;
@@ -987,6 +990,114 @@ public enum Tools {
             //Draw the brush
             this.shapeDrawer.polygon(this.brush, lineWidth);
 
+
+        }
+    }),
+    EDIT_POSE(new MapEditingTool() {
+
+        PoseCatalog[] catalogPoses = PoseCatalog.values();
+        BitmapFont sidebarFont = new BitmapFont();
+        float lineHeight = 0.1f;
+        float linePaddingLeft = 0.05f;
+        float linePaddingVert = 0.02f;
+        float currentOffset = 0f;
+
+        int currentPoseIdx = 0;
+        PoseCatalog currentPose = this.catalogPoses[currentPoseIdx];
+        int currentCase = 0; //Which case of the current pose is currently being edited
+
+        @Override
+        public void touchDown(int screenX, int screenY, int pointer, int button, OrthographicCamera worldCam) {
+
+        }
+
+        @Override
+        public void touchUp(int screenX, int screenY, int pointer, int button, OrthographicCamera worldCam) {
+
+        }
+
+        private void updatePose() {
+            PoseCatalog nextPose = this.catalogPoses[this.currentPoseIdx];
+            if (this.currentPose != nextPose) {
+                this.currentCase = 0;
+                this.currentPose = nextPose;
+            }
+        }
+
+        @Override
+        public void buttonDown(int gameInput) {
+            if (gameInput == InputTranslator.GameInputs.PAUSE) {
+                this.switchToTool(Tools.SELECT_VERTICES.toolInstance);
+            } else if (gameInput == InputTranslator.GameInputs.NEXT_TAB) {
+                if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+                    this.currentPoseIdx--;
+                    if (this.currentPoseIdx < 0) this.currentPoseIdx = this.catalogPoses.length-1;
+                } else {
+                    this.currentPoseIdx++;
+                    if (this.currentPoseIdx >= this.catalogPoses.length) this.currentPoseIdx = 0;
+                }
+                this.currentPose = this.catalogPoses[this.currentPoseIdx];
+            } else if (gameInput == InputTranslator.GameInputs.DOWN) {
+                this.currentCase++;
+                if (this.currentCase >= this.currentPose.getNumCases()) this.currentCase = 0;
+            } else if (gameInput == InputTranslator.GameInputs.UP) {
+                this.currentCase--;
+                if (this.currentCase < 0) this.currentCase = this.currentPose.getNumCases()-1;
+            }
+        }
+
+        @Override
+        public void buttonUp(int gameInput) {
+
+        }
+
+        @Override
+        public void touchDragged(int screenX, int screenY, int pointer, OrthographicCamera worldCam) {
+
+        }
+
+        @Override
+        public void mouseMoved(int screenX, int screenY, OrthographicCamera worldCam) {
+
+        }
+
+        @Override
+        public void activate() {
+
+        }
+
+        @Override
+        public void renderToScreen(SpriteBatch batch, OrthographicCamera screenCamera, float aspectRatio) {
+            this.sidebarFont.setColor(Color.WHITE);
+            this.sidebarFont.setUseIntegerPositions(false);
+            this.sidebarFont.getData().setScale(this.lineHeight * this.sidebarFont.getScaleY() / this.sidebarFont.getLineHeight()); //Scale by ratio between desired and actual height
+
+            float startHeight = 0.5f;
+            for (int i = 0; i < this.catalogPoses.length; i++) {
+                PoseCatalog pose = this.catalogPoses[i];
+                String display = pose.name();
+
+                float x = -1 * aspectRatio + this.linePaddingLeft;
+                float y = 1 - startHeight - (this.lineHeight+this.linePaddingVert)*i;
+
+                if (i == this.currentPoseIdx) {
+                    x += this.linePaddingLeft;
+                }
+
+                this.sidebarFont.draw(batch, display, x, y);
+            }
+
+            for (int i = 0; i < this.currentPose.getNumCases(); i++) {
+                float x = 1*aspectRatio - this.linePaddingLeft - linePaddingVert;
+                if (i == this.currentCase) x -= linePaddingVert;
+                float y = 1 - startHeight - (this.lineHeight+this.linePaddingVert)*i;
+
+                this.sidebarFont.draw(batch, i+"", x, y);
+            }
+        }
+
+        @Override
+        public void renderToWorld(SpriteBatch batch, OrthographicCamera worldCamera) {
 
         }
     }),

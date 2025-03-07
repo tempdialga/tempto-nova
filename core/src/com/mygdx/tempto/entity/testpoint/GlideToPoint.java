@@ -24,7 +24,7 @@ public class GlideToPoint extends Pose {
     protected float T;
 
     private boolean reversed;
-    public GlideToPoint(Posable subject, Vector2 start, Vector2 end, float speed) {
+    public GlideToPoint(Vector2 start, Vector2 end, float speed) {
         super(Map.of(MOVING_FOOT_START, start, MOVING_FOOT_END, end));
         this.assertKeysPresent(MOVING_FOOT_START, MOVING_FOOT_END);
 

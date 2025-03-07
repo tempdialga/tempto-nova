@@ -83,6 +83,8 @@ public class MapEditor implements InputProcessor, RendersToScreen, RendersToWorl
             } else { // Undo
                 this.editStack.undo();
             }
+        } else if (keycode == InputTranslator.GameInputs.POSE) {
+            this.currentTool.switchToTool(Tools.EDIT_POSE.toolInstance);
         } else {
             this.currentTool.buttonDown(keycode);
         }

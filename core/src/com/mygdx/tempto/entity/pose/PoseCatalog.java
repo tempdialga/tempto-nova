@@ -6,18 +6,20 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonValue;
 import com.badlogic.gdx.utils.JsonWriter;
+import com.mygdx.tempto.entity.player.Player;
 
 import org.ejml.simple.SimpleMatrix;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Vector;
 
 /**An enum of file information, each corresponding to data about a pose. Includes methods to read and write to those files.*/
 public enum PoseCatalog {
 
     PLAYER_STAND("player/stand.json", new String[]{"front_foot"}, new String[]{"hip"}),
+    PLAYER_STAND2("player/stand2.json", new String[]{"front_foot"}, new String[]{"hip"}),
 
     ;
     /**Constants for reading the file*/
@@ -37,9 +39,11 @@ public enum PoseCatalog {
     private SimpleMatrix outputSpace = new SimpleMatrix(1,1);
     /**The number of cases required to fully describe this pose, equivalent to n+1, where n is the number of independent variables in the input. For a pose with 1 vector2 input (2 variables, x and y), 3 cases are required, for a ose with 2 vector2s, 5 cases, etc.*/
     private int numCases;
-
-
-    PoseCatalog(String subPath, String[] inputIDs, String[] outputIDs) {
+    /**A/The {@link Posable} this pose is associated with, if any. E.g. a secondary instance of {@link Player} the editor created to edit player poses. Used in the editor to do things like place constraints or generate default points*/
+    private Posable targetPosable;
+    /**Any constraints on the points (purely used for editing), e.g. that when editing an example case, you can't drag the foot farther than leg_length from the hip*/
+    private ArrayList<PoseConstraint> constraints;
+    PoseCatalog(String subPath, String[] inputIDs, String[] outputIDs, Posable target) {
         this.filepath = BASE_FILEPATH + subPath;
         HashMap<String, Vector2[]> inputPoints = new HashMap<>();
         for (String inputID : inputIDs) inputPoints.put(inputID, new Vector2[]{});
@@ -49,12 +53,21 @@ public enum PoseCatalog {
         this.outputIDs = outputIDs;
         this.inputOutputData = new LinearPoseData(inputPoints, outputPoints);
         this.numCases = inputIDs.length*2 + 1;//TODO: This would need to change if more than Vector2 cases are considered
+        this.targetPosable = target;
 
         this.loadFileData();
         this.generateSpaceMatricesFromLinearPoseData();
         this.updateLinearPoseDataFromSpaceMatrices();
         System.out.println(this.inputSpace.toString());
         System.out.println(this.outputSpace.toString());
+
+
+    }
+
+
+
+    PoseCatalog(String subPath, String[] inputIDs, String[] outputIDs) {
+        this(subPath, inputIDs, outputIDs, null);
     }
 
     /**Loads pose data from the corresponding file.
@@ -102,42 +115,6 @@ public enum PoseCatalog {
 
     /**Converts input and output vectors into the matrices representing the input and output spaces. TODO: refactor to be a little simpler to understand, likely by just generating the matrices here and filling them item by item*/
     public void generateSpaceMatricesFromLinearPoseData() {
-//        SimpleMatrix[] inputColumns = new SimpleMatrix[this.numCases];
-//        SimpleMatrix[] outputColumns = new SimpleMatrix[this.numCases];
-//
-//        for (int case_idx = 0; case_idx < this.numCases; case_idx++) {
-//            Vector2[] caseInputVectors = new Vector2[this.inputIDs.length];
-//            Vector2[] caseOutputVectors = new Vector2[this.outputIDs.length];
-//            for (int input_idx = 0; input_idx < this.inputIDs.length; input_idx++) {
-//                String inputID = this.inputIDs[input_idx];
-//                Vector2[] inputPointCases = this.inputOutputData.inputSpace.get(inputID);
-//
-////                if (inputPointCases.length < this.numCases) throw new IllegalArgumentException("Not enough cases specified for input point '"+inputID+"' of pose '"+this.name()+"' (Required: "+this.numCases+", Provided: "+inputPointCases.length);
-//                if (inputPointCases.length < this.numCases) {
-//                    caseInputVectors[input_idx] = new Vector2();
-//                    continue;
-//                }
-//                caseInputVectors[input_idx] = inputPointCases[case_idx];
-//            }
-//            for (int output_idx = 0; output_idx < this.outputIDs.length; output_idx++) {
-//                String outputID = this.outputIDs[output_idx];
-//                Vector2[] outputPointCases = this.inputOutputData.outputSpace.get(outputID);
-//
-////                if (outputPointCases.length < this.numCases) throw new IllegalArgumentException("Not enough cases specified for output point '"+outputID+"' of pose '"+this.name()+"' (Required: "+this.numCases+", Provided: "+outputPointCases.length);
-//                if (outputPointCases.length < this.numCases) {
-//                    caseOutputVectors[output_idx] = new Vector2();
-//                    continue;
-//                }
-//                caseOutputVectors[output_idx] = outputPointCases[case_idx];
-//            }
-//
-//            inputColumns[case_idx] = MiscFunctions.concatVector2sColumn(caseInputVectors, true);
-//            outputColumns[case_idx] = MiscFunctions.concatVector2sColumn(caseOutputVectors, false);
-//        }
-//
-//        this.inputSpace = this.inputSpace.concatColumns(inputColumns);
-//        this.outputSpace = this.outputSpace.concatColumns(outputColumns);
-
         int numInputRows = this.inputIDs.length*2+1;
         int numOutputRows = this.outputIDs.length*2;
         int numCols = this.numCases;
@@ -233,6 +210,14 @@ public enum PoseCatalog {
         }
     }
 
+    public int getNumCases() {
+        return numCases;
+    }
+
+    public ArrayList<PoseConstraint> getConstraints() {
+        return constraints;
+    }
+
     public static class LinearPoseData {
         /**The {@link Json} instance used to read and write json data to serialize each pose's {@link LinearPoseData} instance*/
         private static final Json JSON = new Json();
@@ -283,4 +268,8 @@ public enum PoseCatalog {
     }
 
 
+
+    public class PoseConstraint {
+
+    }
 }
