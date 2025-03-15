@@ -15,7 +15,9 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-/**An enum of file information, each corresponding to data about a pose. Includes methods to read and write to those files.*/
+import javax.sound.sampled.Line;
+
+/**An enum of file information, each corresponding to data about a pose. Includes methods to read and write to those files. Input points and output points must not share IDs.*/
 public enum PoseCatalog {
 
     PLAYER_STAND("player/stand.json", new String[]{"front_foot"}, new String[]{"hip"}),
@@ -29,10 +31,10 @@ public enum PoseCatalog {
     private static final String BASE_FILEPATH = "data/pose/";
     /**Where the data file for this pose is stored*/
     private String filepath;
-    /**The original input and output IDs, preserved for order*/
-    private String[] inputIDs, outputIDs;
+    /**The original input and output IDs, preserved for order. Inputs and outputs should not overlap, so that an id can be used without specifying input or output.*/
+    public String[] inputIDs, outputIDs;
     /**The input points and output points data of the pose*/
-    private LinearPoseData inputOutputData;
+    public LinearPoseData inputOutputData;
     /**The matrix representing the input space, where each column vector comprises the different input vectors concatenated together*/
     private SimpleMatrix inputSpace = new SimpleMatrix(1,1);
     /**The matrix representing the output space, where each column vector comprises the different output vectors concatenated together*/
@@ -68,6 +70,17 @@ public enum PoseCatalog {
 
     PoseCatalog(String subPath, String[] inputIDs, String[] outputIDs) {
         this(subPath, inputIDs, outputIDs, null);
+    }
+
+    /**Returns the input or output point Vector2 corresponding to the given ID in the given case. If no points with this id are found, returns null.*/
+    public Vector2 getPoint(String id, int caseIdx) {
+        LinearPoseData data = this.inputOutputData;
+        if (data.inputSpace.containsKey(id)) {
+            return data.inputSpace.get(id)[caseIdx];
+        } else if (data.outputSpace.containsKey(id)) {
+            return data.outputSpace.get(id)[caseIdx];
+        }
+        return null;
     }
 
     /**Loads pose data from the corresponding file.

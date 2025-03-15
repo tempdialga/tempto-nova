@@ -1,6 +1,5 @@
 package com.mygdx.tempto.editing;
 
-import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
@@ -20,6 +19,7 @@ import com.badlogic.gdx.utils.FloatArray;
 import com.badlogic.gdx.utils.IntArray;
 import com.mygdx.tempto.entity.Entity;
 import com.mygdx.tempto.entity.StaticTerrainElement;
+import com.mygdx.tempto.entity.pose.Pose;
 import com.mygdx.tempto.entity.pose.PoseCatalog;
 import com.mygdx.tempto.input.InputTranslator;
 import com.mygdx.tempto.maps.WorldMap;
@@ -27,10 +27,8 @@ import com.mygdx.tempto.util.MiscFunctions;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Vector;
-import java.util.function.Predicate;
 
 import space.earlygrey.shapedrawer.JoinType;
 import space.earlygrey.shapedrawer.ShapeDrawer;
@@ -995,25 +993,63 @@ public enum Tools {
     }),
     EDIT_POSE(new MapEditingTool() {
 
+        static final float POSE_SELECT_DISTANCE = 1f; //TODO: make this dynamic when we can zoom in and out
+
         PoseCatalog[] catalogPoses = PoseCatalog.values();
         BitmapFont sidebarFont = new BitmapFont();
         float lineHeight = 0.1f;
         float linePaddingLeft = 0.05f;
         float linePaddingVert = 0.02f;
-        float currentOffset = 0f;
+        float lineScrollOffset = 0f;
 
         int currentPoseIdx = 0;
         PoseCatalog currentPose = this.catalogPoses[currentPoseIdx];
         int currentCase = 0; //Which case of the current pose is currently being edited
 
+        String selectedPoint;
+        /**The offset from the point to where the mouse was when it selected that point.*/
+        Vector2 pointSelectionOffset;
+
         @Override
         public void touchDown(int screenX, int screenY, int pointer, int button, OrthographicCamera worldCam) {
 
+            Vector3 mouseWorldCoords = worldCam.unproject(new Vector3(screenX, screenY, 0));
+            //Select from input points, then from output points
+
+            for (String inputID : this.currentPose.inputIDs) {
+                Vector2 currentLoc = this.currentPose.inputOutputData.inputSpace.get(inputID)[this.currentCase];
+                Vector2 offset = new Vector2(mouseWorldCoords.x, mouseWorldCoords.y).sub(currentLoc).sub(worldCam.position.x, worldCam.position.y);
+                if (offset.len() < POSE_SELECT_DISTANCE) {
+                    this.selectedPoint = inputID;
+                    this.pointSelectionOffset = offset;
+                    return;
+                }
+            }
+            for (String outputID : this.currentPose.outputIDs) {
+                Vector2 currentLoc = this.currentPose.inputOutputData.outputSpace.get(outputID)[this.currentCase];
+                Vector2 offset = new Vector2(mouseWorldCoords.x, mouseWorldCoords.y).sub(currentLoc).sub(worldCam.position.x, worldCam.position.y);
+                if (offset.len() < POSE_SELECT_DISTANCE) {
+                    this.selectedPoint = outputID;
+                    this.pointSelectionOffset = offset;
+                    return;
+                }
+            }
         }
 
         @Override
         public void touchUp(int screenX, int screenY, int pointer, int button, OrthographicCamera worldCam) {
+            //If there's a gripped point, move it
+            if (this.selectedPoint != null) {
+                Vector3 mouseWorldCoords = worldCam.unproject(new Vector3(screenX, screenY, 0));
 
+
+                Vector2 before = new Vector2(this.currentPose.getPoint(this.selectedPoint, this.currentCase));
+                Vector2 after = new Vector2(mouseWorldCoords.x, mouseWorldCoords.y).sub(worldCam.position.x, worldCam.position.y).sub(this.pointSelectionOffset);
+                this.editStack.addEdit(new UpdatePose(this.currentPose, this.selectedPoint, this.currentCase, before, after));
+            }
+            //Release points from grip
+            this.selectedPoint = null;
+            this.pointSelectionOffset = null;
         }
 
         private void updatePose() {
@@ -1036,13 +1072,20 @@ public enum Tools {
                     this.currentPoseIdx++;
                     if (this.currentPoseIdx >= this.catalogPoses.length) this.currentPoseIdx = 0;
                 }
-                this.currentPose = this.catalogPoses[this.currentPoseIdx];
             } else if (gameInput == InputTranslator.GameInputs.DOWN) {
                 this.currentCase++;
                 if (this.currentCase >= this.currentPose.getNumCases()) this.currentCase = 0;
             } else if (gameInput == InputTranslator.GameInputs.UP) {
                 this.currentCase--;
                 if (this.currentCase < 0) this.currentCase = this.currentPose.getNumCases()-1;
+            }
+            this.updatePose();
+
+            if (gameInput == InputTranslator.GameInputs.POSE && Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+                System.out.println("Writing Pose data to file!");
+                for (PoseCatalog pose : PoseCatalog.values()) {
+                    pose.writeToFile();
+                }
             }
         }
 
@@ -1099,6 +1142,60 @@ public enum Tools {
         @Override
         public void renderToWorld(SpriteBatch batch, OrthographicCamera worldCamera) {
 
+            Vector2 camPos = new Vector2(worldCamera.position.x, worldCamera.position.y);
+            ShapeDrawer drawer = this.editStack.getMap().shapeDrawer;
+
+            //Render crosshair on camera
+            Color chColor = Color.LIGHT_GRAY;
+            float chRadius = 5f;
+            float chThickness = 0.5f;
+            drawer.line(camPos.x-chRadius, camPos.y, camPos.x+chRadius, camPos.y, chColor, chThickness);
+            drawer.line(camPos.x, camPos.y-chRadius, camPos.x, camPos.y+chRadius, chColor, chThickness);
+
+            //Render all the points centered on the camera
+            Color inputColor = Color.CORAL;
+            Color outputColor = Color.TEAL;
+            float pointRadius = 1;
+            PoseCatalog.LinearPoseData data = this.currentPose.inputOutputData;
+            for (String inputID : this.currentPose.inputIDs) {
+//                System.out.println("Rendering input point!");
+                Vector2 point = data.inputSpace.get(inputID)[this.currentCase];
+                drawer.filledCircle(point.x+camPos.x, point.y+camPos.y, pointRadius, inputColor);
+            }
+            for (String outputID : this.currentPose.outputIDs) {
+                Vector2 point = data.outputSpace.get(outputID)[this.currentCase];
+                drawer.filledCircle(point.x+camPos.x, point.y+camPos.y, pointRadius, outputColor);
+            }
+        }
+
+        private class UpdatePose extends MapEdit {
+
+            PoseCatalog pose;
+            String pointID;
+            int caseIdx;
+
+            Vector2 before;
+            Vector2 after;
+
+            public UpdatePose(PoseCatalog pose, String pointID, int caseIdx, Vector2 before, Vector2 after) {
+                this.pose = pose;
+                this.pointID = pointID;
+                this.caseIdx = caseIdx;
+                this.before = before;
+                this.after = after;
+            }
+
+            @Override
+            public void undoEdit(WorldMap map) {
+                //Searches by ID from scratch each time for sake of redundancy, in case something reassigns what Vector2 or Vector2[] instances are in the Pose for some reason
+                this.pose.getPoint(this.pointID, this.caseIdx).set(this.before);
+            }
+
+            @Override
+            public void redoEdit(WorldMap map) {
+                //Searches by ID from scratch each time for sake of redundancy, in case something reassigns what Vector2 or Vector2[] instances are in the Pose for some reason
+                this.pose.getPoint(this.pointID, this.caseIdx).set(this.after);
+            }
         }
     }),
     ;
