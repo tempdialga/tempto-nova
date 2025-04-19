@@ -993,7 +993,7 @@ public enum Tools {
     }),
     EDIT_POSE(new MapEditingTool() {
 
-        static final float POSE_SELECT_DISTANCE = 1f; //TODO: make this dynamic when we can zoom in and out
+        static final float POSE_SELECT_DISTANCE = 3f; //TODO: make this dynamic when we can zoom in and out
 
         PoseCatalog[] catalogPoses = PoseCatalog.values();
         BitmapFont sidebarFont = new BitmapFont();
@@ -1002,9 +1002,14 @@ public enum Tools {
         float linePaddingVert = 0.02f;
         float lineScrollOffset = 0f;
 
+        BitmapFont pointFont = new BitmapFont();
+        float pointFontHeight = 15f;
+
+
         int currentPoseIdx = 0;
         PoseCatalog currentPose = this.catalogPoses[currentPoseIdx];
         int currentCase = 0; //Which case of the current pose is currently being edited
+        Vector2 currentMouseCoords = new Vector2();//In world coordinates
 
         String selectedPoint;
         /**The offset from the point to where the mouse was when it selected that point.*/
@@ -1014,11 +1019,12 @@ public enum Tools {
         public void touchDown(int screenX, int screenY, int pointer, int button, OrthographicCamera worldCam) {
 
             Vector3 mouseWorldCoords = worldCam.unproject(new Vector3(screenX, screenY, 0));
+            this.currentMouseCoords.set(mouseWorldCoords.x, mouseWorldCoords.y);
             //Select from input points, then from output points
 
             for (String inputID : this.currentPose.inputIDs) {
                 Vector2 currentLoc = this.currentPose.inputOutputData.inputSpace.get(inputID)[this.currentCase];
-                Vector2 offset = new Vector2(mouseWorldCoords.x, mouseWorldCoords.y).sub(currentLoc).sub(worldCam.position.x, worldCam.position.y);
+                Vector2 offset = new Vector2(this.currentMouseCoords).sub(currentLoc).sub(worldCam.position.x, worldCam.position.y);
                 if (offset.len() < POSE_SELECT_DISTANCE) {
                     this.selectedPoint = inputID;
                     this.pointSelectionOffset = offset;
@@ -1027,7 +1033,7 @@ public enum Tools {
             }
             for (String outputID : this.currentPose.outputIDs) {
                 Vector2 currentLoc = this.currentPose.inputOutputData.outputSpace.get(outputID)[this.currentCase];
-                Vector2 offset = new Vector2(mouseWorldCoords.x, mouseWorldCoords.y).sub(currentLoc).sub(worldCam.position.x, worldCam.position.y);
+                Vector2 offset = new Vector2(this.currentMouseCoords).sub(currentLoc).sub(worldCam.position.x, worldCam.position.y);
                 if (offset.len() < POSE_SELECT_DISTANCE) {
                     this.selectedPoint = outputID;
                     this.pointSelectionOffset = offset;
@@ -1101,7 +1107,8 @@ public enum Tools {
 
         @Override
         public void mouseMoved(int screenX, int screenY, OrthographicCamera worldCam) {
-
+            Vector3 mouseWorldCoords = worldCam.unproject(new Vector3(screenX, screenY, 0));
+            this.currentMouseCoords.set(mouseWorldCoords.x, mouseWorldCoords.y);
         }
 
         @Override
@@ -1145,6 +1152,8 @@ public enum Tools {
             Vector2 camPos = new Vector2(worldCamera.position.x, worldCamera.position.y);
             ShapeDrawer drawer = this.editStack.getMap().shapeDrawer;
 
+
+
             //Render crosshair on camera
             Color chColor = Color.LIGHT_GRAY;
             float chRadius = 5f;
@@ -1152,20 +1161,33 @@ public enum Tools {
             drawer.line(camPos.x-chRadius, camPos.y, camPos.x+chRadius, camPos.y, chColor, chThickness);
             drawer.line(camPos.x, camPos.y-chRadius, camPos.x, camPos.y+chRadius, chColor, chThickness);
 
-            //Render all the points centered on the camera
+            //Render all the points centered on the camera, alongside a description thereof
             Color inputColor = Color.CORAL;
             Color outputColor = Color.TEAL;
             float pointRadius = 1;
+            this.sidebarFont.getData().setScale(this.pointFontHeight * this.sidebarFont.getScaleY() / this.sidebarFont.getLineHeight()); //Scale by ratio between desired and actual height
+
             PoseCatalog.LinearPoseData data = this.currentPose.inputOutputData;
+            this.pointFont.setColor(inputColor);
             for (String inputID : this.currentPose.inputIDs) {
 //                System.out.println("Rendering input point!");
-                Vector2 point = data.inputSpace.get(inputID)[this.currentCase];
-                drawer.filledCircle(point.x+camPos.x, point.y+camPos.y, pointRadius, inputColor);
+                Vector2 point = new Vector2(data.inputSpace.get(inputID)[this.currentCase]).add(camPos);
+                if (inputID.equals(this.selectedPoint)) point.set(this.currentMouseCoords);
+
+                drawer.filledCircle(point.x, point.y, pointRadius, inputColor);
+                this.pointFont.draw(batch, inputID, point.x, point.y);
             }
+            this.pointFont.setColor(outputColor);
             for (String outputID : this.currentPose.outputIDs) {
-                Vector2 point = data.outputSpace.get(outputID)[this.currentCase];
-                drawer.filledCircle(point.x+camPos.x, point.y+camPos.y, pointRadius, outputColor);
+                Vector2 point = new Vector2(data.outputSpace.get(outputID)[this.currentCase]).add(camPos);
+                if (outputID.equals(this.selectedPoint)) point.set(this.currentMouseCoords);
+
+                drawer.filledCircle(point.x, point.y, pointRadius, outputColor);
+                this.pointFont.draw(batch, outputID, point.x, point.y);
             }
+
+
+
         }
 
         private class UpdatePose extends MapEdit {
