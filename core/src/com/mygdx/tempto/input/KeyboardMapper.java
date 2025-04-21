@@ -47,6 +47,8 @@ public class KeyboardMapper {
                 Keys.DEL, GameInputs.DELETE,
                 Keys.B, GameInputs.BRUSH,
                 Keys.V, GameInputs.VERTEX,
+                Keys.P, GameInputs.POSE,
+                Keys.TAB, GameInputs.NEXT_TAB,
         });
         //// Secondary/"weak" bindings, the ones that duplicate their intuitive input unless you actively tell them to do something else
         addIntArray(keyboardToAbstract, new int[]{

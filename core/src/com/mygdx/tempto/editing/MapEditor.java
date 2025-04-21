@@ -12,6 +12,8 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Vector3;
 import com.mygdx.tempto.gui.button.ButtonAction;
 import com.mygdx.tempto.gui.button.ButtonMenu;
 import com.mygdx.tempto.gui.button.GUIClickable;
@@ -29,6 +31,7 @@ import org.eclipse.collections.impl.bimap.mutable.HashBiMap;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Vector;
 
 /**A class to edit {@link WorldMap} instances; Consumes all input for the world, takes {@link com.mygdx.tempto.input.InputTranslator.GameInputs}*/
 public class MapEditor implements InputProcessor, RendersToScreen, RendersToWorld {
@@ -44,6 +47,11 @@ public class MapEditor implements InputProcessor, RendersToScreen, RendersToWorl
 
     /**The GUI of the editor*/
     private MainEditorGUI editorGUI;
+
+    /**Information about the mouse*/
+    private Vector3 mouseLastWorldCoords = new Vector3();
+    private Vector3 mouseNextWorldCoords = new Vector3();
+    private boolean panning = false;
 
     //Display
 
@@ -66,7 +74,6 @@ public class MapEditor implements InputProcessor, RendersToScreen, RendersToWorl
     }
 
     public void update(float deltaTime) {
-
     }
 
     @Override
@@ -76,6 +83,13 @@ public class MapEditor implements InputProcessor, RendersToScreen, RendersToWorl
         }
         if (!this.active) return false;
 
+        boolean zoomOut = Gdx.input.isKeyJustPressed(Input.Keys.MINUS);
+        boolean zoomIn = Gdx.input.isKeyPressed(Input.Keys.EQUALS);
+        if (zoomIn || zoomOut) {
+            float zoomFactor = 1.2f;
+            if (zoomIn) zoomFactor = 0.8f;
+            this.updateZoomFromMouse(zoomFactor);
+        }
 
         if (keycode == InputTranslator.GameInputs.UNDO && Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT)) { // If wanting to undo or redo
             if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) { // Redo if shift is pressed
@@ -83,6 +97,8 @@ public class MapEditor implements InputProcessor, RendersToScreen, RendersToWorl
             } else { // Undo
                 this.editStack.undo();
             }
+        } else if (keycode == InputTranslator.GameInputs.POSE && this.currentTool != Tools.EDIT_POSE.getInstance()) {
+            this.currentTool.switchToTool(Tools.EDIT_POSE.toolInstance);
         } else {
             this.currentTool.buttonDown(keycode);
         }
@@ -106,6 +122,11 @@ public class MapEditor implements InputProcessor, RendersToScreen, RendersToWorl
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
         //If not active, stop
         if (!this.active) return false;
+        //If shift pressed and left click, switch to panning mode
+        if (!this.panning & Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT) && pointer == Input.Buttons.LEFT) {
+            this.panning = true;
+            return true;
+        }
         //If the gui can use this input, start with that
         if (this.editorGUI.touchDown(screenX, screenY, pointer, button)) return true;
         //Else, check for the tool's action
@@ -116,6 +137,10 @@ public class MapEditor implements InputProcessor, RendersToScreen, RendersToWorl
     @Override
     public boolean touchUp(int screenX, int screenY, int pointer, int button) {
         if (!this.active) return false;
+        if (this.panning && pointer == Input.Buttons.LEFT) {
+            this.panning = false;
+            return true;
+        }
         this.currentTool.touchUp(screenX, screenY, pointer, button, this.mapToEdit.getCamera());
         return true;
     }
@@ -135,8 +160,18 @@ public class MapEditor implements InputProcessor, RendersToScreen, RendersToWorl
 
     @Override
     public boolean mouseMoved(int screenX, int screenY) {
+        //Regardless, do update the mouse knowledge
+        this.mouseLastWorldCoords.set(this.mouseNextWorldCoords);
+        this.mouseNextWorldCoords.set(screenX, screenY, 0);
+        this.mapToEdit.getCamera().unproject(this.mouseNextWorldCoords);
         //If not active, don't take the input
         if (!this.active) return false;
+        //If panning, well, pan the camera such that the position of the mouse stays constant
+        if (this.panning) {
+            Vector3 mouseMovement = new Vector3(this.mouseNextWorldCoords).sub(this.mouseLastWorldCoords);
+            this.mapToEdit.getCamera().position.sub(mouseMovement);
+            this.mouseNextWorldCoords.set(this.mouseLastWorldCoords);
+        }
         //Check if the GUI wants this input, and if so don't give it to the tool
         if (this.editorGUI.mouseMoved(screenX, screenY)) return true;
         this.currentTool.mouseMoved(screenX, screenY, this.mapToEdit.getCamera());
@@ -145,7 +180,17 @@ public class MapEditor implements InputProcessor, RendersToScreen, RendersToWorl
 
     @Override
     public boolean scrolled(float amountX, float amountY) {
+        System.out.println("Scrolling!");
+
         if (!this.active) return false;
+        //Scroll multiplicatively, by the equation zoom=zoom*a^ky, where y is the amount scrolled
+        float a = 2;
+        float k = 0.1f;
+        float zoomFactor = (float) Math.pow(a, k*amountY);
+
+        //Scroll up/down to change zoom, centered around the current mouse location
+        this.updateZoomFromMouse(zoomFactor);
+
         return true;
     }
 
@@ -170,6 +215,16 @@ public class MapEditor implements InputProcessor, RendersToScreen, RendersToWorl
     public void renderToWorld(SpriteBatch batch, OrthographicCamera worldCamera) {
         if (!this.active) return; //Only render if active
         this.currentTool.renderToWorld(batch, worldCamera);
+    }
+
+    public void updateZoomFromMouse(float zoomFactor) {
+        OrthographicCamera cam = this.mapToEdit.getCamera();
+        Vector3 mousePos = cam.unproject(new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0));
+        Vector3 diff = new Vector3(cam.position).sub(mousePos);
+        cam.position.sub(diff);
+        cam.zoom *= zoomFactor;
+        diff.scl(zoomFactor);
+        cam.position.add(diff);
     }
 
     public MapEditingTool getCurrentTool() {

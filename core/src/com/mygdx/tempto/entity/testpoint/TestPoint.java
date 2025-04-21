@@ -18,9 +18,7 @@ import com.mygdx.tempto.util.MiscFunctions;
 
 import space.earlygrey.shapedrawer.ShapeDrawer;
 
-public class TestPoint implements Entity, RendersToWorld, Posable {
-
-    public static ShapeDrawer drawer;
+public class TestPoint implements Entity, RendersToWorld {
 
     public static final String TEST_POINT_ID_BASE = "testPoint";
 
@@ -42,7 +40,6 @@ public class TestPoint implements Entity, RendersToWorld, Posable {
                 if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
                     Vector2 clickPos = TestPoint.this.parent.screenToWorldCoords(screenX, screenY);
                     TestPoint.this.currentPose = new GlideToPoint(
-                            TestPoint.this,
                             new Vector2(TestPoint.this.body.getPos()),
                             clickPos,
                             5
@@ -138,11 +135,7 @@ public class TestPoint implements Entity, RendersToWorld, Posable {
 
     @Override
     public void renderToWorld(SpriteBatch batch, OrthographicCamera worldCamera) {
-        if (drawer == null) {
-            drawer = new ShapeDrawer(batch);
-            drawer.setTextureRegion(new TextureRegion(this.parent.blankTexture));
-
-        }
+        ShapeDrawer drawer = this.parent.shapeDrawer;
         drawer.setColor(Color.WHITE);
         float radius = this.body.getRadius();
         if (radius <= 0) radius = 2;

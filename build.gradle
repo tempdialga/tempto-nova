@@ -28,6 +28,7 @@ allprojects {
         aiVersion = '1.8.2'
         gdxControllersVersion = '2.2.1'
         shapedrawerVersion = '2.5.0'
+        ejmlVersion = '0.43'
     }
 
     repositories {
@@ -91,6 +92,8 @@ project(":core") {
         implementation "org.eclipse.collections:eclipse-collections:11.1.0"
 
         implementation "space.earlygrey:shapedrawer:$shapedrawerVersion"
+        implementation "org.ejml:ejml-all:$ejmlVersion"
+
 
     }
 }

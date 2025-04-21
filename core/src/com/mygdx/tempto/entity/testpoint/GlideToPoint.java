@@ -1,13 +1,11 @@
 package com.mygdx.tempto.entity.testpoint;
 
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.scenes.scene2d.actions.MoveToAction;
 import com.mygdx.tempto.entity.pose.Posable;
 import com.mygdx.tempto.entity.pose.Pose;
 import com.mygdx.tempto.util.MiscFunctions;
 
 import java.util.Map;
-import java.util.Vector;
 
 public class GlideToPoint extends Pose {
 
@@ -22,13 +20,17 @@ public class GlideToPoint extends Pose {
     private float speed;
     private Vector2 vel;
 
+
+    protected float T;
+
     private boolean reversed;
-    public GlideToPoint(Posable subject, Vector2 start, Vector2 end, float speed) {
-        super(subject, Map.of(MOVING_FOOT_START, start, MOVING_FOOT_END, end));
-        this.assertKeys(MOVING_FOOT_START, MOVING_FOOT_END);
+    public GlideToPoint(Vector2 start, Vector2 end, float speed) {
+        super(Map.of(MOVING_FOOT_START, start, MOVING_FOOT_END, end));
+        this.assertKeysPresent(MOVING_FOOT_START, MOVING_FOOT_END);
 
         this.start = start;
         this.end = end;
+        this.T = 0;
 
         this.outputPoints = Map.of(MOVING_FOOT_OUTPUT, new Vector2(start));
 
@@ -65,4 +67,8 @@ public class GlideToPoint extends Pose {
         this.vel.scl(-1);
         this.T = 1-this.T;
     }
+
+
+    public float getT() {return this.T;}
+    public void setT(float T) {this.T = T;}
 }

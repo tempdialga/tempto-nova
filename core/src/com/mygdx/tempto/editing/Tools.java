@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.maps.MapObject;
@@ -18,16 +19,16 @@ import com.badlogic.gdx.utils.FloatArray;
 import com.badlogic.gdx.utils.IntArray;
 import com.mygdx.tempto.entity.Entity;
 import com.mygdx.tempto.entity.StaticTerrainElement;
+import com.mygdx.tempto.entity.pose.Pose;
+import com.mygdx.tempto.entity.pose.PoseCatalog;
 import com.mygdx.tempto.input.InputTranslator;
 import com.mygdx.tempto.maps.WorldMap;
 import com.mygdx.tempto.util.MiscFunctions;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Vector;
-import java.util.function.Predicate;
 
 import space.earlygrey.shapedrawer.JoinType;
 import space.earlygrey.shapedrawer.ShapeDrawer;
@@ -988,6 +989,235 @@ public enum Tools {
             this.shapeDrawer.polygon(this.brush, lineWidth);
 
 
+        }
+    }),
+    EDIT_POSE(new MapEditingTool() {
+
+        static final float POSE_SELECT_DISTANCE = 3f; //TODO: make this dynamic when we can zoom in and out
+
+        PoseCatalog[] catalogPoses = PoseCatalog.values();
+        BitmapFont sidebarFont = new BitmapFont();
+        float lineHeight = 0.1f;
+        float linePaddingLeft = 0.05f;
+        float linePaddingVert = 0.02f;
+        float lineScrollOffset = 0f;
+
+        BitmapFont pointFont = new BitmapFont();
+        float pointFontHeight = 15f;
+
+
+        int currentPoseIdx = 0;
+        PoseCatalog currentPose = this.catalogPoses[currentPoseIdx];
+        int currentCase = 0; //Which case of the current pose is currently being edited
+        Vector2 currentMouseCoords = new Vector2();//In world coordinates
+
+        String selectedPoint;
+        /**The offset from the point to where the mouse was when it selected that point.*/
+        Vector2 pointSelectionOffset;
+
+        @Override
+        public void touchDown(int screenX, int screenY, int pointer, int button, OrthographicCamera worldCam) {
+
+            Vector3 mouseWorldCoords = worldCam.unproject(new Vector3(screenX, screenY, 0));
+            this.currentMouseCoords.set(mouseWorldCoords.x, mouseWorldCoords.y);
+            //Select from input points, then from output points
+
+            for (String inputID : this.currentPose.inputIDs) {
+                Vector2 currentLoc = this.currentPose.inputOutputData.inputSpace.get(inputID)[this.currentCase];
+                Vector2 offset = new Vector2(this.currentMouseCoords).sub(currentLoc).sub(worldCam.position.x, worldCam.position.y);
+                if (offset.len() < POSE_SELECT_DISTANCE) {
+                    this.selectedPoint = inputID;
+                    this.pointSelectionOffset = offset;
+                    return;
+                }
+            }
+            for (String outputID : this.currentPose.outputIDs) {
+                Vector2 currentLoc = this.currentPose.inputOutputData.outputSpace.get(outputID)[this.currentCase];
+                Vector2 offset = new Vector2(this.currentMouseCoords).sub(currentLoc).sub(worldCam.position.x, worldCam.position.y);
+                if (offset.len() < POSE_SELECT_DISTANCE) {
+                    this.selectedPoint = outputID;
+                    this.pointSelectionOffset = offset;
+                    return;
+                }
+            }
+        }
+
+        @Override
+        public void touchUp(int screenX, int screenY, int pointer, int button, OrthographicCamera worldCam) {
+            //If there's a gripped point, move it
+            if (this.selectedPoint != null) {
+                Vector3 mouseWorldCoords = worldCam.unproject(new Vector3(screenX, screenY, 0));
+
+
+                Vector2 before = new Vector2(this.currentPose.getPoint(this.selectedPoint, this.currentCase));
+                Vector2 after = new Vector2(mouseWorldCoords.x, mouseWorldCoords.y).sub(worldCam.position.x, worldCam.position.y).sub(this.pointSelectionOffset);
+                this.editStack.addEdit(new UpdatePose(this.currentPose, this.selectedPoint, this.currentCase, before, after));
+            }
+            //Release points from grip
+            this.selectedPoint = null;
+            this.pointSelectionOffset = null;
+        }
+
+        private void updatePose() {
+            PoseCatalog nextPose = this.catalogPoses[this.currentPoseIdx];
+            if (this.currentPose != nextPose) {
+                this.currentCase = 0;
+                this.currentPose = nextPose;
+            }
+        }
+
+        @Override
+        public void buttonDown(int gameInput) {
+            if (gameInput == InputTranslator.GameInputs.PAUSE) {
+                this.switchToTool(Tools.SELECT_VERTICES.toolInstance);
+            } else if (gameInput == InputTranslator.GameInputs.NEXT_TAB) {
+                if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+                    this.currentPoseIdx--;
+                    if (this.currentPoseIdx < 0) this.currentPoseIdx = this.catalogPoses.length-1;
+                } else {
+                    this.currentPoseIdx++;
+                    if (this.currentPoseIdx >= this.catalogPoses.length) this.currentPoseIdx = 0;
+                }
+            } else if (gameInput == InputTranslator.GameInputs.DOWN) {
+                this.currentCase++;
+                if (this.currentCase >= this.currentPose.getNumCases()) this.currentCase = 0;
+            } else if (gameInput == InputTranslator.GameInputs.UP) {
+                this.currentCase--;
+                if (this.currentCase < 0) this.currentCase = this.currentPose.getNumCases()-1;
+            }
+            this.updatePose();
+
+            if (gameInput == InputTranslator.GameInputs.POSE && Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+                System.out.println("Writing Pose data to file!");
+                for (PoseCatalog pose : PoseCatalog.values()) {
+                    pose.writeToFile();
+                }
+            }
+        }
+
+        @Override
+        public void buttonUp(int gameInput) {
+
+        }
+
+        @Override
+        public void touchDragged(int screenX, int screenY, int pointer, OrthographicCamera worldCam) {
+
+        }
+
+        @Override
+        public void mouseMoved(int screenX, int screenY, OrthographicCamera worldCam) {
+            Vector3 mouseWorldCoords = worldCam.unproject(new Vector3(screenX, screenY, 0));
+            this.currentMouseCoords.set(mouseWorldCoords.x, mouseWorldCoords.y);
+        }
+
+        @Override
+        public void activate() {
+
+        }
+
+        @Override
+        public void renderToScreen(SpriteBatch batch, OrthographicCamera screenCamera, float aspectRatio) {
+            this.sidebarFont.setColor(Color.WHITE);
+            this.sidebarFont.setUseIntegerPositions(false);
+            this.sidebarFont.getData().setScale(this.lineHeight * this.sidebarFont.getScaleY() / this.sidebarFont.getLineHeight()); //Scale by ratio between desired and actual height
+
+            float startHeight = 0.5f;
+            for (int i = 0; i < this.catalogPoses.length; i++) {
+                PoseCatalog pose = this.catalogPoses[i];
+                String display = pose.name();
+
+                float x = -1 * aspectRatio + this.linePaddingLeft;
+                float y = 1 - startHeight - (this.lineHeight+this.linePaddingVert)*i;
+
+                if (i == this.currentPoseIdx) {
+                    x += this.linePaddingLeft;
+                }
+
+                this.sidebarFont.draw(batch, display, x, y);
+            }
+
+            for (int i = 0; i < this.currentPose.getNumCases(); i++) {
+                float x = 1*aspectRatio - this.linePaddingLeft - linePaddingVert;
+                if (i == this.currentCase) x -= linePaddingVert;
+                float y = 1 - startHeight - (this.lineHeight+this.linePaddingVert)*i;
+
+                this.sidebarFont.draw(batch, i+"", x, y);
+            }
+        }
+
+        @Override
+        public void renderToWorld(SpriteBatch batch, OrthographicCamera worldCamera) {
+
+            Vector2 camPos = new Vector2(worldCamera.position.x, worldCamera.position.y);
+            ShapeDrawer drawer = this.editStack.getMap().shapeDrawer;
+
+
+
+            //Render crosshair on camera
+            Color chColor = Color.LIGHT_GRAY;
+            float chRadius = 5f;
+            float chThickness = 0.5f;
+            drawer.line(camPos.x-chRadius, camPos.y, camPos.x+chRadius, camPos.y, chColor, chThickness);
+            drawer.line(camPos.x, camPos.y-chRadius, camPos.x, camPos.y+chRadius, chColor, chThickness);
+
+            //Render all the points centered on the camera, alongside a description thereof
+            Color inputColor = Color.CORAL;
+            Color outputColor = Color.TEAL;
+            float pointRadius = 1;
+            this.sidebarFont.getData().setScale(this.pointFontHeight * this.sidebarFont.getScaleY() / this.sidebarFont.getLineHeight()); //Scale by ratio between desired and actual height
+
+            PoseCatalog.LinearPoseData data = this.currentPose.inputOutputData;
+            this.pointFont.setColor(inputColor);
+            for (String inputID : this.currentPose.inputIDs) {
+//                System.out.println("Rendering input point!");
+                Vector2 point = new Vector2(data.inputSpace.get(inputID)[this.currentCase]).add(camPos);
+                if (inputID.equals(this.selectedPoint)) point.set(this.currentMouseCoords);
+
+                drawer.filledCircle(point.x, point.y, pointRadius, inputColor);
+                this.pointFont.draw(batch, inputID, point.x, point.y);
+            }
+            this.pointFont.setColor(outputColor);
+            for (String outputID : this.currentPose.outputIDs) {
+                Vector2 point = new Vector2(data.outputSpace.get(outputID)[this.currentCase]).add(camPos);
+                if (outputID.equals(this.selectedPoint)) point.set(this.currentMouseCoords);
+
+                drawer.filledCircle(point.x, point.y, pointRadius, outputColor);
+                this.pointFont.draw(batch, outputID, point.x, point.y);
+            }
+
+
+
+        }
+
+        private class UpdatePose extends MapEdit {
+
+            PoseCatalog pose;
+            String pointID;
+            int caseIdx;
+
+            Vector2 before;
+            Vector2 after;
+
+            public UpdatePose(PoseCatalog pose, String pointID, int caseIdx, Vector2 before, Vector2 after) {
+                this.pose = pose;
+                this.pointID = pointID;
+                this.caseIdx = caseIdx;
+                this.before = before;
+                this.after = after;
+            }
+
+            @Override
+            public void undoEdit(WorldMap map) {
+                //Searches by ID from scratch each time for sake of redundancy, in case something reassigns what Vector2 or Vector2[] instances are in the Pose for some reason
+                this.pose.getPoint(this.pointID, this.caseIdx).set(this.before);
+            }
+
+            @Override
+            public void redoEdit(WorldMap map) {
+                //Searches by ID from scratch each time for sake of redundancy, in case something reassigns what Vector2 or Vector2[] instances are in the Pose for some reason
+                this.pose.getPoint(this.pointID, this.caseIdx).set(this.after);
+            }
         }
     }),
     ;
