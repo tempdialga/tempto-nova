@@ -171,6 +171,7 @@ public class MapEditor implements InputProcessor, RendersToScreen, RendersToWorl
             Vector3 mouseMovement = new Vector3(this.mouseNextWorldCoords).sub(this.mouseLastWorldCoords);
             this.mapToEdit.getCamera().position.sub(mouseMovement);
             this.mouseNextWorldCoords.set(this.mouseLastWorldCoords);
+            return true;
         }
         //Check if the GUI wants this input, and if so don't give it to the tool
         if (this.editorGUI.mouseMoved(screenX, screenY)) return true;
