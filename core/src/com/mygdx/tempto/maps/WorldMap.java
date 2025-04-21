@@ -9,17 +9,21 @@ import com.badlogic.gdx.assets.loaders.resolvers.LocalFileHandleResolver;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapObject;
 import com.badlogic.gdx.maps.MapProperties;
 import com.badlogic.gdx.maps.objects.PolygonMapObject;
 import com.badlogic.gdx.maps.tiled.TiledMap;
+import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
+import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
@@ -35,6 +39,7 @@ import com.mygdx.tempto.editing.MapEditor;
 import com.mygdx.tempto.editing.TmxMapWriter;
 import com.mygdx.tempto.entity.Entity;
 import com.mygdx.tempto.entity.StaticTerrainElement;
+import com.mygdx.tempto.entity.decoration.TileLayer;
 import com.mygdx.tempto.entity.player.Player;
 import com.mygdx.tempto.entity.testpoint.TestPoint;
 import com.mygdx.tempto.entity.physics.Collidable;
@@ -98,6 +103,10 @@ public class WorldMap implements RendersToScreen {
     SpriteBatch worldBatch;
     public ShapeDrawer shapeDrawer;
     public Texture blankTexture = new Texture("blank.png");
+
+    FrameBuffer depthBuffer;
+    Texture depthMap;
+    public OrthogonalTiledMapRenderer tileRenderer;
 
     //Debugging utilities:
 
@@ -179,6 +188,13 @@ public class WorldMap implements RendersToScreen {
 
                     }
                 }
+            } else if (layer instanceof TiledMapTileLayer tileLayer) {
+                //Tile layers, only for rendering I think
+                String name = layer.getName();
+                if (name.endsWith("px")) { //Confirms that it's a rendering layer, named [#]px from the screen
+                    float depth = Float.parseFloat(name.substring(0,name.length()-2));
+                    entities.add(new TileLayer(tileLayer, depth));
+                }
             }
         }
 
@@ -210,6 +226,12 @@ public class WorldMap implements RendersToScreen {
         //Create a debug texture for testing things
         this.debugTexture = new Texture("badlogic.jpg");
         this.debugSprite = new Sprite(this.debugTexture);
+
+        //Initialize the depth map
+        this.depthBuffer = new FrameBuffer(Pixmap.Format.RGBA8888,TemptoNova.PIXEL_GAME_WIDTH, TemptoNova.PIXEL_GAME_HEIGHT, false);
+
+        //Initialize tilemap renderer
+        this.tileRenderer = new OrthogonalTiledMapRenderer(this.tiledMap, this.worldBatch);
 
         this.mapWriter = new TmxMapWriter();
 
@@ -280,6 +302,20 @@ public class WorldMap implements RendersToScreen {
         this.worldViewport.apply();
 
 
+        // Render depth buffer
+        this.depthBuffer.begin();
+        ScreenUtils.clear(0.2f,0,0.2f,0.5f);
+        this.worldBatch.begin();
+        for (Entity entity : this.entities) {
+            if (entity instanceof RendersToWorld renderable) {
+                renderable.renderToDepthMap(this.worldBatch, this.camera);
+            }
+        }
+        this.worldBatch.end();
+        this.depthBuffer.end();
+        this.depthMap = depthBuffer.getColorBufferTexture();
+
+
 
 
 //        Camera worldViewportCamera = this.worldViewport.getCamera();
@@ -309,6 +345,9 @@ public class WorldMap implements RendersToScreen {
                 renderable.renderToWorld(this.worldBatch, this.camera);
             }
         }
+        float hw = TemptoNova.PIXEL_GAME_WIDTH/2f, hh = TemptoNova.PIXEL_GAME_HEIGHT/2f;
+        float x = this.camera.position.x-hw, y = this.camera.position.y;
+        this.worldBatch.draw(this.depthMap, x, y, hw, -hh);
         this.editor.renderToWorld(worldBatch, camera);
 
         this.worldBatch.end();
