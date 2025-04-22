@@ -1,6 +1,9 @@
 package com.mygdx.tempto;
 
 import com.badlogic.gdx.Game;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.files.FileHandle;
+import com.mygdx.tempto.data.CentralTextureData;
 import com.mygdx.tempto.view.EditScreen;
 import com.mygdx.tempto.view.GameScreen;
 import com.mygdx.tempto.view.LoadingScreen;
@@ -15,6 +18,8 @@ public class TemptoNova extends Game {
 	public static final int PIXEL_GAME_WIDTH = 640, PIXEL_GAME_HEIGHT = 360;
 	/**The intended ratio between width and height of the primary game window. Used for things like rendering GUIs*/
 	public static final float ASPECT_RATIO = PIXEL_GAME_WIDTH/((float) PIXEL_GAME_HEIGHT);
+	/**The location of the central texture atlas file, in local files*/
+	public static final String CENTRAL_ATLAS_FILEPATH = "./packeddata/temptoNovaTextures.atlas";
 
 	//////// Screens ////////////////
 
@@ -25,6 +30,7 @@ public class TemptoNova extends Game {
 
 	@Override
 	public void create () {
+		CentralTextureData.loadCoreTextures(Gdx.files.local(CENTRAL_ATLAS_FILEPATH));
 		this.switchScreen(MAIN_MENU_SCREEN);
 	}
 

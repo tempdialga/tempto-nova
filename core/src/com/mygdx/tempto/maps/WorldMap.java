@@ -8,6 +8,7 @@ import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.assets.loaders.resolvers.LocalFileHandleResolver;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
@@ -20,6 +21,7 @@ import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapObject;
 import com.badlogic.gdx.maps.MapProperties;
 import com.badlogic.gdx.maps.objects.PolygonMapObject;
+import com.badlogic.gdx.maps.tiled.AtlasTmxMapLoader;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
@@ -71,8 +73,12 @@ public class WorldMap implements RendersToScreen {
 
     //File loading and unloading
 
+    /**Default location of map files within the 'data' local directory*/
+    public static final String DEFAULT_MAP_DATA_RELPATH = "maps/";
     /**ID of the map currently loaded*/
     String mapID;
+    /**Relative path of the current map file, from the 'data' local directory. Currently always {@link #DEFAULT_MAP_DATA_RELPATH}, but this could likely change*/
+    public String pathDirFromData = DEFAULT_MAP_DATA_RELPATH;
     /**Base map data, from internal map file*/
     TiledMap tiledMap;
     /**The layer chosen as the central layer to store entities, currently just the first layer found that already has an entity in it TODO: choose the map layer in a more sophisticated manner*/
@@ -153,14 +159,19 @@ public class WorldMap implements RendersToScreen {
             existingData = new JsonValue(JsonValue.ValueType.object);//If not, prepare as if the file was a blank json
         }
         //This map has never been loaded before; load using defaults of the internal map file
-        String probableMap = "data/maps/" + mapID + ".tmx";//Convention for internal map files
+        String probableMap = "data/"+this.pathDirFromData + mapID + ".tmx";//Convention for internal map files
         FileHandle localMapFile = Gdx.files.local(probableMap); //Find where it would be locally
-        TmxMapLoader loader;
+        NewAtlasTmxMapLoader loader;
+        TmxMapLoader oldLoader;
         if (localMapFile.exists()) {
-            loader = new TmxMapLoader(new LocalFileHandleResolver()); //If there's a local file with the right name, create a local file to load from that
+            loader = new NewAtlasTmxMapLoader(new LocalFileHandleResolver()); //If there's a local file with the right name, create a local file to load from that
+            oldLoader = new TmxMapLoader(new LocalFileHandleResolver());
         } else {
-            loader = new TmxMapLoader(); //And if not, load from assets
+            loader = new NewAtlasTmxMapLoader(); //And if not, load from assets
+            oldLoader = new TmxMapLoader();
         }
+        loader.setParent(this);
+
         this.tiledMap = loader.load(probableMap);//Attempt to load from what would be assumed to be the map file name
 //        XmlReader.Element mapRoot = new XmlReader().parse(Gdx.files.internal(probableMap));
 //        System.out.println(mapRoot.toString());
@@ -193,7 +204,7 @@ public class WorldMap implements RendersToScreen {
                 String name = layer.getName();
                 if (name.endsWith("px")) { //Confirms that it's a rendering layer, named [#]px from the screen
                     float depth = Float.parseFloat(name.substring(0,name.length()-2));
-                    entities.add(new TileLayer(tileLayer, depth));
+                    entities.add(new TileLayer(this, tileLayer, depth));
                 }
             }
         }
@@ -232,6 +243,7 @@ public class WorldMap implements RendersToScreen {
 
         //Initialize tilemap renderer
         this.tileRenderer = new OrthogonalTiledMapRenderer(this.tiledMap, this.worldBatch);
+
 
         this.mapWriter = new TmxMapWriter();
 

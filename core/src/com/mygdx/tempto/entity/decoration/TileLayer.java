@@ -2,11 +2,23 @@ package com.mygdx.tempto.entity.decoration;
 
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.maps.MapProperties;
+import com.badlogic.gdx.maps.tiled.TiledMapTile;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
+import com.badlogic.gdx.maps.tiled.TiledMapTileSet;
+import com.badlogic.gdx.maps.tiled.TiledMapTileSets;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
+import com.badlogic.gdx.maps.tiled.tiles.StaticTiledMapTile;
+import com.mygdx.tempto.data.CentralTextureData;
 import com.mygdx.tempto.entity.Entity;
 import com.mygdx.tempto.maps.WorldMap;
 import com.mygdx.tempto.rendering.RendersToWorld;
+
+import org.lwjgl.Sys;
+
+import java.util.Iterator;
 
 public class TileLayer implements Entity, RendersToWorld {
 
@@ -15,7 +27,8 @@ public class TileLayer implements Entity, RendersToWorld {
     float baseDepth; //In pixel space, e.g. 10 pixels
     WorldMap parent;
 
-    public TileLayer(TiledMapTileLayer mapLayer, float baseDepth) {
+    public TileLayer(WorldMap parent, TiledMapTileLayer mapLayer, float baseDepth) {
+        this.setParentWorld(parent);
         this.mapLayer = mapLayer;
         this.baseDepth = baseDepth;
         this.ID = "tiles_"+this.baseDepth;

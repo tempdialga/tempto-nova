@@ -29,6 +29,7 @@ allprojects {
         gdxControllersVersion = '2.2.1'
         shapedrawerVersion = '2.5.0'
         ejmlVersion = '0.43'
+        toolsVersion = '1.9.2'
     }
 
     repositories {
@@ -86,6 +87,7 @@ project(":core") {
         implementation "com.badlogicgames.gdx:gdx:$gdxVersion"
         implementation "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
         implementation "com.badlogicgames.gdx-controllers:gdx-controllers-core:$gdxControllersVersion"
+        implementation "com.badlogicgames.gdx:gdx-tools:$toolsVersion"
 
 
         implementation "org.eclipse.collections:eclipse-collections-api:11.1.0"
