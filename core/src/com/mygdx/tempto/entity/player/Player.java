@@ -47,7 +47,7 @@ public class Player extends InputAdapter implements Entity, RendersToWorld, Posa
     MovementState currentState;
 
     //// Rendering Utilities ////
-    /**The ShapeDrawer the entity should use for rendering. The player sets this to its parent's {@link WorldMap#shapeDrawer}, unless it lacks a parent, in which case it can be set manually by */
+    /**The ShapeDrawer the entity should use for rendering. The player sets this to its parent's {@link WorldMap#tempFinalPassShapeDrawer}, unless it lacks a parent, in which case it can be set manually by */
     ShapeDrawer shapeDrawer;
 
     public Player(Vector2 centerPos, WorldMap parent) {
@@ -105,7 +105,7 @@ public class Player extends InputAdapter implements Entity, RendersToWorld, Posa
 
     @Override
     public void renderToWorld(Batch batch, OrthographicCamera worldCamera) {
-        this.shapeDrawer = this.parent.shapeDrawer;
+        this.shapeDrawer = this.parent.tempFinalPassShapeDrawer;
         ShapeDrawer drawer = this.shapeDrawer;
 
         drawer.setColor(Color.YELLOW);

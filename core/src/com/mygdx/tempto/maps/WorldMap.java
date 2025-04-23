@@ -8,7 +8,6 @@ import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.assets.loaders.resolvers.LocalFileHandleResolver;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
@@ -21,11 +20,9 @@ import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapObject;
 import com.badlogic.gdx.maps.MapProperties;
 import com.badlogic.gdx.maps.objects.PolygonMapObject;
-import com.badlogic.gdx.maps.tiled.AtlasTmxMapLoader;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
-import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
@@ -36,6 +33,7 @@ import com.badlogic.gdx.utils.JsonWriter;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.mygdx.tempto.TemptoNova;
+import com.mygdx.tempto.data.CentralTextureData;
 import com.mygdx.tempto.data.SavesToFile;
 import com.mygdx.tempto.editing.MapEditor;
 import com.mygdx.tempto.editing.TmxMapWriter;
@@ -47,13 +45,13 @@ import com.mygdx.tempto.entity.testpoint.TestPoint;
 import com.mygdx.tempto.entity.physics.Collidable;
 import com.mygdx.tempto.input.InputTranslator;
 import com.mygdx.tempto.rendering.AltDepthBatch;
-import com.mygdx.tempto.rendering.AtlasOrthogonalTiledMapRenderer;
+import com.mygdx.tempto.rendering.AltFinalBatch;
+import com.mygdx.tempto.rendering.TileLayerDepthRenderer;
+import com.mygdx.tempto.rendering.TileLayerFinalRenderer;
 import com.mygdx.tempto.rendering.RendersToScreen;
 import com.mygdx.tempto.rendering.RendersToWorld;
 import com.mygdx.tempto.util.MiscFunctions;
 import com.mygdx.tempto.view.GameScreen;
-
-import org.lwjgl.Sys;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -110,15 +108,18 @@ public class WorldMap implements RendersToScreen {
 
     FitViewport worldViewport;
     OrthographicCamera camera;
-    SpriteBatch worldBatch;
+    SpriteBatch miscWorldBatch;
     AltDepthBatch depthMapBatch;
-    public ShapeDrawer shapeDrawer;
+    AltFinalBatch finalPassBatch;
+    public ShapeDrawer editorShapeDrawer;
+    public ShapeDrawer tempFinalPassShapeDrawer;
     public Texture blankTexture = new Texture("blank.png");
+    public TextureRegion blank = CentralTextureData.getRegion("misc/blank");
 
     FrameBuffer depthBuffer;
     Texture depthMap;
-    public OrthogonalTiledMapRenderer tileRenderer;
-    public AtlasOrthogonalTiledMapRenderer tileDepthRenderer;
+    public TileLayerFinalRenderer tileFinalRenderer;
+    public TileLayerDepthRenderer tileDepthRenderer;
 
     //Debugging utilities:
 
@@ -236,12 +237,16 @@ public class WorldMap implements RendersToScreen {
         this.worldViewport = new FitViewport(TemptoNova.PIXEL_GAME_WIDTH, TemptoNova.PIXEL_GAME_HEIGHT, this.camera);
 
         // Create a spritebatch (also mostly for testing things)
-        this.worldBatch = new SpriteBatch();
+        this.miscWorldBatch = new SpriteBatch();
         this.depthMapBatch = new AltDepthBatch();
+        this.finalPassBatch = new AltFinalBatch();
 
         // Create a centralized shape renderer to use for stuff
-        this.shapeDrawer = new ShapeDrawer(this.worldBatch);
-        this.shapeDrawer.setTextureRegion(new TextureRegion(this.blankTexture));
+        this.editorShapeDrawer = new ShapeDrawer(this.miscWorldBatch);
+        this.editorShapeDrawer.setTextureRegion(this.blank);
+        // TODO: Figure out our own shapedrawer situation, since this wont work with the custom shaders and whatnot
+        this.tempFinalPassShapeDrawer = new ShapeDrawer(this.finalPassBatch);
+        this.tempFinalPassShapeDrawer.setTextureRegion(this.blank);
 
         //Create a debug texture for testing things
         this.debugTexture = new Texture("badlogic.jpg");
@@ -251,8 +256,8 @@ public class WorldMap implements RendersToScreen {
         this.depthBuffer = new FrameBuffer(Pixmap.Format.RGBA8888,TemptoNova.PIXEL_GAME_WIDTH, TemptoNova.PIXEL_GAME_HEIGHT, false);
 
         //Initialize tilemap renderer
-        this.tileRenderer = new OrthogonalTiledMapRenderer(this.tiledMap, this.worldBatch);
-        this.tileDepthRenderer = new AtlasOrthogonalTiledMapRenderer(this.tiledMap, this.depthMapBatch, true);
+        this.tileFinalRenderer = new TileLayerFinalRenderer(this.tiledMap, this.finalPassBatch);
+        this.tileDepthRenderer = new TileLayerDepthRenderer(this.tiledMap, this.depthMapBatch);
 
 
         this.mapWriter = new TmxMapWriter();
@@ -360,20 +365,23 @@ public class WorldMap implements RendersToScreen {
         this.debugRenderer.circle(this.camera.position.x, this.camera.position.y, 1);
         this.debugRenderer.end();
 
-        this.worldBatch.setProjectionMatrix(this.camera.combined);
-        this.worldBatch.begin();
+        this.finalPassBatch.setProjectionMatrix(this.camera.combined);
+        this.finalPassBatch.begin();
 
         for (Entity entity : this.entities) {
             if (entity instanceof RendersToWorld renderable) {
-                renderable.renderToWorld(this.worldBatch, this.camera);
+                renderable.renderToWorld(this.finalPassBatch, this.camera);
             }
         }
         float hw = TemptoNova.PIXEL_GAME_WIDTH/2f, hh = TemptoNova.PIXEL_GAME_HEIGHT/2f;
         float x = this.camera.position.x-hw, y = this.camera.position.y;
-        this.worldBatch.draw(this.depthMap, x, y, hw, -hh);
-        this.editor.renderToWorld(worldBatch, camera);
+        this.finalPassBatch.draw(this.depthMap, x, y, hw, -hh);
+        this.finalPassBatch.end();
 
-        this.worldBatch.end();
+        this.miscWorldBatch.setProjectionMatrix(this.camera.combined);
+        this.miscWorldBatch.begin();
+        this.editor.renderToWorld(this.miscWorldBatch, camera);
+        this.miscWorldBatch.end();
 
     }
 
@@ -433,7 +441,9 @@ public class WorldMap implements RendersToScreen {
     //// Other Utility ////
 
     public void dispose() {
-        this.worldBatch.dispose();
+        this.miscWorldBatch.dispose();
+        this.depthMapBatch.dispose();
+        this.finalPassBatch.dispose();
         this.debugRenderer.dispose();
         this.debugTexture.dispose();
         this.blankTexture.dispose();

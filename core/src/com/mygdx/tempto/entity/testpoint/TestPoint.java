@@ -133,7 +133,7 @@ public class TestPoint implements Entity, RendersToWorld {
 
     @Override
     public void renderToWorld(Batch batch, OrthographicCamera worldCamera) {
-        ShapeDrawer drawer = this.parent.shapeDrawer;
+        ShapeDrawer drawer = this.parent.tempFinalPassShapeDrawer;
         drawer.setColor(Color.WHITE);
         float radius = this.body.getRadius();
         if (radius <= 0) radius = 2;

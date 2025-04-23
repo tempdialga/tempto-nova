@@ -3,10 +3,10 @@ package com.mygdx.tempto.entity.decoration;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
-import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.mygdx.tempto.entity.Entity;
 import com.mygdx.tempto.maps.WorldMap;
-import com.mygdx.tempto.rendering.AtlasOrthogonalTiledMapRenderer;
+import com.mygdx.tempto.rendering.TileLayerDepthRenderer;
+import com.mygdx.tempto.rendering.TileLayerFinalRenderer;
 import com.mygdx.tempto.rendering.RendersToWorld;
 
 public class TileLayer implements Entity, RendersToWorld {
@@ -28,6 +28,8 @@ public class TileLayer implements Entity, RendersToWorld {
 
     }
 
+
+
     @Override
     public void setParentWorld(WorldMap parent) {
         this.parent = parent;
@@ -40,16 +42,27 @@ public class TileLayer implements Entity, RendersToWorld {
 
     @Override
     public void renderToWorld(Batch batch, OrthographicCamera worldCamera) {
-        OrthogonalTiledMapRenderer renderer = this.parent.tileRenderer;
+        TileLayerFinalRenderer renderer = this.parent.tileFinalRenderer;
         renderer.setView(worldCamera);
-        renderer.renderTileLayer(this.mapLayer);
+        renderer.renderTileLayer(this);
     }
 
     @Override
     public void renderToDepthMap(Batch depthBatch, OrthographicCamera worldCamera) {
-        AtlasOrthogonalTiledMapRenderer renderer = this.parent.tileDepthRenderer;
-        renderer.currentBaseDepth.r = (1/this.baseDepth);
+        TileLayerDepthRenderer renderer = this.parent.tileDepthRenderer;
         renderer.setView(worldCamera);
-        renderer.renderTileLayer(this.mapLayer);
+        renderer.renderTileLayer(this);
+    }
+
+    public TiledMapTileLayer getMapLayer() {
+        return mapLayer;
+    }
+
+    public float getBaseDepth() {
+        return baseDepth;
+    }
+
+    public WorldMap getParent() {
+        return parent;
     }
 }

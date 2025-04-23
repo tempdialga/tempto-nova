@@ -1149,7 +1149,7 @@ public enum Tools {
         public void renderToWorld(Batch batch, OrthographicCamera worldCamera) {
 
             Vector2 camPos = new Vector2(worldCamera.position.x, worldCamera.position.y);
-            ShapeDrawer drawer = this.editStack.getMap().shapeDrawer;
+            ShapeDrawer drawer = this.editStack.getMap().editorShapeDrawer;
 
 
 
