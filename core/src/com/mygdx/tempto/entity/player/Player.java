@@ -5,7 +5,7 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.math.Vector2;
 import com.mygdx.tempto.entity.Entity;
 import com.mygdx.tempto.entity.physics.BodyPoint;
@@ -104,7 +104,7 @@ public class Player extends InputAdapter implements Entity, RendersToWorld, Posa
     }
 
     @Override
-    public void renderToWorld(SpriteBatch batch, OrthographicCamera worldCamera) {
+    public void renderToWorld(Batch batch, OrthographicCamera worldCamera) {
         this.shapeDrawer = this.parent.shapeDrawer;
         ShapeDrawer drawer = this.shapeDrawer;
 

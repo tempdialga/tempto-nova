@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
@@ -19,7 +20,6 @@ import com.badlogic.gdx.utils.FloatArray;
 import com.badlogic.gdx.utils.IntArray;
 import com.mygdx.tempto.entity.Entity;
 import com.mygdx.tempto.entity.StaticTerrainElement;
-import com.mygdx.tempto.entity.pose.Pose;
 import com.mygdx.tempto.entity.pose.PoseCatalog;
 import com.mygdx.tempto.input.InputTranslator;
 import com.mygdx.tempto.maps.WorldMap;
@@ -28,7 +28,6 @@ import com.mygdx.tempto.util.MiscFunctions;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Vector;
 
 import space.earlygrey.shapedrawer.JoinType;
 import space.earlygrey.shapedrawer.ShapeDrawer;
@@ -152,7 +151,7 @@ public enum Tools {
 
         }
         @Override
-        public void renderToWorld(SpriteBatch batch, OrthographicCamera worldCamera) {
+        public void renderToWorld(Batch batch, OrthographicCamera worldCamera) {
 
 
             //Ensure the shape drawer is initialized
@@ -529,7 +528,7 @@ public enum Tools {
         }
 
         @Override
-        public void renderToWorld(SpriteBatch batch, OrthographicCamera worldCamera) {
+        public void renderToWorld(Batch batch, OrthographicCamera worldCamera) {
             //Ensure the shape drawer is initialized
             if (this.shapeDrawer == null) {
                 TextureRegion region = new TextureRegion(this.editStack.getMap().blankTexture, 1, 1); //Use blank texture for shape
@@ -758,7 +757,7 @@ public enum Tools {
         }
 
         @Override
-        public void renderToWorld(SpriteBatch batch, OrthographicCamera worldCamera) {
+        public void renderToWorld(Batch batch, OrthographicCamera worldCamera) {
             //Ensure the shape drawer is initialized
             if (this.shapeDrawer == null) {
                 TextureRegion region = new TextureRegion(this.editStack.getMap().blankTexture, 1, 1); //Use blank texture for shape
@@ -973,7 +972,7 @@ public enum Tools {
         }
 
         @Override
-        public void renderToWorld(SpriteBatch batch, OrthographicCamera worldCamera) {
+        public void renderToWorld(Batch batch, OrthographicCamera worldCamera) {
             //Ensure the shape drawer is initialized
             if (this.shapeDrawer == null) {
                 TextureRegion region = new TextureRegion(this.editStack.getMap().blankTexture, 1, 1); //Use blank texture for shape
@@ -1147,7 +1146,7 @@ public enum Tools {
         }
 
         @Override
-        public void renderToWorld(SpriteBatch batch, OrthographicCamera worldCamera) {
+        public void renderToWorld(Batch batch, OrthographicCamera worldCamera) {
 
             Vector2 camPos = new Vector2(worldCamera.position.x, worldCamera.position.y);
             ShapeDrawer drawer = this.editStack.getMap().shapeDrawer;

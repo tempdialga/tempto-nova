@@ -1,24 +1,13 @@
 package com.mygdx.tempto.entity.decoration;
 
 import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.g2d.TextureAtlas;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.badlogic.gdx.maps.MapProperties;
-import com.badlogic.gdx.maps.tiled.TiledMapTile;
+import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
-import com.badlogic.gdx.maps.tiled.TiledMapTileSet;
-import com.badlogic.gdx.maps.tiled.TiledMapTileSets;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
-import com.badlogic.gdx.maps.tiled.tiles.StaticTiledMapTile;
-import com.mygdx.tempto.data.CentralTextureData;
 import com.mygdx.tempto.entity.Entity;
 import com.mygdx.tempto.maps.WorldMap;
+import com.mygdx.tempto.rendering.AtlasOrthogonalTiledMapRenderer;
 import com.mygdx.tempto.rendering.RendersToWorld;
-
-import org.lwjgl.Sys;
-
-import java.util.Iterator;
 
 public class TileLayer implements Entity, RendersToWorld {
 
@@ -50,14 +39,17 @@ public class TileLayer implements Entity, RendersToWorld {
     }
 
     @Override
-    public void renderToWorld(SpriteBatch batch, OrthographicCamera worldCamera) {
+    public void renderToWorld(Batch batch, OrthographicCamera worldCamera) {
         OrthogonalTiledMapRenderer renderer = this.parent.tileRenderer;
         renderer.setView(worldCamera);
         renderer.renderTileLayer(this.mapLayer);
     }
 
     @Override
-    public void renderToDepthMap(SpriteBatch depthBatch, OrthographicCamera worldCamera) {
-        this.renderToWorld(depthBatch, worldCamera);
+    public void renderToDepthMap(Batch depthBatch, OrthographicCamera worldCamera) {
+        AtlasOrthogonalTiledMapRenderer renderer = this.parent.tileDepthRenderer;
+        renderer.currentBaseDepth.r = (1/this.baseDepth);
+        renderer.setView(worldCamera);
+        renderer.renderTileLayer(this.mapLayer);
     }
 }

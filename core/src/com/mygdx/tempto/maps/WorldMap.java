@@ -46,10 +46,14 @@ import com.mygdx.tempto.entity.player.Player;
 import com.mygdx.tempto.entity.testpoint.TestPoint;
 import com.mygdx.tempto.entity.physics.Collidable;
 import com.mygdx.tempto.input.InputTranslator;
+import com.mygdx.tempto.rendering.AltDepthBatch;
+import com.mygdx.tempto.rendering.AtlasOrthogonalTiledMapRenderer;
 import com.mygdx.tempto.rendering.RendersToScreen;
 import com.mygdx.tempto.rendering.RendersToWorld;
 import com.mygdx.tempto.util.MiscFunctions;
 import com.mygdx.tempto.view.GameScreen;
+
+import org.lwjgl.Sys;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -107,12 +111,14 @@ public class WorldMap implements RendersToScreen {
     FitViewport worldViewport;
     OrthographicCamera camera;
     SpriteBatch worldBatch;
+    AltDepthBatch depthMapBatch;
     public ShapeDrawer shapeDrawer;
     public Texture blankTexture = new Texture("blank.png");
 
     FrameBuffer depthBuffer;
     Texture depthMap;
     public OrthogonalTiledMapRenderer tileRenderer;
+    public AtlasOrthogonalTiledMapRenderer tileDepthRenderer;
 
     //Debugging utilities:
 
@@ -182,6 +188,8 @@ public class WorldMap implements RendersToScreen {
 //        String mapStr = this.tiledMap.toString();
 //        System.out.println(mapStr);
 
+        System.out.println(SpriteBatch.createDefaultShader().getVertexShaderSource());
+        System.out.println(SpriteBatch.createDefaultShader().getFragmentShaderSource());
         //TODO: Generalize and clean up this process
         MapProperties mapProps = this.tiledMap.getProperties();
         for (Iterator<String> it = mapProps.getKeys(); it.hasNext();) {
@@ -229,6 +237,7 @@ public class WorldMap implements RendersToScreen {
 
         // Create a spritebatch (also mostly for testing things)
         this.worldBatch = new SpriteBatch();
+        this.depthMapBatch = new AltDepthBatch();
 
         // Create a centralized shape renderer to use for stuff
         this.shapeDrawer = new ShapeDrawer(this.worldBatch);
@@ -243,6 +252,7 @@ public class WorldMap implements RendersToScreen {
 
         //Initialize tilemap renderer
         this.tileRenderer = new OrthogonalTiledMapRenderer(this.tiledMap, this.worldBatch);
+        this.tileDepthRenderer = new AtlasOrthogonalTiledMapRenderer(this.tiledMap, this.depthMapBatch, true);
 
 
         this.mapWriter = new TmxMapWriter();
@@ -317,13 +327,14 @@ public class WorldMap implements RendersToScreen {
         // Render depth buffer
         this.depthBuffer.begin();
         ScreenUtils.clear(0.2f,0,0.2f,0.5f);
-        this.worldBatch.begin();
+        this.depthMapBatch.setProjectionMatrix(this.camera.combined);
+        this.depthMapBatch.begin();
         for (Entity entity : this.entities) {
-            if (entity instanceof RendersToWorld renderable) {
-                renderable.renderToDepthMap(this.worldBatch, this.camera);
+            if (entity instanceof TileLayer renderable) { //Currently only tile layer bc this is the only one the batch supports atm
+                renderable.renderToDepthMap(this.depthMapBatch, this.camera);
             }
         }
-        this.worldBatch.end();
+        this.depthMapBatch.end();
         this.depthBuffer.end();
         this.depthMap = depthBuffer.getColorBufferTexture();
 

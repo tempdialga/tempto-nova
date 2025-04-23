@@ -1,6 +1,5 @@
 package com.mygdx.tempto.editing;
 
-import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
@@ -8,11 +7,10 @@ import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
-import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.mygdx.tempto.gui.button.ButtonAction;
 import com.mygdx.tempto.gui.button.ButtonMenu;
@@ -24,14 +22,11 @@ import com.mygdx.tempto.input.InputTranslator;
 import com.mygdx.tempto.maps.WorldMap;
 import com.mygdx.tempto.rendering.RendersToScreen;
 import com.mygdx.tempto.rendering.RendersToWorld;
-import com.mygdx.tempto.view.GameScreen;
 
 import org.eclipse.collections.impl.bimap.mutable.HashBiMap;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
-import java.util.Vector;
 
 /**A class to edit {@link WorldMap} instances; Consumes all input for the world, takes {@link com.mygdx.tempto.input.InputTranslator.GameInputs}*/
 public class MapEditor implements InputProcessor, RendersToScreen, RendersToWorld {
@@ -213,7 +208,7 @@ public class MapEditor implements InputProcessor, RendersToScreen, RendersToWorl
     }
 
     @Override
-    public void renderToWorld(SpriteBatch batch, OrthographicCamera worldCamera) {
+    public void renderToWorld(Batch batch, OrthographicCamera worldCamera) {
         if (!this.active) return; //Only render if active
         this.currentTool.renderToWorld(batch, worldCamera);
     }

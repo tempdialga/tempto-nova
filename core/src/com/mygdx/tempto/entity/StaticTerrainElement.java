@@ -21,6 +21,8 @@ import com.mygdx.tempto.input.InputTranslator;
 import com.mygdx.tempto.maps.WorldMap;
 import com.mygdx.tempto.util.MiscFunctions;
 
+import java.util.ArrayList;
+
 public class StaticTerrainElement implements Entity, SavesToFile, Collidable {
 
     public Polygon polygon;//TODO: generalize, this is only a temporary thing to make sure map loading works
@@ -29,6 +31,10 @@ public class StaticTerrainElement implements Entity, SavesToFile, Collidable {
     public InputAdapter debugInput; //TODO: remove once we add other things that actually are supposed to take user input
     private boolean edited; //Whether or not this terrain object has been edited and needs to be saved to the base file
     private boolean deleted; //If, as part of being edited, this object has been deleted
+
+    //Rendering
+    /**A list of 6-length float arrays representing this element's polygon split into triangles*/
+    public ArrayList<float[]> triangles;
 
     public StaticTerrainElement(PolygonMapObject mapObject) {
         this(mapObject, null);

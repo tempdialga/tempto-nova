@@ -5,12 +5,10 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.math.Vector2;
 import com.mygdx.tempto.entity.Entity;
 import com.mygdx.tempto.entity.physics.BodyPoint;
-import com.mygdx.tempto.entity.pose.Posable;
 import com.mygdx.tempto.entity.pose.Pose;
 import com.mygdx.tempto.maps.WorldMap;
 import com.mygdx.tempto.rendering.RendersToWorld;
@@ -134,7 +132,7 @@ public class TestPoint implements Entity, RendersToWorld {
     }
 
     @Override
-    public void renderToWorld(SpriteBatch batch, OrthographicCamera worldCamera) {
+    public void renderToWorld(Batch batch, OrthographicCamera worldCamera) {
         ShapeDrawer drawer = this.parent.shapeDrawer;
         drawer.setColor(Color.WHITE);
         float radius = this.body.getRadius();

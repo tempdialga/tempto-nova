@@ -1,8 +1,11 @@
 package com.mygdx.tempto.scripts;
 
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector2;
 import com.mygdx.tempto.entity.pose.Pose;
 import com.mygdx.tempto.entity.testpoint.GlideToPoint;
+
+import org.lwjgl.Sys;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -27,12 +30,13 @@ public class SyntaxTests {
 //        System.out.println(justMap.get(HI));
 
         // 11-28-2024: Testing the instanceof keyword for null instances
-        Pose nullPose = null;
-        if (nullPose instanceof GlideToPoint) {
-            System.out.println("GlideToPoint found!");
-        } else {
-            System.out.println("No");
-        }
+//        Pose nullPose = null;
+//        if (nullPose instanceof GlideToPoint) {
+//            System.out.println("GlideToPoint found!");
+//        } else {
+//            System.out.println("No");
+//        }
+//        System.out.println(SpriteBatch.createDefaultShader());
 
 
     }
