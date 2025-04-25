@@ -21,6 +21,8 @@ public abstract class AltBatch implements Batch {
     protected Mesh mesh;
     /**How many data points per vertex. E.g., the depth map has 7: x, y, c, u, v, d, e (d & e being u & v but corresponding to the depth map location)*/
     protected int spriteSize;
+    /**How many indices per sprite. 6 if each sprite is a quad, 3 if each is only a triangle*/
+    protected int indicesPerSprite;
 
     protected float[] vertices;
     protected int idx = 0;
@@ -55,8 +57,10 @@ public abstract class AltBatch implements Batch {
     /** The maximum number of sprites rendered in one batch so far. **/
     public int maxSpritesInBatch = 0;
 
+    public AltBatch(int size, ShaderProgram defaultShader, Mesh mesh, int spriteSize) {this(size, defaultShader, mesh, spriteSize, true);}
+
     public static Mesh.VertexDataType getDefaultVertexDataType() {return (Gdx.gl30 != null) ? Mesh.VertexDataType.VertexBufferObjectWithVAO : defaultVertexDataType;}
-    public AltBatch(int size, ShaderProgram defaultShader, Mesh mesh, int spriteSize) {
+    public AltBatch(int size, ShaderProgram defaultShader, Mesh mesh, int spriteSize, boolean indexQuadsToTriangles) {
         this.mesh = mesh;
         // 32767 is max vertex index, so 32767 / 4 vertices per sprite = 8191 sprites max.
         if (size > 8191) throw new IllegalArgumentException("Can't have more than 8191 sprites per batch: " + size);
@@ -67,16 +71,25 @@ public abstract class AltBatch implements Batch {
 
         vertices = new float[size * spriteSize];
 
-        int len = size * 6;
-        short[] indices = new short[len];
-        short j = 0;
-        for (int i = 0; i < len; i += 6, j += 4) {
-            indices[i] = j;
-            indices[i + 1] = (short)(j + 1);
-            indices[i + 2] = (short)(j + 2);
-            indices[i + 3] = (short)(j + 2);
-            indices[i + 4] = (short)(j + 3);
-            indices[i + 5] = j;
+        short[] indices;
+        if (indexQuadsToTriangles) { //Are quads, so map each quad to two triangles
+            this.indicesPerSprite = 6;
+            int len = size * this.indicesPerSprite;
+            indices = new short[len];
+            short j = 0;
+            for (int i = 0; i < len; i += this.indicesPerSprite, j += 4) {
+                indices[i] = j;
+                indices[i + 1] = (short) (j + 1);
+                indices[i + 2] = (short) (j + 2);
+                indices[i + 3] = (short) (j + 2);
+                indices[i + 4] = (short) (j + 3);
+                indices[i + 5] = j;
+            }
+        } else { //Already are triangles
+            this.indicesPerSprite = 3;
+            int len = size * this.indicesPerSprite;
+            indices = new short[len];
+            for (int i = 0; i < len; i++) indices[i]= (short) i;
         }
         mesh.setIndices(indices);
 
@@ -116,6 +129,7 @@ public abstract class AltBatch implements Batch {
         GL20 gl = Gdx.gl;
         gl.glDepthMask(true);
         if (isBlendingEnabled()) gl.glDisable(GL20.GL_BLEND);
+        this.vertices = new float[this.vertices.length];
     }
 
     @Override
@@ -154,7 +168,7 @@ public abstract class AltBatch implements Batch {
         totalRenderCalls++;
         int spritesInBatch = idx / spriteSize;
         if (spritesInBatch > maxSpritesInBatch) maxSpritesInBatch = spritesInBatch;
-        int count = spritesInBatch * 6;
+        int count = spritesInBatch * this.indicesPerSprite;
 
         lastTexture.bind();
         Mesh mesh = this.mesh;

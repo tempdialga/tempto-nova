@@ -3,6 +3,9 @@ package com.mygdx.tempto.rendering;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.Batch;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**An interface entities or other items should implement in order to be rendered using world coordinates.*/
 public interface RendersToWorld {
 
@@ -13,4 +16,7 @@ public interface RendersToWorld {
     default void renderToDepthMap(Batch depthBatch, OrthographicCamera worldCamera) {
 
     }
+
+    /**Adds any shadow-casting surfaces from this surface to the given list*/
+    default void addShadowCastersToList(List<ShadowCaster> centralList) {}
 }

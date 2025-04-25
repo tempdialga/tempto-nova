@@ -38,6 +38,8 @@ public class AltLightBatch extends AltBatch{
                 new VertexAttribute(VertexAttributes.Usage.Position, 2, ShaderProgram.POSITION_ATTRIBUTE),
 //                new VertexAttribute(VertexAttributes.Usage.TextureCoordinates, 2, AltDepthBatch.DEPCOORD_ATTRIBUTE + "0"),
                 new VertexAttribute(VertexAttributes.Usage.Position, 3, LIGHTCOORD_ATTRIBUTE+"0")), LIGHT_SPRITE_SIZE);
+
+
     }
 
     public void setViewport(Viewport viewport) {
@@ -51,7 +53,7 @@ public class AltLightBatch extends AltBatch{
     }
 
     public void drawLight(LightSource source, Texture depthMap, OrthographicCamera camera) {
-        float radius = 50;
+        float radius = source.radius();
         Vector3 p = source.pos();
         Vector3 p_screen = camera.project(new Vector3(p));
         p_screen.x /= (float) TemptoNova.PIXEL_GAME_WIDTH;

@@ -478,6 +478,15 @@ public class MiscFunctions {
         return bNorm.scl(a.dot(bNorm));
     }
 
+    /**Returns the parameter T such that value = start + T*(end-start)*/
+    public static float parameterize(float start, float end, float value) {
+        return parameterizeWithDistance(start, start-end, value);
+    }
+
+    public static float parameterizeWithDistance(float start, float distance, float value) {
+        return (value-start)/distance;
+    }
+
     public static float tOnLinearPath(Vector2 start, Vector2 end, Vector2 position) {
         return tOnLinearPath(start, end, position, false);
     }

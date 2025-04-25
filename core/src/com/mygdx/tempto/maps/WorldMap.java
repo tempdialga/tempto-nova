@@ -24,6 +24,7 @@ import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.math.Polygon;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Json;
@@ -47,7 +48,9 @@ import com.mygdx.tempto.input.InputTranslator;
 import com.mygdx.tempto.rendering.AltDepthBatch;
 import com.mygdx.tempto.rendering.AltFinalBatch;
 import com.mygdx.tempto.rendering.AltLightBatch;
+import com.mygdx.tempto.rendering.AltShadeBatch;
 import com.mygdx.tempto.rendering.LightSource;
+import com.mygdx.tempto.rendering.ShadowCaster;
 import com.mygdx.tempto.rendering.TileLayerDepthRenderer;
 import com.mygdx.tempto.rendering.TileLayerFinalRenderer;
 import com.mygdx.tempto.rendering.RendersToScreen;
@@ -113,6 +116,7 @@ public class WorldMap implements RendersToScreen {
     SpriteBatch miscWorldBatch;
     AltDepthBatch depthMapBatch;
     AltLightBatch lightBatch;
+    AltShadeBatch shadeBatch;
     AltFinalBatch finalPassBatch;
     public ShapeDrawer editorShapeDrawer;
     public ShapeDrawer tempFinalPassShapeDrawer;
@@ -245,6 +249,7 @@ public class WorldMap implements RendersToScreen {
         this.miscWorldBatch = new SpriteBatch();
         this.depthMapBatch = new AltDepthBatch();
         this.lightBatch = new AltLightBatch();
+        this.shadeBatch = new AltShadeBatch();
         this.finalPassBatch = new AltFinalBatch();
 
         // Create a centralized shape renderer to use for stuff
@@ -358,11 +363,60 @@ public class WorldMap implements RendersToScreen {
         ScreenUtils.clear(0,0,0,1);
         Vector3 mouseCoords = camera.unproject(new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0));
         mouseCoords.z=0;
+        LightSource mouseLight = new LightSource(mouseCoords, Color.YELLOW, 250);
         this.lightBatch.setProjectionMatrix(this.camera.combined);
         this.lightBatch.begin();
         this.lightBatch.setViewport(this.worldViewport);
-        this.lightBatch.drawLight(new LightSource(mouseCoords, Color.YELLOW, 10), this.depthMap, this.camera);
+        this.lightBatch.drawLight(mouseLight, this.depthMap, this.camera);
         this.lightBatch.end();
+
+        this.shadeBatch.setProjectionMatrix(this.camera.combined);
+
+        ArrayList<ShadowCaster> casters = new ArrayList<>();
+        for (Entity entity : this.entities) {
+            if (entity instanceof RendersToWorld renders) {
+                renders.addShadowCastersToList(casters);
+            }
+        }
+//        for (ShadowCaster caster : casters) {
+//            caster.origin().set(mouseCoords);
+//        }
+
+        float width = camera.viewportWidth * camera.zoom;
+        float height = camera.viewportHeight * camera.zoom;
+        float w = width * Math.abs(camera.up.y) + height * Math.abs(camera.up.x);
+        float h = height * Math.abs(camera.up.y) + width * Math.abs(camera.up.x);
+        Rectangle viewBounds = new Rectangle(camera.position.x - w / 2, camera.position.y - h / 2, w, h);
+        Polygon viewPoly = new Polygon(new float[]{
+                viewBounds.x, viewBounds.y,
+                viewBounds.x, viewBounds.y+h,
+                viewBounds.x+w, viewBounds.y+h,
+                viewBounds.x+w, viewBounds.y
+        });
+
+        ShadowCaster screenTestCaster = new ShadowCaster(new TextureRegion(depthMap), new Vector3(viewBounds.x, viewBounds.y, 0), new Vector3(viewBounds.width, 0, 0), new Vector3(0, viewBounds.height, 0));
+//        casters.add(screenTestCaster);
+//        System.out.println(casters.size() + " casters found");
+
+//        this.shadeBatch.dispose();
+//        this.shadeBatch = new AltShadeBatch();
+//        this.shadeBatch.setProjectionMatrix(this.camera.combined);
+        this.shadeBatch.enableBlending();
+        this.shadeBatch.begin();
+
+        ShadowCaster.numRangesVisible = 0;
+        for (ShadowCaster caster : casters) {
+//            caster.origin().set(screenTestCaster.origin());
+//            caster.u().set(screenTestCaster.u());
+//            caster.v().set(screenTestCaster.v());
+            this.shadeBatch.drawShadow(caster, mouseLight, this.depthMap, this.camera, viewBounds, viewPoly);
+//            System.out.println("Caster has u of "+caster.u() + " and v of "+caster.v());
+//            System.out.println("Caster at: "+caster.origin() + ", Caster has u of "+caster.u() + " and v of "+caster.v());
+        }
+        this.shadeBatch.flush();
+        this.shadeBatch.end();
+
+
         this.shadowBuffer.end();
         this.shadowMap = this.shadowBuffer.getColorBufferTexture();
 
@@ -465,6 +519,7 @@ public class WorldMap implements RendersToScreen {
         this.miscWorldBatch.dispose();
         this.depthMapBatch.dispose();
         this.lightBatch.dispose();
+        this.shadeBatch.dispose();
         this.finalPassBatch.dispose();
 
         this.depthBuffer.dispose();
