@@ -46,6 +46,8 @@ import com.mygdx.tempto.entity.physics.Collidable;
 import com.mygdx.tempto.input.InputTranslator;
 import com.mygdx.tempto.rendering.AltDepthBatch;
 import com.mygdx.tempto.rendering.AltFinalBatch;
+import com.mygdx.tempto.rendering.AltLightBatch;
+import com.mygdx.tempto.rendering.LightSource;
 import com.mygdx.tempto.rendering.TileLayerDepthRenderer;
 import com.mygdx.tempto.rendering.TileLayerFinalRenderer;
 import com.mygdx.tempto.rendering.RendersToScreen;
@@ -110,6 +112,7 @@ public class WorldMap implements RendersToScreen {
     OrthographicCamera camera;
     SpriteBatch miscWorldBatch;
     AltDepthBatch depthMapBatch;
+    AltLightBatch lightBatch;
     AltFinalBatch finalPassBatch;
     public ShapeDrawer editorShapeDrawer;
     public ShapeDrawer tempFinalPassShapeDrawer;
@@ -118,6 +121,8 @@ public class WorldMap implements RendersToScreen {
 
     FrameBuffer depthBuffer;
     Texture depthMap;
+    FrameBuffer shadowBuffer;
+    Texture shadowMap;
     public TileLayerFinalRenderer tileFinalRenderer;
     public TileLayerDepthRenderer tileDepthRenderer;
 
@@ -239,6 +244,7 @@ public class WorldMap implements RendersToScreen {
         // Create a spritebatch (also mostly for testing things)
         this.miscWorldBatch = new SpriteBatch();
         this.depthMapBatch = new AltDepthBatch();
+        this.lightBatch = new AltLightBatch();
         this.finalPassBatch = new AltFinalBatch();
 
         // Create a centralized shape renderer to use for stuff
@@ -254,6 +260,10 @@ public class WorldMap implements RendersToScreen {
 
         //Initialize the depth map
         this.depthBuffer = new FrameBuffer(Pixmap.Format.RGBA8888,TemptoNova.PIXEL_GAME_WIDTH, TemptoNova.PIXEL_GAME_HEIGHT, false);
+
+        //Initialize the shadow map TODO: Work out the camera with resolutions of the buffers and whatnot
+        int n = 1; //n*n*4 channels maximum lights, just 1 for now while we test
+        this.shadowBuffer = new FrameBuffer(Pixmap.Format.RGBA4444,TemptoNova.PIXEL_GAME_WIDTH*n, TemptoNova.PIXEL_GAME_HEIGHT*n, false);
 
         //Initialize tilemap renderer
         this.tileFinalRenderer = new TileLayerFinalRenderer(this.tiledMap, this.finalPassBatch);
@@ -331,7 +341,7 @@ public class WorldMap implements RendersToScreen {
 
         // Render depth buffer
         this.depthBuffer.begin();
-        ScreenUtils.clear(0.2f,0,0.2f,0.5f);
+        ScreenUtils.clear(0f,0,0.2f,0.5f);
         this.depthMapBatch.setProjectionMatrix(this.camera.combined);
         this.depthMapBatch.begin();
         for (Entity entity : this.entities) {
@@ -343,8 +353,18 @@ public class WorldMap implements RendersToScreen {
         this.depthBuffer.end();
         this.depthMap = depthBuffer.getColorBufferTexture();
 
-
-
+        //Render lights ! :D
+        this.shadowBuffer.begin();
+        ScreenUtils.clear(0,0,0,1);
+        Vector3 mouseCoords = camera.unproject(new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0));
+        mouseCoords.z=0;
+        this.lightBatch.setProjectionMatrix(this.camera.combined);
+        this.lightBatch.begin();
+        this.lightBatch.setViewport(this.worldViewport);
+        this.lightBatch.drawLight(new LightSource(mouseCoords, Color.YELLOW, 10), this.depthMap, this.camera);
+        this.lightBatch.end();
+        this.shadowBuffer.end();
+        this.shadowMap = this.shadowBuffer.getColorBufferTexture();
 
 //        Camera worldViewportCamera = this.worldViewport.getCamera();
 //        worldViewportCamera.position.set(this.worldViewport.getWorldWidth()/2, this.worldViewport.getWorldHeight()/2,1f);
@@ -376,6 +396,7 @@ public class WorldMap implements RendersToScreen {
         float hw = TemptoNova.PIXEL_GAME_WIDTH/2f, hh = TemptoNova.PIXEL_GAME_HEIGHT/2f;
         float x = this.camera.position.x-hw, y = this.camera.position.y;
         this.finalPassBatch.draw(this.depthMap, x, y, hw, -hh);
+        this.finalPassBatch.draw(this.shadowMap, x, y+hh, hw, -hh);
         this.finalPassBatch.end();
 
         this.miscWorldBatch.setProjectionMatrix(this.camera.combined);
@@ -443,7 +464,15 @@ public class WorldMap implements RendersToScreen {
     public void dispose() {
         this.miscWorldBatch.dispose();
         this.depthMapBatch.dispose();
+        this.lightBatch.dispose();
         this.finalPassBatch.dispose();
+
+        this.depthBuffer.dispose();
+        this.depthMap.dispose();
+        this.shadowBuffer.dispose();
+        this.shadowMap.dispose();
+
+
         this.debugRenderer.dispose();
         this.debugTexture.dispose();
         this.blankTexture.dispose();
