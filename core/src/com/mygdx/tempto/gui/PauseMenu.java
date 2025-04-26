@@ -1,8 +1,5 @@
 package com.mygdx.tempto.gui;
 
-import com.badlogic.gdx.Game;
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -11,11 +8,10 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.Disposable;
-import com.badlogic.gdx.utils.ScreenUtils;
 import com.mygdx.tempto.TemptoNova;
-import com.mygdx.tempto.input.InputTranslator;
+
 import static com.mygdx.tempto.input.InputTranslator.GameInputs;
-import com.mygdx.tempto.input.KeyboardMapper;
+
 import com.mygdx.tempto.rendering.RendersToScreen;
 import com.mygdx.tempto.util.MiscFunctions;
 import com.mygdx.tempto.view.GameScreen;
@@ -31,10 +27,12 @@ public class PauseMenu implements InputProcessor, RendersToScreen, Disposable {
     public static final int RETURN = 0; // Hide menu and go back to game
     public static final int EDIT = 1; // Switch to editing mode (or switch back if currently in such mode)
     public static final int QUIT_GAME = 2; // Return to main menu
+    public static final int RELOAD_WITHOUT_SAVE = 3; //Reload without saving the map
     public static final String[] BUTTON_TEXTS = {
             "Return to Game",
             "Toggle editing",
-            "Main menu"
+            "Main menu",
+            "Reload from save"
     };
 
     //////// Control Flow //////////////////////
@@ -104,7 +102,7 @@ public class PauseMenu implements InputProcessor, RendersToScreen, Disposable {
         batch.draw(temporaryButtonImg, returnX, returnY, returnWidth, returnHeight); //Return button
         batch.draw(temporaryButtonImg, quitX, quitY, quitWidth, quitHeight); //Quit button*/
 
-        float buttonStartY = 0.5f, buttonStartX = -0.5f*aspectRatio, buttonHeight = 0.3f, buttonPadding = 0.1f;
+        float buttonStartY = 0.5f, buttonStartX = -0.5f*aspectRatio, buttonHeight = 0.2f, buttonPadding = 0.1f;
         Color baseColor = Color.WHITE;
         Color selectedColor = Color.TEAL;
 
@@ -149,13 +147,19 @@ public class PauseMenu implements InputProcessor, RendersToScreen, Disposable {
                         this.gameScreen.getWorld().toggleEditing();
                         this.hide();
                         return true;// Input still handled
+                    } else if (selectedButton == RELOAD_WITHOUT_SAVE) {
+                        if (this.overallGame.getScreen() == this.gameScreen) {
+                            this.gameScreen.doNotSave();
+                        }
+                        this.overallGame.switchScreen(TemptoNova.MAIN_MENU_SCREEN);
+                        this.overallGame.switchScreen(TemptoNova.GAME_SCREEN);
                     }
 
                 }
             }
 
             // Ensure the selected button remains one of the buttons that can be selected. This is why QUIT_GAME and RETURN need to be the last and first buttons
-            this.selectedButton = MiscFunctions.clamp(this.selectedButton, RETURN, QUIT_GAME);
+            this.selectedButton = MiscFunctions.clamp(this.selectedButton, RETURN, RELOAD_WITHOUT_SAVE);
 
         } else { // If the Pause Menu is currently inactive, the only input that it needs to look for is input to activate it
             if (keycode == GameInputs.PAUSE) {

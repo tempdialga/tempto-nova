@@ -185,7 +185,7 @@ public class AltShadeBatch extends AltBatch {
         boolean rangeVisible = Intersector.intersectPolygons(shadowRange, viewPolygonClockwise, visRange);
 
         if (rangeVisible) {
-            System.out.println("Range # "+(ShadowCaster.numRangesVisible++)+" visible!");
+//            System.out.println("Range # "+(ShadowCaster.numRangesVisible++)+" visible!");
 //            caster
             float[] rangeVerts = visRange.getTransformedVertices();
             for (int i = 2; i < rangeVerts.length-2; i+=2) {

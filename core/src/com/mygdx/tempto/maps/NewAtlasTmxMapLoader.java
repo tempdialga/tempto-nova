@@ -5,7 +5,10 @@ import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.maps.ImageResolver;
+import com.badlogic.gdx.maps.MapLayer;
+import com.badlogic.gdx.maps.MapLayers;
 import com.badlogic.gdx.maps.MapProperties;
+import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapTile;
 import com.badlogic.gdx.maps.tiled.TiledMapTileSet;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
@@ -18,12 +21,16 @@ import com.mygdx.tempto.data.CentralTextureData;
 
 import org.lwjgl.Sys;
 
+import java.util.HashMap;
+
 public class NewAtlasTmxMapLoader extends TmxMapLoader {
 
     WorldMap parent;
+    public HashMap<MapLayer, XmlReader.Element> layerElements;
 
     public NewAtlasTmxMapLoader(LocalFileHandleResolver localFileHandleResolver) {
         super(localFileHandleResolver);
+        this.layerElements = new HashMap<>();
     }
 
     public NewAtlasTmxMapLoader() {
@@ -32,6 +39,18 @@ public class NewAtlasTmxMapLoader extends TmxMapLoader {
 
     public void setParent(WorldMap parent) {
         this.parent = parent;
+    }
+
+    @Override
+    protected void loadLayer(TiledMap map, MapLayers parentLayers, XmlReader.Element element, FileHandle tmxFile, ImageResolver imageResolver) {
+        super.loadLayer(map, parentLayers, element, tmxFile, imageResolver);
+        System.out.println(parentLayers.get(parentLayers.size()-1));
+        this.layerElements.put(parentLayers.get(parentLayers.size()-1), element);//Add the layer just added
+    }
+
+    @Override
+    protected void loadTileSet(XmlReader.Element element, FileHandle tmxFile, ImageResolver imageResolver) {
+        super.loadTileSet(element, tmxFile, imageResolver);
     }
 
     @Override
@@ -61,10 +80,12 @@ public class NewAtlasTmxMapLoader extends TmxMapLoader {
                                    String source, int offsetX, int offsetY, String imageSource, int imageWidth, int imageHeight, FileHandle image) {
         //System.out.println("Adding tiles of name "+name);
         MapProperties props = tileSet.getProperties();
+        props.put("source",source);
         if (image != null) {
             // One image for the whole tileSet
 
             props.put("imagesource", imageSource);
+
             props.put("imagewidth", imageWidth);
             props.put("imageheight", imageHeight);
             props.put("tilewidth", tilewidth);

@@ -2,10 +2,12 @@ package com.mygdx.tempto.entity.decoration;
 
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.Batch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.maps.tiled.TiledMapTile;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.utils.XmlReader;
 import com.mygdx.tempto.entity.Entity;
 import com.mygdx.tempto.maps.WorldMap;
 import com.mygdx.tempto.rendering.ShadowCaster;
@@ -19,12 +21,14 @@ public class TileLayer implements Entity, RendersToWorld {
 
     String ID;
     TiledMapTileLayer mapLayer;
+    XmlReader.Element originalElement;
     float baseDepth; //In pixel space, e.g. 10 pixels
     WorldMap parent;
 
-    public TileLayer(WorldMap parent, TiledMapTileLayer mapLayer, float baseDepth) {
+    public TileLayer(WorldMap parent, TiledMapTileLayer mapLayer, XmlReader.Element originalElement, float baseDepth) {
         this.setParentWorld(parent);
         this.mapLayer = mapLayer;
+        this.originalElement = originalElement;
         this.baseDepth = baseDepth;
         this.ID = "tiles_"+this.baseDepth;
     }
@@ -81,10 +85,11 @@ public class TileLayer implements Entity, RendersToWorld {
                 TiledMapTile tile = cell.getTile();
                 float x1 = x + tile.getOffsetX() * unitScale;
                 float y1 = y + tile.getOffsetY() * unitScale;
-                ShadowCaster cellCaster = new ShadowCaster(tile.getTextureRegion(),
+                TextureRegion tileRegion = tile.getTextureRegion();
+                ShadowCaster cellCaster = new ShadowCaster(tileRegion,
                         new Vector3(x1, y1, this.baseDepth),
-                        new Vector3(layer.getTileWidth(), 0, 0),
-                        new Vector3(0, layer.getTileWidth(), 0));
+                        new Vector3(tileRegion.getRegionWidth(), 0, 0),
+                        new Vector3(0, tileRegion.getRegionHeight(), 0));
                 centralList.add(cellCaster);
                 x+=layer.getTileWidth();
             }

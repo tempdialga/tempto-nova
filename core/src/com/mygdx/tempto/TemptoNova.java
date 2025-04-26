@@ -36,7 +36,8 @@ public class TemptoNova extends Game {
 
 	@Override
 	public void dispose () {
-		this.currentScreen.dispose();
+		super.dispose();
+		this.screen.dispose();
 	}
 
 	public void switchScreen(int screenType) { // When told to switch to a given screen:
@@ -55,7 +56,7 @@ public class TemptoNova extends Game {
 		}
 
 		if (screenValid) this.screenType = screenType; // If a new screen was made, change the screen type
-		this.setScreen(this.currentScreen); // Update the application on what screen is currently being used
+		if (this.screen != this.currentScreen) this.setScreen(this.currentScreen); // Update the application on what screen is currently being used
 
 		// In the current model, screens will not be saved and reused. In the future this may change, but for now, if the screen is changed, the old screen is disposed
 		if (lastScreen != this.currentScreen && lastScreen != null) {// If the screen changed:

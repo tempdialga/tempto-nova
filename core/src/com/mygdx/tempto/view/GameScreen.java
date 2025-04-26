@@ -1,13 +1,11 @@
 package com.mygdx.tempto.view;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.controllers.Controllers;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.viewport.FitViewport;
-import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.mygdx.tempto.TemptoNova;
 import com.mygdx.tempto.gui.PauseMenu;
@@ -51,6 +49,9 @@ public class GameScreen extends TemptoScreen {
 
     /**A list of things to be rendered on top of the world using {@link #overlayViewport} and {@link #overlayCamera}, such as the pause menu or a health bar*/
     private ArrayList<RendersToScreen> overlays;
+
+    /**If true, avoids writing to file on next call of {@link #hide()}*/
+    private boolean notSaving = false;
 
     //////// Creating and showing the main game /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     public GameScreen(TemptoNova parent) {
@@ -185,10 +186,19 @@ public class GameScreen extends TemptoScreen {
 
     }
 
+    public void doNotSave() {
+        this.notSaving = true;
+    }
+
     @Override
     public void hide() {
-        this.world.writeToSaveFile(); // Write to save file (Final game behavior)
-        this.world.writeToCoreFile(); // Write to core map file (ONLY FOR EDITING)
+        if (this.notSaving) {
+            System.out.println("Skipping next save!");
+        } else {
+            System.out.println("Writing to save file lmao");
+            this.world.writeToSaveFile(); // Write to save file (Final game behavior)
+            this.world.writeToCoreFile(); // Write to core map file (ONLY FOR EDITING)
+        }
     }
 
     @Override
@@ -203,4 +213,6 @@ public class GameScreen extends TemptoScreen {
     public WorldMap getWorld() {
         return world;
     }
+
+
 }

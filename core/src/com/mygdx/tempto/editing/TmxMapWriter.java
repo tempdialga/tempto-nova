@@ -1,5 +1,6 @@
 package com.mygdx.tempto.editing;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapObject;
 import com.badlogic.gdx.maps.MapObjects;
@@ -8,14 +9,22 @@ import com.badlogic.gdx.maps.objects.PolygonMapObject;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapImageLayer;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
+import com.badlogic.gdx.maps.tiled.TiledMapTileSet;
 import com.badlogic.gdx.math.Polygon;
+import com.badlogic.gdx.utils.ObjectMap;
 import com.badlogic.gdx.utils.StringBuilder;
+import com.badlogic.gdx.utils.XmlReader;
 import com.badlogic.gdx.utils.XmlWriter;
+import com.mygdx.tempto.data.TmxMapReader;
+import com.mygdx.tempto.maps.NewAtlasTmxMapLoader;
+
+import org.lwjgl.Sys;
 
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.Map;
 
 public class TmxMapWriter {
     public XmlWriter writer;
@@ -42,7 +51,7 @@ public class TmxMapWriter {
 
     }
     /**Writes relevant portions of a map for Tempto back into a usable xml string. Intended for use by an internal map editor*/
-    public String writeTiledMapToString(TiledMap map){
+    public String writeTiledMapToString(TiledMap map, NewAtlasTmxMapLoader originalLoader){
 
         StringWriter writer = new StringWriter();
         this.writer = new XmlWriter(writer);
@@ -66,10 +75,32 @@ public class TmxMapWriter {
                 Object propValue = mapProperties.get(propName);
                 this.writer.attribute(propName, propValue);
             }
+            for (TiledMapTileSet tileSet : map.getTileSets()) {
+                this.writer.element("tileset");
+                this.writer.attribute("firstgid", tileSet.getProperties().get("firstgid"));
+                this.writer.attribute("source",tileSet.getProperties().get("source"));
+                this.writer.pop();
+            }
             //Write each layer to the map
             for (MapLayer layer : map.getLayers()){
-                if (layer instanceof TiledMapTileLayer || layer instanceof TiledMapImageLayer){
-                    continue; //We'll figure out how to deal with tile layers later if we need to
+
+                if (layer instanceof TiledMapTileLayer tileLayer) {
+                    XmlReader.Element layerElement = originalLoader.layerElements.get(tileLayer);
+                    System.out.println("Layer: "+layerElement.getName()+"------------------------------------");
+                    System.out.println(layerElement.toString());
+                    this.writer.text(layerElement.toString("\t".repeat(this.writer.indent)).replaceFirst("^\\t","").replaceAll("\\n$",""));
+//                    System.exit(0);
+
+//                    this.writer.element(layerElement.getName());
+//                    ObjectMap<String, String> attrs = layerElement.getAttributes();
+//                    for (String attrName : attrs.keys()) {
+//                        this.writer.attribute(attrName, attrs.get(attrName));
+//                    }
+
+                    continue;
+                }
+                if (layer instanceof TiledMapImageLayer){
+                     continue;//We'll figure out how to deal with image layers later if we need to
                 }
                 this.writer.element("objectgroup");
                 int id = map.getLayers().getIndex(layer) + 1;//This does not 1:1 correspond with the original id, but it does give each layer a unique id. Unless it's found that LibGDX Tiled interface stores that original id and it's accessible, this should work fine

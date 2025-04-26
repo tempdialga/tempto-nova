@@ -94,6 +94,8 @@ public class WorldMap implements RendersToScreen {
     TmxMapWriter mapWriter;
     /**Path to a JSON (extension .dat) file in the local file directory, which is the data file describing the map*/
     String mapDataFilePath;
+    /**The map loader, which also stores some relevant context about the original map loading*/
+    NewAtlasTmxMapLoader mapLoader;
 
 
     //"In-world" stuff like entities
@@ -177,18 +179,18 @@ public class WorldMap implements RendersToScreen {
         //This map has never been loaded before; load using defaults of the internal map file
         String probableMap = "data/"+this.pathDirFromData + mapID + ".tmx";//Convention for internal map files
         FileHandle localMapFile = Gdx.files.local(probableMap); //Find where it would be locally
-        NewAtlasTmxMapLoader loader;
+//        NewAtlasTmxMapLoader loader;
         TmxMapLoader oldLoader;
         if (localMapFile.exists()) {
-            loader = new NewAtlasTmxMapLoader(new LocalFileHandleResolver()); //If there's a local file with the right name, create a local file to load from that
+            this.mapLoader = new NewAtlasTmxMapLoader(new LocalFileHandleResolver()); //If there's a local file with the right name, create a local file to load from that
             oldLoader = new TmxMapLoader(new LocalFileHandleResolver());
         } else {
-            loader = new NewAtlasTmxMapLoader(); //And if not, load from assets
+            this.mapLoader = new NewAtlasTmxMapLoader(); //And if not, load from assets
             oldLoader = new TmxMapLoader();
         }
-        loader.setParent(this);
+        this.mapLoader.setParent(this);
 
-        this.tiledMap = loader.load(probableMap);//Attempt to load from what would be assumed to be the map file name
+        this.tiledMap = this.mapLoader.load(probableMap);//Attempt to load from what would be assumed to be the map file name
 //        XmlReader.Element mapRoot = new XmlReader().parse(Gdx.files.internal(probableMap));
 //        System.out.println(mapRoot.toString());
 //        for (int i = 0, j = mapRoot.getChildCount(); i < j; i++) {
@@ -222,7 +224,7 @@ public class WorldMap implements RendersToScreen {
                 String name = layer.getName();
                 if (name.endsWith("px")) { //Confirms that it's a rendering layer, named [#]px from the screen
                     float depth = Float.parseFloat(name.substring(0,name.length()-2));
-                    entities.add(new TileLayer(this, tileLayer, depth));
+                    entities.add(new TileLayer(this, tileLayer, this.mapLoader.layerElements.get(layer), depth));
                 }
             }
         }
@@ -500,7 +502,7 @@ public class WorldMap implements RendersToScreen {
 //        }
 
         // Write the map data to file TODO: Could we do this and guarantee non-destruction of the existing map data, in case it wasn't read properly?
-        String mapXML = this.mapWriter.writeTiledMapToString(this.tiledMap);
+        String mapXML = this.mapWriter.writeTiledMapToString(this.tiledMap, this.mapLoader);
 
         String toMapData = "data/maps/";
         FileHandle file = Gdx.files.local(toMapData+ this.mapID + ".tmx");
