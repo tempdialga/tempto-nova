@@ -181,7 +181,9 @@ public abstract class AltBatch implements Batch {
             Gdx.gl.glDisable(GL20.GL_BLEND);
         } else {
             Gdx.gl.glEnable(GL20.GL_BLEND);
-            if (blendSrcFunc != -1) Gdx.gl.glBlendFuncSeparate(blendSrcFunc, blendDstFunc, blendSrcFuncAlpha, blendDstFuncAlpha);
+            if (blendSrcFunc != -1) {
+                Gdx.gl.glBlendFuncSeparate(blendSrcFunc, blendDstFunc, blendSrcFuncAlpha, blendDstFuncAlpha);
+            }
         }
 
         mesh.render(customShader != null ? customShader : shader, GL20.GL_TRIANGLES, 0, count);

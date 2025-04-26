@@ -8,6 +8,7 @@ import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.assets.loaders.resolvers.LocalFileHandleResolver;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
@@ -59,6 +60,7 @@ import com.mygdx.tempto.util.MiscFunctions;
 import com.mygdx.tempto.view.GameScreen;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Iterator;
 
 import space.earlygrey.shapedrawer.ShapeDrawer;
@@ -348,7 +350,7 @@ public class WorldMap implements RendersToScreen {
 
         // Render depth buffer
         this.depthBuffer.begin();
-        ScreenUtils.clear(0f,0,0.2f,0.5f);
+        ScreenUtils.clear(0.01f,0,0.2f,0.5f);
         this.depthMapBatch.setProjectionMatrix(this.camera.combined);
         this.depthMapBatch.begin();
         for (Entity entity : this.entities) {
@@ -362,15 +364,11 @@ public class WorldMap implements RendersToScreen {
 
         //Render lights ! :D
         this.shadowBuffer.begin();
-        ScreenUtils.clear(0,0,0,1);
+        ScreenUtils.clear(1,1,1,1);
         Vector3 mouseCoords = camera.unproject(new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0));
         mouseCoords.z=0;
         LightSource mouseLight = new LightSource(mouseCoords, Color.YELLOW, 250);
-        this.lightBatch.setProjectionMatrix(this.camera.combined);
-        this.lightBatch.begin();
-        this.lightBatch.setViewport(this.worldViewport);
-        this.lightBatch.drawLight(mouseLight, this.depthMap, this.camera);
-        this.lightBatch.end();
+
 
         this.shadeBatch.setProjectionMatrix(this.camera.combined);
 
@@ -403,10 +401,18 @@ public class WorldMap implements RendersToScreen {
 //        this.shadeBatch.dispose();
 //        this.shadeBatch = new AltShadeBatch();
 //        this.shadeBatch.setProjectionMatrix(this.camera.combined);
-        this.shadeBatch.enableBlending();
+//        this.shadeBatch.enableBlending();
+        this.shadeBatch.setBlendFunctionSeparate(GL20.GL_DST_COLOR, GL20.GL_ZERO, GL20.GL_ONE, GL20.GL_ZERO);
         this.shadeBatch.begin();
 
+
         ShadowCaster.numRangesVisible = 0;
+        casters.sort(new Comparator<ShadowCaster>() {
+            @Override
+            public int compare(ShadowCaster o1, ShadowCaster o2) {
+                return o1.compareTo(o2);
+            }
+        });
         for (ShadowCaster caster : casters) {
 //            caster.origin().set(screenTestCaster.origin());
 //            caster.u().set(screenTestCaster.u());
@@ -415,8 +421,15 @@ public class WorldMap implements RendersToScreen {
 //            System.out.println("Caster has u of "+caster.u() + " and v of "+caster.v());
 //            System.out.println("Caster at: "+caster.origin() + ", Caster has u of "+caster.u() + " and v of "+caster.v());
         }
-        this.shadeBatch.flush();
+//        this.shadeBatch.flush();
         this.shadeBatch.end();
+//
+        this.lightBatch.setProjectionMatrix(this.camera.combined);
+        this.lightBatch.setBlendFunctionSeparate(GL20.GL_DST_COLOR, GL20.GL_ZERO, GL20.GL_ONE, GL20.GL_ZERO);
+        this.lightBatch.begin();
+        this.lightBatch.setViewport(this.worldViewport);
+        this.lightBatch.drawLight(mouseLight, this.depthMap, this.camera, viewBounds);
+        this.lightBatch.end();
 
 
         this.shadowBuffer.end();

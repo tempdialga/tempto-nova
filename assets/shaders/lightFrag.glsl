@@ -13,5 +13,6 @@ void main()
     vec4 dMap = texture2D(u_texture, v_depCoords);
     float depth = 1/dMap.r;
     vec3 r = vec3((v_depCoords-v_lightCoords.xy)*u_viewDims,v_lightCoords.z-depth);
-    gl_FragColor = vec4(vec2(100/dot(r,r)),0,1);
+    float inv_sq = 250/dot(r,r);
+    gl_FragColor = vec4(inv_sq,inv_sq,0,1);
 }

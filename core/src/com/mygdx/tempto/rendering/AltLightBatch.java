@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.VertexAttributes;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.math.Affine2;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.mygdx.tempto.TemptoNova;
@@ -52,7 +53,7 @@ public class AltLightBatch extends AltBatch{
         return new ShaderProgram(Gdx.files.internal(LIGHT_VERT_PATH_INTERNAL), Gdx.files.internal(LIGHT_FRAG_PATH_INTERNAL));
     }
 
-    public void drawLight(LightSource source, Texture depthMap, OrthographicCamera camera) {
+    public void drawLight(LightSource source, Texture depthMap, OrthographicCamera camera, Rectangle viewBounds) {
         float radius = source.radius();
         Vector3 p = source.pos();
         Vector3 p_screen = camera.project(new Vector3(p));
@@ -61,7 +62,8 @@ public class AltLightBatch extends AltBatch{
         p_screen.z = p.z;
         p_screen.scl(0.5f,0.5f,1);
 
-        float l = p.x-radius, r=p.x+radius, u=p.y+radius, d=p.y-radius;
+//        float l = p.x-radius, r=p.x+radius, u=p.y+radius, d=p.y-radius;
+        float l = viewBounds.x, r=viewBounds.x+viewBounds.width, u=viewBounds.y+viewBounds.height, d=viewBounds.y;
         float u1 = 0, v1 = 0, u2 = 1, v2 = 1; //Uh wait actually do we need these
         float[] verts = new float[LIGHT_SPRITE_SIZE];
         p = p_screen;
