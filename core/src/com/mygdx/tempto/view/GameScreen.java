@@ -130,6 +130,7 @@ public class GameScreen extends TemptoScreen {
     //////// Updating the game on a frame by frame basis ////////////////////////////////////////////////////////////////////////////////////////////////////////
     @Override
     public void render(float delta) {
+        System.out.println("Frame time: " + delta + " seconds.");
 
         // Update processed input data like direction //
         InputTranslator.GameInputs.updateProcessedInput();

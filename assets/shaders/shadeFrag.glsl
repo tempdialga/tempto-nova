@@ -32,7 +32,7 @@ void main()
     float v = det_recip*dot(cross(-lST, v_ab), laS);
 
     //If the intersection with the plane lies within the parallelogram created by a, b and c, and it's in front of the source, sample the shadow texture
-    float t_fudge = 0.01;
+    float t_fudge = 0.0;
     if (t > t_fudge && t < 1-t_fudge && u >= 0 && u <= 1 && v >= 0 && v <= 1) {
 //        gl_fragColor = texture2D(u_shadTex, u_shadCoordOrigin + (u_shadCoordUV*vec2(u,v)));
         gl_FragColor = vec4(vec3(0),1);//Start by making it 0 to see if it works

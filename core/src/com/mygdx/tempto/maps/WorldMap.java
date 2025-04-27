@@ -60,6 +60,7 @@ import com.mygdx.tempto.util.MiscFunctions;
 import com.mygdx.tempto.view.GameScreen;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 
@@ -364,7 +365,7 @@ public class WorldMap implements RendersToScreen {
 
         //Render lights ! :D
         this.shadowBuffer.begin();
-        ScreenUtils.clear(1,1,1,1);
+
         Vector3 mouseCoords = camera.unproject(new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0));
         mouseCoords.z=0;
         LightSource mouseLight = new LightSource(mouseCoords, Color.YELLOW, 250);
@@ -402,27 +403,26 @@ public class WorldMap implements RendersToScreen {
 //        this.shadeBatch = new AltShadeBatch();
 //        this.shadeBatch.setProjectionMatrix(this.camera.combined);
 //        this.shadeBatch.enableBlending();
-        this.shadeBatch.setBlendFunctionSeparate(GL20.GL_DST_COLOR, GL20.GL_ZERO, GL20.GL_ONE, GL20.GL_ZERO);
-        this.shadeBatch.begin();
+        for (int i = 0; i < 100; i++) {
+            ScreenUtils.clear(1, 1, 1, 1);
+            this.shadeBatch.setBlendFunctionSeparate(GL20.GL_DST_COLOR, GL20.GL_ZERO, GL20.GL_ONE, GL20.GL_ZERO);
+            this.shadeBatch.begin();
 
 
-        ShadowCaster.numRangesVisible = 0;
-        casters.sort(new Comparator<ShadowCaster>() {
-            @Override
-            public int compare(ShadowCaster o1, ShadowCaster o2) {
-                return o1.compareTo(o2);
-            }
-        });
-        for (ShadowCaster caster : casters) {
+
+            ShadowCaster.numRangesVisible = 0;
+            Collections.sort(casters);
+            for (ShadowCaster caster : casters) {
 //            caster.origin().set(screenTestCaster.origin());
 //            caster.u().set(screenTestCaster.u());
 //            caster.v().set(screenTestCaster.v());
-            this.shadeBatch.drawShadow(caster, mouseLight, this.depthMap, this.camera, viewBounds, viewPoly);
+                this.shadeBatch.drawShadow(caster, mouseLight, this.depthMap, this.camera, viewBounds, viewPoly);
 //            System.out.println("Caster has u of "+caster.u() + " and v of "+caster.v());
 //            System.out.println("Caster at: "+caster.origin() + ", Caster has u of "+caster.u() + " and v of "+caster.v());
-        }
+            }
 //        this.shadeBatch.flush();
-        this.shadeBatch.end();
+            this.shadeBatch.end();
+        }
 //
         this.lightBatch.setProjectionMatrix(this.camera.combined);
         this.lightBatch.setBlendFunctionSeparate(GL20.GL_DST_COLOR, GL20.GL_ZERO, GL20.GL_ONE, GL20.GL_ZERO);

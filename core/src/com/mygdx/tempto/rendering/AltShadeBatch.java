@@ -381,6 +381,6 @@ public class AltShadeBatch extends AltBatch {
 //        mesh.render(customShader != null ? customShader : shader, GL20.GL_TRIANGLES, 0, count);
 //
 //        idx = 0;
-        System.out.println("Mesh size on flush: " + this.mesh.getNumVertices());
+//        System.out.println("Mesh size on flush: " + this.mesh.getNumVertices());
     }
 }
