@@ -17,6 +17,7 @@ import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
+import com.mygdx.tempto.data.CentralTextureData;
 import com.mygdx.tempto.util.MiscFunctions;
 
 import org.lwjgl.util.vector.Matrix2f;
@@ -37,6 +38,7 @@ public class AltShadeBatch extends AltBatch {
     protected final static String DEPTHMAPCOORD_ATTRIBUTE = AltDepthBatch.DEPCOORD_ATTRIBUTE;
     protected final static String SHADOWTEXCOORD_ATTRIBUTE = "a_shadTexCoord";
     protected final static String SHADOWTEXDIMS_ATTRIBUTE = "a_shadTexDims";
+    protected final static String SHADOWTEXDEPCOORD_ATTRIBUTE = "a_shadTexDepCoord"; //Coordinates of the depth texture on the same texture as the base texture
 
     protected final static String DMAPTEX_UNIFORM = "u_dMapTex";
     protected final static String SHADTEX_UNIFORM = "u_shadTex";
@@ -47,9 +49,9 @@ public class AltShadeBatch extends AltBatch {
                                     S_ATTRIBUTE = "a_S";
 
     private static int i=0;
-    public static final int X1 = i++, Y1 = i++, D1 = i++, E1 = i++, ShU1 = i++, ShV1 = i++, ShW1 = i++, ShH1 = i++, AX1 = i++, AY1 = i++, AZ1 = i++, ABX1 = i++, ABY1 = i++, ABZ1 = i++, ACX1 = i++, ACY1 = i++, ACZ1 = i++, SX1 = i++, SY1 = i++, SZ1 = i++,
-                            X2 = i++, Y2 = i++, D2 = i++, E2 = i++, ShU2 = i++, ShV2 = i++, ShW2 = i++, ShH2 = i++, AX2 = i++, AY2 = i++, AZ2 = i++, ABX2 = i++, ABY2 = i++, ABZ2 = i++, ACX2 = i++, ACY2 = i++, ACZ2 = i++, SX2 = i++, SY2 = i++, SZ2 = i++,
-                            X3 = i++, Y3 = i++, D3 = i++, E3 = i++, ShU3 = i++, ShV3 = i++, ShW3 = i++, ShH3 = i++, AX3 = i++, AY3 = i++, AZ3 = i++, ABX3 = i++, ABY3 = i++, ABZ3 = i++, ACX3 = i++, ACY3 = i++, ACZ3 = i++, SX3 = i++, SY3 = i++, SZ3 = i++;
+    public static final int X1 = i++, Y1 = i++, D1 = i++, E1 = i++, ShU1 = i++, ShV1 = i++, ShW1 = i++, ShH1 = i++, ShD1 = i++, ShE1 = i++, AX1 = i++, AY1 = i++, AZ1 = i++, ABX1 = i++, ABY1 = i++, ABZ1 = i++, ACX1 = i++, ACY1 = i++, ACZ1 = i++, SX1 = i++, SY1 = i++, SZ1 = i++,
+                            X2 = i++, Y2 = i++, D2 = i++, E2 = i++, ShU2 = i++, ShV2 = i++, ShW2 = i++, ShH2 = i++, ShD2 = i++, ShE2 = i++, AX2 = i++, AY2 = i++, AZ2 = i++, ABX2 = i++, ABY2 = i++, ABZ2 = i++, ACX2 = i++, ACY2 = i++, ACZ2 = i++, SX2 = i++, SY2 = i++, SZ2 = i++,
+                            X3 = i++, Y3 = i++, D3 = i++, E3 = i++, ShU3 = i++, ShV3 = i++, ShW3 = i++, ShH3 = i++, ShD3 = i++, ShE3 = i++, AX3 = i++, AY3 = i++, AZ3 = i++, ABX3 = i++, ABY3 = i++, ABZ3 = i++, ACX3 = i++, ACY3 = i++, ACZ3 = i++, SX3 = i++, SY3 = i++, SZ3 = i++;
     protected final static int SHADOW_SPRITE_SIZE = i;
 
 
@@ -73,6 +75,7 @@ public class AltShadeBatch extends AltBatch {
                 new VertexAttribute(VertexAttributes.Usage.TextureCoordinates, 2, DEPTHMAPCOORD_ATTRIBUTE + "0"),
                 new VertexAttribute(VertexAttributes.Usage.TextureCoordinates, 2, SHADOWTEXCOORD_ATTRIBUTE + "0"),
                 new VertexAttribute(VertexAttributes.Usage.TextureCoordinates, 2, SHADOWTEXDIMS_ATTRIBUTE+"0"),
+                new VertexAttribute(VertexAttributes.Usage.TextureCoordinates, 2, SHADOWTEXDEPCOORD_ATTRIBUTE+"0"),
                 new VertexAttribute(VertexAttributes.Usage.Generic, 3, A_ATTRIBUTE),
                 new VertexAttribute(VertexAttributes.Usage.Generic, 3, AB_ATTRIBUTE),
                 new VertexAttribute(VertexAttributes.Usage.Generic, 3, AC_ATTRIBUTE),
@@ -157,6 +160,8 @@ public class AltShadeBatch extends AltBatch {
 //        float sh_u = caster.shadowTexture().getU()*sh_invTexWid, sh_v = caster.shadowTexture().getV()*sh_invTexHgt;
         float sh_w = caster.shadowTexture().getRegionWidth()*sh_invTexWid, sh_h = caster.shadowTexture().getRegionHeight()*sh_invTexHgt;
         float sh_u = caster.shadowTexture().getU(), sh_v = caster.shadowTexture().getV();
+        TextureRegion depReg = CentralTextureData.baseToDepthPairs.get(caster.shadowTexture());
+        float sh_d = depReg.getU(), sh_e = depReg.getV();
 //        float sh_w = caster.shadowTexture().getRegionWidth(), sh_h = caster.shadowTexture().getRegionHeight();
 //        float sh_u = 0, sh_v = 0;
 //        float sh_w = 1, sh_h = 1;
@@ -176,7 +181,13 @@ public class AltShadeBatch extends AltBatch {
         vertices[ShH2] = sh_h;
         vertices[ShH3] = sh_h;
 
+        vertices[ShD1] = sh_d;
+        vertices[ShD2] = sh_d;
+        vertices[ShD3] = sh_d;
 
+        vertices[ShE1] = sh_e;
+        vertices[ShE2] = sh_e;
+        vertices[ShE3] = sh_e;
 
         Matrix3 toRegCoords = new Matrix3(new float[]{
                 cU.x,cV.x,0,
@@ -204,7 +215,14 @@ public class AltShadeBatch extends AltBatch {
         Vector2 c = new Vector2(b).add(cU.x, cU.y);
         Vector2 d = new Vector2(c).sub(cV.x, cV.y);
 
-        if (Math.min(Math.min(a.len(), b.len()), Math.min(c.len(), d.len())) > source.radius()) return; //Don't try to render too far away TODO: this won't allow a big region that the source is close to the edge of
+        Vector2 zero = new Vector2();
+        float r2 = source.radius()*source.radius();
+        if (!(
+            Intersector.intersectSegmentCircle(a, b, zero, r2) ||
+            Intersector.intersectSegmentCircle(b, c, zero, r2) ||
+            Intersector.intersectSegmentCircle(c, d, zero, r2) ||
+            Intersector.intersectSegmentCircle(d, a, zero, r2)
+        )) return; //Don't try to render too far away
 
         Vector2 farthestLeft = a;
         Vector2 farthestRight = a;

@@ -4,6 +4,7 @@ precision mediump float;
 varying vec2 v_dMapCoords;//Corresponds to the location on the depth map
 varying vec2 v_shadUV;//origin coordinate on shadow texture
 varying vec2 v_shadWH;//width and height of of the region of the shadow texture
+varying vec2 v_shadDE;//origin coordinate on the shadow texture but which correspond to the depth texture instead of the normal
 uniform sampler2D u_dMapTex;//Corresponds to the depth map
 uniform sampler2D u_shadTex;//Corresponds to the shadow texture
 
@@ -32,16 +33,25 @@ void main()
     float u = det_recip*dot(cross(v_ac, -lST), laS);
     float v = det_recip*dot(cross(-lST, v_ab), laS);
 
+    vec2 shadCoord = v_shadUV + (v_shadWH*vec2(u,1-v));
+    vec2 shadDepCoord = v_shadDE + (v_shadWH*vec2(u,1-v));
+    vec4 shadColor = texture2D(u_shadTex, shadCoord);
+    vec4 shadDep = texture2D(u_shadTex, shadDepCoord);
+
+    float t_mod = (2.5*(shadDep.r-0.5))/lST.z;//TODO: replace this with a normal vector? So that the depth could work properly on an angled surface
+//    t_mod = 0;
+
     //If the intersection with the plane lies within the parallelogram created by a, b and c, and it's in front of the source, sample the shadow texture
     float t_fudge = 0.0;
     float coord_fudge = 0.001;
-    if (t > t_fudge && t < 1-t_fudge &&
+    if (t+t_mod > t_fudge && t+t_mod < 1-t_fudge &&
         u >= 0-coord_fudge && u <= 1+coord_fudge &&
         v >= 0-coord_fudge && v <= 1+coord_fudge) {
         vec2 shadCoord = v_shadUV + (v_shadWH*vec2(u,1-v));
 //        vec2 shadCoord = vec2(u,v);
         vec4 shadColor = texture2D(u_shadTex, shadCoord);
 //        vec4 shadColor = texture2D(u_shadTex, vec2(u,v));
+//        gl_FragColor = shadDep;
         gl_FragColor = vec4(vec3(1-shadColor.a), 1 );
 //        gl_FragColor = vec4(vec3(1-shadColor.a),1);//Start by making it 0 to see if it works
     } else {
