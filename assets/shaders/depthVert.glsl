@@ -14,4 +14,5 @@ void main()
     v_texCoords = a_texCoord0;
     v_depCoords = a_depCoord0;
     gl_Position =  u_projTrans * a_position;
+    gl_Position.z = v_color.r;
 }

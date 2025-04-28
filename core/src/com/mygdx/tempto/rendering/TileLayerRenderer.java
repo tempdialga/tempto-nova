@@ -98,6 +98,7 @@ public abstract class TileLayerRenderer extends OrthogonalTiledMapRenderer {
     }
 
     public void renderTileLayer(TileLayer layer) {
+//        if (layer.isRotate()) return;//For now don't try to render rotated ones, they're only for shadows
         final float color = this.packedColorForLayer(layer);
         final float[] vertices = this.vertices;
         TiledMapTileLayer tiledLayer = layer.getMapLayer();
@@ -135,7 +136,12 @@ public abstract class TileLayerRenderer extends OrthogonalTiledMapRenderer {
                 final TiledMapTile tile = cell.getTile();
 
                 if (tile != null) {
-                    this.drawTile(cell, x, y, vertices, color);
+                    float w = cell.getTile().getTextureRegion().getRegionWidth(), h = cell.getTile().getTextureRegion().getRegionHeight();
+                    if (layer.isRotate()) {
+                        w *= (float) Math.cos(Math.toRadians(45));
+                    }
+
+                    this.drawTile(cell, x, y, w, h, vertices, color);
                 }
                 x += layerTileWidth;
             }
@@ -148,7 +154,7 @@ public abstract class TileLayerRenderer extends OrthogonalTiledMapRenderer {
     /**Renders a specific tile.
      * Between different rendering stages (Drawing to the depth map, to the shadow/light map, the final pass), the loop itself doesn't change,
      * just the piece of code to render each tile.*/
-    abstract void drawTile(TiledMapTileLayer.Cell cell, float x, float y, float[] vertices, float color);
+    abstract void drawTile(TiledMapTileLayer.Cell cell, float x, float y, float w, float h, float[] vertices, float color);
 
 
 

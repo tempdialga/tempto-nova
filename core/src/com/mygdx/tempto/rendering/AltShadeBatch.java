@@ -12,11 +12,16 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.math.Affine2;
 import com.badlogic.gdx.math.Intersector;
+import com.badlogic.gdx.math.Matrix3;
 import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.mygdx.tempto.util.MiscFunctions;
+
+import org.lwjgl.util.vector.Matrix2f;
+import org.lwjgl.util.vector.Vector2f;
+import org.w3c.dom.Text;
 
 import java.nio.Buffer;
 import java.util.Arrays;
@@ -46,12 +51,12 @@ public class AltShadeBatch extends AltBatch {
                             X2 = i++, Y2 = i++, D2 = i++, E2 = i++, ShU2 = i++, ShV2 = i++, ShW2 = i++, ShH2 = i++, AX2 = i++, AY2 = i++, AZ2 = i++, ABX2 = i++, ABY2 = i++, ABZ2 = i++, ACX2 = i++, ACY2 = i++, ACZ2 = i++, SX2 = i++, SY2 = i++, SZ2 = i++,
                             X3 = i++, Y3 = i++, D3 = i++, E3 = i++, ShU3 = i++, ShV3 = i++, ShW3 = i++, ShH3 = i++, AX3 = i++, AY3 = i++, AZ3 = i++, ABX3 = i++, ABY3 = i++, ABZ3 = i++, ACX3 = i++, ACY3 = i++, ACZ3 = i++, SX3 = i++, SY3 = i++, SZ3 = i++;
     protected final static int SHADOW_SPRITE_SIZE = i;
-        
-    protected static ShaderProgram shadowShader;
-    protected static ShaderProgram lightShader;
 
 
     protected static Mesh.VertexDataType meshVertexDataType = (Gdx.gl30 != null) ? Mesh.VertexDataType.VertexBufferObjectWithVAO : defaultVertexDataType;
+
+    protected Texture lastShadowTexture;
+    protected float invShadTexWidth = 0, invShadTexHeight = 0;
 
     public AltShadeBatch() {this(1000, null);}
 
@@ -148,8 +153,13 @@ public class AltShadeBatch extends AltBatch {
         vertices[SZ3] = S_nor.z;
         
         //Shadow texture coordinates. This is confusing bc normally texture coords are interpolated, but that interpolation happens per fragment based on its own depth/intersection with the shadow plane described by a, b, and c above
+        float sh_invTexWid = 1/(float)caster.shadowTexture().getTexture().getWidth(), sh_invTexHgt = 1/(float)caster.shadowTexture().getTexture().getHeight();
+//        float sh_u = caster.shadowTexture().getU()*sh_invTexWid, sh_v = caster.shadowTexture().getV()*sh_invTexHgt;
+        float sh_w = caster.shadowTexture().getRegionWidth()*sh_invTexWid, sh_h = caster.shadowTexture().getRegionHeight()*sh_invTexHgt;
         float sh_u = caster.shadowTexture().getU(), sh_v = caster.shadowTexture().getV();
-        float sh_w = caster.shadowTexture().getRegionWidth(), sh_h = caster.shadowTexture().getRegionHeight();
+//        float sh_w = caster.shadowTexture().getRegionWidth(), sh_h = caster.shadowTexture().getRegionHeight();
+//        float sh_u = 0, sh_v = 0;
+//        float sh_w = 1, sh_h = 1;
         vertices[ShU1] = sh_u;
         vertices[ShU2] = sh_u;
         vertices[ShU3] = sh_u;
@@ -166,29 +176,35 @@ public class AltShadeBatch extends AltBatch {
         vertices[ShH2] = sh_h;
         vertices[ShH3] = sh_h;
 
+
+
+        Matrix3 toRegCoords = new Matrix3(new float[]{
+                cU.x,cV.x,0,
+                cU.y,cV.y,0,
+                0,0,1
+        });
+        if (toRegCoords.det() != 0) { //If the shadow surface is fully orthogonal to the screen, there isn't a way for the light to be "inside" it
+            Vector3 regCoords = new Vector3(S).sub(cPos).mul(toRegCoords.inv());
+
+//        if (a.x <= 0 && a.y <=0 && c.x >= 0 && c.y >=0) {//The source is inside the parallelogram (infinite prism?) represented by the caster, check whole screen
+            if (regCoords.x >= 0 && regCoords.x <= 1 && regCoords.y >= 0 && regCoords.y <= 1) {
+                this.pushConvexShadowPolygon(new float[]{
+                        S.x - r, S.y - r,
+                        S.x - r, S.y + r,
+                        S.x + r, S.y + r,
+                        S.x + r, S.y - r,
+                }, vertices, caster.shadowTexture().getTexture(), depthMap, viewBounds);
+                return;
+            }
+        }
+
         //Coordinates of shadow casting parallelogram relative to the source
         Vector2 a = new Vector2(cPos.x, cPos.y).sub(S.x, S.y);
         Vector2 b = new Vector2(a).add(cV.x, cV.y);
         Vector2 c = new Vector2(b).add(cU.x, cU.y);
         Vector2 d = new Vector2(c).sub(cV.x, cV.y);
 
-
-        if (Intersector.isPointInPolygon(new float[]{
-                a.x,a.y,
-                b.x,b.y,
-                c.x,c.y,
-                d.x,d.y,
-        }, 0, 8, 0, 0)) {//The source is inside the parallelogram (infinite prism?) represented by the caster, check whole screen
-            this.pushConvexShadowPolygon(new float[]{
-                    S.x-r,S.y-r,
-                    S.x-r,S.y+r,
-                    S.x+r,S.y+r,
-                    S.x+r,S.y-r,
-            }, vertices, caster.shadowTexture().getTexture(), depthMap, viewBounds);
-            return;
-        }
-
-        if (Math.min(Math.min(a.len(), b.len()), Math.min(c.len(), d.len())) > source.radius()) return; //Don't try to render too far away
+        if (Math.min(Math.min(a.len(), b.len()), Math.min(c.len(), d.len())) > source.radius()) return; //Don't try to render too far away TODO: this won't allow a big region that the source is close to the edge of
 
         Vector2 farthestLeft = a;
         Vector2 farthestRight = a;
@@ -273,6 +289,9 @@ public class AltShadeBatch extends AltBatch {
     }
 
     protected void pushConvexShadowPolygon(float[] polygonVerts, float[] preloadedMeshVerts, Texture shadowTexture, Texture depthMap, Rectangle viewBounds) {
+        if (shadowTexture != this.lastShadowTexture) { //If it's using a different shadowTexture than before
+            this.switchShadowTexture(shadowTexture);
+        }
 
         preloadedMeshVerts[X1] = polygonVerts[0];
         preloadedMeshVerts[Y1] = polygonVerts[1];
@@ -300,6 +319,13 @@ public class AltShadeBatch extends AltBatch {
         }
     }
 
+    protected void switchShadowTexture (Texture shadowTexture) {
+        flush();
+        this.lastShadowTexture = shadowTexture;
+        invShadTexWidth = 1.0f / shadowTexture.getWidth();
+        invShadTexHeight = 1.0f / shadowTexture.getHeight();
+    }
+
     @Override
     public void end() {
         super.end();
@@ -313,11 +339,11 @@ public class AltShadeBatch extends AltBatch {
         if (customShader != null) {
             customShader.setUniformMatrix("u_projTrans", combinedMatrix);
             customShader.setUniformi(DMAPTEX_UNIFORM, 0);
-//            customShader.setUniformi(SHADTEX_UNIFORM, 1);
+            customShader.setUniformi(SHADTEX_UNIFORM, 1);
         } else {
             shader.setUniformMatrix("u_projTrans", combinedMatrix);
             shader.setUniformi(DMAPTEX_UNIFORM, 0);
-//            shader.setUniformi(SHADTEX_UNIFORM, 1);
+            shader.setUniformi(SHADTEX_UNIFORM, 1);
         }
     }
     @Override
@@ -353,34 +379,34 @@ public class AltShadeBatch extends AltBatch {
 
     @Override
     public void flush() {
+        if (idx == 0) return;
 
-        super.flush();
-//        if (idx == 0) return;
-//
-//        renderCalls++;
-//        totalRenderCalls++;
-//        int spritesInBatch = idx / spriteSize;
-//        if (spritesInBatch > maxSpritesInBatch) maxSpritesInBatch = spritesInBatch;
-//        int count = spritesInBatch * this.indicesPerSprite;
-//
-//        lastTexture.bind();
-//        Mesh mesh = this.mesh;
-//        mesh.setVertices(vertices, 0, idx);
-//        Buffer indicesBuffer = (Buffer)mesh.getIndicesBuffer(true);
-//        indicesBuffer.position(0);
-//        indicesBuffer.limit(count);
-//
-//        Gdx.gl.glBlendEquation( GL20.GL_FUNC_ADD );
-//        Gdx.gl.glBlendFunc( GL20.GL_ZERO, GL20.GL_SRC_COLOR );
-////        Gdx.gl.glBlendEquationSeparate(GL20.GL_FUNC_ADD, GL20.GL_FUNC_ADD);
-////        Gdx.gl.glBlendFuncSeparate(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA, GL20.GL_ONE, GL20.GL_ZERO);
-////        Gdx.gl20.glEnable(GL20.GL_BLEND);
-////        Gdx.gl20.glBlendEquationSeparate(GL20.GL_FUNC_ADD, GL20.GL_FUNC_ADD);
-////        Gdx.gl20.glBlendFuncSeparate(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA, GL20.GL_ONE, GL20.GL_ZERO);
-//
-//        mesh.render(customShader != null ? customShader : shader, GL20.GL_TRIANGLES, 0, count);
-//
-//        idx = 0;
-//        System.out.println("Mesh size on flush: " + this.mesh.getNumVertices());
+        renderCalls++;
+        totalRenderCalls++;
+        int spritesInBatch = idx / spriteSize;
+        if (spritesInBatch > maxSpritesInBatch) maxSpritesInBatch = spritesInBatch;
+        int count = spritesInBatch * this.indicesPerSprite;
+
+        lastShadowTexture.bind(1);
+        lastTexture.bind(0);
+
+        Mesh mesh = this.mesh;
+        mesh.setVertices(vertices, 0, idx);
+        Buffer indicesBuffer = (Buffer)mesh.getIndicesBuffer(true);
+        indicesBuffer.position(0);
+        indicesBuffer.limit(count);
+
+        if (blendingDisabled) {
+            Gdx.gl.glDisable(GL20.GL_BLEND);
+        } else {
+            Gdx.gl.glEnable(GL20.GL_BLEND);
+            if (blendSrcFunc != -1) {
+                Gdx.gl.glBlendFuncSeparate(blendSrcFunc, blendDstFunc, blendSrcFuncAlpha, blendDstFuncAlpha);
+            }
+        }
+
+        mesh.render(customShader != null ? customShader : shader, GL20.GL_TRIANGLES, 0, count);
+
+        idx = 0;
     }
 }

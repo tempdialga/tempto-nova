@@ -24,14 +24,20 @@ public class TileLayer implements Entity, RendersToWorld {
     XmlReader.Element originalElement;
     float baseDepth; //In pixel space, e.g. 10 pixels
     WorldMap parent;
+    boolean rotate; //Whether this layer's tiles are rotated, for now just flipped back along the left side, goes -z instead of +x
 
     public TileLayer(WorldMap parent, TiledMapTileLayer mapLayer, XmlReader.Element originalElement, float baseDepth) {
+        this(parent, mapLayer, originalElement, baseDepth, false);
+    }
+    public TileLayer(WorldMap parent, TiledMapTileLayer mapLayer, XmlReader.Element originalElement, float baseDepth, boolean rotate) {
         this.setParentWorld(parent);
         this.mapLayer = mapLayer;
         this.originalElement = originalElement;
         this.baseDepth = baseDepth;
         this.ID = "tiles_"+this.baseDepth;
+        this.rotate = rotate;
     }
+
 
     @Override
     public void update(float deltaTime, WorldMap world) {
@@ -86,9 +92,17 @@ public class TileLayer implements Entity, RendersToWorld {
                 float x1 = x + tile.getOffsetX() * unitScale;
                 float y1 = y + tile.getOffsetY() * unitScale;
                 TextureRegion tileRegion = tile.getTextureRegion();
+
+                Vector3 u = new Vector3(tileRegion.getRegionWidth(), 0, 0);
+
+                if (this.rotate) { //Test: rotate back along left side
+                    u.z = u.x*(float) Math.cos(Math.toRadians(45));
+                    u.x = u.x*(float) Math.cos(Math.toRadians(45));
+                }
+
                 ShadowCaster cellCaster = new ShadowCaster(tileRegion,
                         new Vector3(x1, y1, this.baseDepth),
-                        new Vector3(tileRegion.getRegionWidth(), 0, 0),
+                        u,
                         new Vector3(0, tileRegion.getRegionHeight(), 0));
                 centralList.add(cellCaster);
                 x+=layer.getTileWidth();
@@ -144,6 +158,10 @@ public class TileLayer implements Entity, RendersToWorld {
 
     public float getBaseDepth() {
         return baseDepth;
+    }
+
+    public boolean isRotate() {
+        return rotate;
     }
 
     public WorldMap getParent() {

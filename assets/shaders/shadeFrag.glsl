@@ -19,7 +19,8 @@ varying vec3 v_S; //Location of light source S, in depth map coordinates (x = sc
 void main()
 {
 
-    vec3 T = vec3(v_dMapCoords, 1/(texture2D(u_dMapTex, v_dMapCoords).r)-1);//Coordinates of target
+    vec4 dmap = texture2D(u_dMapTex, v_dMapCoords);
+    vec3 T = vec3(v_dMapCoords, 1/dmap.r-1);//Coordinates of target
     vec3 laS = v_S - v_a; //Vector from a to light source S
     vec3 lST = T - v_S; //Vector from light source S to target T
 
@@ -33,14 +34,22 @@ void main()
 
     //If the intersection with the plane lies within the parallelogram created by a, b and c, and it's in front of the source, sample the shadow texture
     float t_fudge = 0.0;
-    if (t > t_fudge && t < 1-t_fudge && u >= 0 && u <= 1 && v >= 0 && v <= 1) {
-//        gl_fragColor = texture2D(u_shadTex, u_shadCoordOrigin + (u_shadCoordUV*vec2(u,v)));
-        gl_FragColor = vec4(vec3(0),1);//Start by making it 0 to see if it works
+    float coord_fudge = 0.001;
+    if (t > t_fudge && t < 1-t_fudge &&
+        u >= 0-coord_fudge && u <= 1+coord_fudge &&
+        v >= 0-coord_fudge && v <= 1+coord_fudge) {
+        vec2 shadCoord = v_shadUV + (v_shadWH*vec2(u,1-v));
+//        vec2 shadCoord = vec2(u,v);
+        vec4 shadColor = texture2D(u_shadTex, shadCoord);
+//        vec4 shadColor = texture2D(u_shadTex, vec2(u,v));
+        gl_FragColor = vec4(vec3(1-shadColor.a), 1 );
+//        gl_FragColor = vec4(vec3(1-shadColor.a),1);//Start by making it 0 to see if it works
     } else {
-        gl_FragColor = vec4(0,1,1,1);
+        gl_FragColor = vec4(1,1,1,1);
     }
+//    gl_FragColor = texture2D(u_dMapTex, gl_FragCoord.xy);
+//    float depth = (T.z-v_S.z);
 
-    float depth = (T.z-v_S.z);
 
     //gl_FragColor = vec4((T.xy-v_S.xy),1/depth,1);
 //    gl_FragColor = vec4(0.5,0,0.5,1);

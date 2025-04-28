@@ -228,6 +228,9 @@ public class WorldMap implements RendersToScreen {
                 if (name.endsWith("px")) { //Confirms that it's a rendering layer, named [#]px from the screen
                     float depth = Float.parseFloat(name.substring(0,name.length()-2));
                     entities.add(new TileLayer(this, tileLayer, this.mapLoader.layerElements.get(layer), depth));
+                } else if (name.endsWith("px_rot")) { //Same but it's one testing rotated elements
+                    float depth = Float.parseFloat(name.substring(0,name.length()-6));
+                    entities.add(new TileLayer(this, tileLayer, this.mapLoader.layerElements.get(layer), depth, true));
                 }
             }
         }
@@ -269,7 +272,7 @@ public class WorldMap implements RendersToScreen {
         this.debugSprite = new Sprite(this.debugTexture);
 
         //Initialize the depth map
-        this.depthBuffer = new FrameBuffer(Pixmap.Format.RGBA8888,TemptoNova.PIXEL_GAME_WIDTH, TemptoNova.PIXEL_GAME_HEIGHT, false);
+        this.depthBuffer = new FrameBuffer(Pixmap.Format.RGBA8888,TemptoNova.PIXEL_GAME_WIDTH, TemptoNova.PIXEL_GAME_HEIGHT, true);
 
         //Initialize the shadow map TODO: Work out the camera with resolutions of the buffers and whatnot
         int n = 1; //n*n*4 channels maximum lights, just 1 for now while we test
@@ -348,10 +351,14 @@ public class WorldMap implements RendersToScreen {
 
         this.worldViewport.apply();
 
-
         // Render depth buffer
         this.depthBuffer.begin();
-        ScreenUtils.clear(0.01f,0,0.2f,0.5f);
+        float bgDepth = 20;
+        Gdx.gl.glClearDepthf(1/bgDepth);
+        ScreenUtils.clear(1/bgDepth,0,0.2f,1, true);
+        Gdx.gl.glEnable(GL20.GL_DEPTH_TEST);
+        Gdx.gl.glDepthFunc(GL20.GL_GREATER);
+
         this.depthMapBatch.setProjectionMatrix(this.camera.combined);
         this.depthMapBatch.begin();
         for (Entity entity : this.entities) {
@@ -362,12 +369,13 @@ public class WorldMap implements RendersToScreen {
         this.depthMapBatch.end();
         this.depthBuffer.end();
         this.depthMap = depthBuffer.getColorBufferTexture();
+        Gdx.gl.glDisable(GL20.GL_DEPTH_TEST);
 
         //Render lights ! :D
         this.shadowBuffer.begin();
 
         Vector3 mouseCoords = camera.unproject(new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0));
-        mouseCoords.z=0;
+        mouseCoords.z=-10;
         LightSource mouseLight = new LightSource(mouseCoords, Color.YELLOW, 250);
 
 
@@ -403,10 +411,12 @@ public class WorldMap implements RendersToScreen {
 //        this.shadeBatch = new AltShadeBatch();
 //        this.shadeBatch.setProjectionMatrix(this.camera.combined);
 //        this.shadeBatch.enableBlending();
-        for (int i = 0; i < 100; i++) {
-            ScreenUtils.clear(1, 1, 1, 1);
-            this.shadeBatch.setBlendFunctionSeparate(GL20.GL_DST_COLOR, GL20.GL_ZERO, GL20.GL_ONE, GL20.GL_ZERO);
-            this.shadeBatch.begin();
+
+        ScreenUtils.clear(1, 1, 1, 1);
+        this.shadeBatch.setBlendFunctionSeparate(GL20.GL_DST_COLOR, GL20.GL_ZERO, GL20.GL_ONE, GL20.GL_ZERO);
+        this.shadeBatch.begin();
+        for (int i = 0; i < 1; i++) {
+
 
 
 
@@ -421,8 +431,9 @@ public class WorldMap implements RendersToScreen {
 //            System.out.println("Caster at: "+caster.origin() + ", Caster has u of "+caster.u() + " and v of "+caster.v());
             }
 //        this.shadeBatch.flush();
-            this.shadeBatch.end();
+
         }
+        this.shadeBatch.end();
 //
         this.lightBatch.setProjectionMatrix(this.camera.combined);
         this.lightBatch.setBlendFunctionSeparate(GL20.GL_DST_COLOR, GL20.GL_ZERO, GL20.GL_ONE, GL20.GL_ZERO);

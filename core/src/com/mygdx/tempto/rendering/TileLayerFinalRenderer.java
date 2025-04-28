@@ -47,7 +47,7 @@ public class TileLayerFinalRenderer extends TileLayerRenderer{
     }
 
     @Override
-    void drawTile(TiledMapTileLayer.Cell cell, float x, float y, float[] vertices, float color) {
+    void drawTile(TiledMapTileLayer.Cell cell, float x, float y, float w, float h, float[] vertices, float color) {
         TiledMapTile tile = cell.getTile();
 
         final boolean flipX = cell.getFlipHorizontally();
@@ -58,8 +58,8 @@ public class TileLayerFinalRenderer extends TileLayerRenderer{
 
         float x1 = x + tile.getOffsetX() * unitScale;
         float y1 = y + tile.getOffsetY() * unitScale;
-        float x2 = x1 + region.getRegionWidth() * unitScale;
-        float y2 = y1 + region.getRegionHeight() * unitScale;
+        float x2 = x1 + w * unitScale;
+        float y2 = y1 + h * unitScale;
 
         float u1 = region.getU();
         float v1 = region.getV2();

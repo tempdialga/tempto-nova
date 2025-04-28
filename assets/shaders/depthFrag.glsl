@@ -25,5 +25,9 @@ void main()
 //    final.rgb=dMap.rgb;
     //depth = floor(base.a)/(dMap.r+0.5 + )
     gl_FragColor = final;
+    if (final.r < gl_FragDepth) {
+        discard;
+    }
+    gl_FragDepth = final.r;
 //    gl_FragColor = vec4(1);
 }
