@@ -19,6 +19,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.mygdx.tempto.data.CentralTextureData;
 import com.mygdx.tempto.util.MiscFunctions;
+import com.mygdx.tempto.view.GameScreen;
 
 import org.lwjgl.util.vector.Matrix2f;
 import org.lwjgl.util.vector.Vector2f;
@@ -434,6 +435,7 @@ public class AltShadeBatch extends AltBatch {
         }, 0, 2);
         shaderToUse.setUniformi(SHADTEXWIDTH_UNIFORM, this.lastShadowTexture.getWidth());
         shaderToUse.setUniformi(SHADTEXHEIGHT_UNIFORM, this.lastShadowTexture.getHeight());
+        shaderToUse.setUniformf("u_elapsedTime", GameScreen.elapsedTime);
 
         Mesh mesh = this.mesh;
         mesh.setVertices(vertices, 0, idx);

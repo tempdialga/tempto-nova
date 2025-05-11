@@ -53,6 +53,9 @@ public class GameScreen extends TemptoScreen {
     /**If true, avoids writing to file on next call of {@link #hide()}*/
     private boolean notSaving = false;
 
+    /**Time elapsed since the most recent game screen was created*/
+    public static float elapsedTime = 0;
+
     //////// Creating and showing the main game /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     public GameScreen(TemptoNova parent) {
         super(parent);
@@ -66,6 +69,7 @@ public class GameScreen extends TemptoScreen {
 
         // Load the world, with context of global save data //
         this.world = new WorldMap(testMap, this);
+        elapsedTime = 0;
     }
     @Override
     public void show() {
@@ -130,6 +134,7 @@ public class GameScreen extends TemptoScreen {
     //////// Updating the game on a frame by frame basis ////////////////////////////////////////////////////////////////////////////////////////////////////////
     @Override
     public void render(float delta) {
+        elapsedTime += delta;
         System.out.println("Frame time: " + delta + " seconds.");
 
         // Update processed input data like direction //
