@@ -42,8 +42,8 @@ void main()
     float u0 = u-r, u1 = u+r;
     float v0 = v-r, v1 = v+r;
     //Cutoff factors, how much either extreme goes off the edge'
-//    float tu0 = 1-(max(u0,0)-u0)/(r*2), tu1 = 1-(u1-min(u1,1))/(r*2);
-//    float tv0 = (max(v0,0)-v0)/(r*2), tv1 = (v1-min(v1,1))/(r*2);
+    //    float tu0 = 1-(max(u0,0)-u0)/(r*2), tu1 = 1-(u1-min(u1,1))/(r*2);
+    //    float tv0 = (max(v0,0)-v0)/(r*2), tv1 = (v1-min(v1,1))/(r*2);
 
     vec2 shadCoord = v_shadUV + (v_shadWH*vec2(u,1-v));
     vec2 shadDepCoord = v_shadDE + (v_shadWH*vec2(u,1-v));
@@ -57,19 +57,19 @@ void main()
     float t_fudge = 0.0;
     float coord_fudge = 0.001;
     if (t+t_mod > t_fudge && t+t_mod < 1-t_fudge &&
-        u1 >= 0-coord_fudge && u0 <= 1+coord_fudge &&
-        v1 >= 0-coord_fudge && v0 <= 1+coord_fudge) {
+    u1 >= 0-coord_fudge && u0 <= 1+coord_fudge &&
+    v1 >= 0-coord_fudge && v0 <= 1+coord_fudge) {
 
         float cu0 = max(u0,0);
         float cu1 = min(u1,1);
         float cv0 = max(v0,0);
         float cv1 = min(v1,1);
 
-//        u = clamp(u,0,1);
-//        float cu0 = max(u0,0);
-//        tu0 = 1-(cu0-u0)/(u1-u0);
-//        float cu1 = min(u1,1);
-//        tu0 = 1-(u1-cu1)/(u1-u0);
+        //        u = clamp(u,0,1);
+        //        float cu0 = max(u0,0);
+        //        tu0 = 1-(cu0-u0)/(u1-u0);
+        //        float cu1 = min(u1,1);
+        //        tu0 = 1-(u1-cu1)/(u1-u0);
         float reg_px_width = 16;
         float reg_px_height = 16;
 
@@ -80,7 +80,7 @@ void main()
         vec2 shadCoord_m = v_shadUV + (v_shadWH*vec2(u,1-v));//Shadow coords right in the middle
         vec4 shadCol_m = texture2D(u_shadTex, shadCoord_m);
         if (u < 0 || u > 1 ||
-            v < 0 || v > 1) shadCol_m = vec4(0);
+        v < 0 || v > 1) shadCol_m = vec4(0);
         vec2 shadCoord1m = v_shadUV + (v_shadWH*vec2(u1,1-v));//Shadow coords right in the middle
         vec4 shadCol1m = texture2D(u_shadTex, shadCoord1m);
         if (u1 > 1 ||
@@ -93,7 +93,7 @@ void main()
         vec2 shadCoordm0 = v_shadUV + (v_shadWH*vec2(u,1-v0));
         vec4 shadColm0 = texture2D(u_shadTex, shadCoordm0);
         if (u < 0 || u > 1 ||
-            v0 < 0) shadColm0 = vec4(0);
+        v0 < 0) shadColm0 = vec4(0);
         vec2 shadCoord10 = v_shadUV + (v_shadWH*vec2(u1,1-v0));
         vec4 shadCol10 = texture2D(u_shadTex, shadCoord10);
         if (u1 > 1 || v0 < 0) shadCol10 = vec4(0);
@@ -104,74 +104,74 @@ void main()
         vec2 shadCoordm1 = v_shadUV + (v_shadWH*vec2(u,1-v1));
         vec4 shadColm1 = texture2D(u_shadTex, shadCoordm1);
         if (u < 0 || u > 1 ||
-            v0 < 0) shadColm1 = vec4(0);
+        v0 < 0) shadColm1 = vec4(0);
         vec2 shadCoord11 = v_shadUV + (v_shadWH*vec2(u1,1-v1));
         vec4 shadCol11 = texture2D(u_shadTex, shadCoord11);
         if (u1 > 1 || v1 > 1) shadCol11 = vec4(0);
 
-//        vec4 shadColor = (
-//            shadCol00*tu0*tv0  +shadCol10*tu1*tv0 +
-//            shadCol01*tu0*tv1  +shadCol11*tu1*tv1
-//        );
+        //        vec4 shadColor = (
+        //            shadCol00*tu0*tv0  +shadCol10*tu1*tv0 +
+        //            shadCol01*tu0*tv1  +shadCol11*tu1*tv1
+        //        );
 
         float shadFudge = 1.1f; //i.e. if there is already a shadow make it a little more opaque
         vec4 shadColor = shadFudge*(
-            shadCol00+shadColm0+shadCol10+
-            shadCol0m+shadCol_m+shadCol1m+
-            shadCol01+shadColm1+shadCol11
-        )/9;
-//        vec4 shadColor = vec4((u_-u0)/du);
+        shadCol00/*+shadColm0*/+shadCol10+
+//        shadCol0m+shadCol_m+shadCol1m+
+        shadCol01/*+shadColm1*/+shadCol11
+        )/4;
+        //        vec4 shadColor = vec4((u_-u0)/du);
 
 
 
-//        float area_px = 1;
+        //        float area_px = 1;
         vec2 r_redundant = u_shadPxDims*0.25;
-//        float u0 = shadCoord.x-r.x;
+        //        float u0 = shadCoord.x-r.x;
         float fu0 = u_shadPxDims.x*floor(u0*u_shadTexWidth);
-//        float tu0 = 0.5;
-//        float u1 = shadCoord.x+r.x;
-//        float tu1 = 1-tu0; //True for now when the shadow is exactly 1px, need to interpret this for more cases later
-//
-//        float v0 = shadCoord.y-r.y;
+        //        float tu0 = 0.5;
+        //        float u1 = shadCoord.x+r.x;
+        //        float tu1 = 1-tu0; //True for now when the shadow is exactly 1px, need to interpret this for more cases later
+        //
+        //        float v0 = shadCoord.y-r.y;
         float fv0 = u_shadPxDims.y*floor(v0*u_shadTexHeight);
-//        float tv0 = 0.5;
-//        float v1 = shadCoord.y+r.y;
-//        float tv1 = 1-tv0;
-//
-//        vec4 shadColor = (
-//            tu0*tv0*texture2D(u_shadTex, vec2(u0, v0))+
-//            tu1*tv0*texture2D(u_shadTex, vec2(u1, v0))+
-//            tu1*tv1*texture2D(u_shadTex, vec2(u1, v1))+
-//            tu0*tv1*texture2D(u_shadTex, vec2(u0, v1))
-//        )/(area_px);
+        //        float tv0 = 0.5;
+        //        float v1 = shadCoord.y+r.y;
+        //        float tv1 = 1-tv0;
+        //
+        //        vec4 shadColor = (
+        //            tu0*tv0*texture2D(u_shadTex, vec2(u0, v0))+
+        //            tu1*tv0*texture2D(u_shadTex, vec2(u1, v0))+
+        //            tu1*tv1*texture2D(u_shadTex, vec2(u1, v1))+
+        //            tu0*tv1*texture2D(u_shadTex, vec2(u0, v1))
+        //        )/(area_px);
 
-//        vec4 shadColor = (
-//        tu0*texture2D(u_shadTex, vec2(u0, v0))+
-//        tu1*texture2D(u_shadTex, vec2(u1, v0))
-//        )/(area_px);
-//        shadColor = (
-//            texture2D(u_shadTex, vec2(u0, v0))+
-//            texture2D(u_shadTex, vec2(u1, v0))+
-//            texture2D(u_shadTex, vec2(u1, v1))+
-//            texture2D(u_shadTex, vec2(u0, v1))
-//        )/4;
+        //        vec4 shadColor = (
+        //        tu0*texture2D(u_shadTex, vec2(u0, v0))+
+        //        tu1*texture2D(u_shadTex, vec2(u1, v0))
+        //        )/(area_px);
+        //        shadColor = (
+        //            texture2D(u_shadTex, vec2(u0, v0))+
+        //            texture2D(u_shadTex, vec2(u1, v0))+
+        //            texture2D(u_shadTex, vec2(u1, v1))+
+        //            texture2D(u_shadTex, vec2(u0, v1))
+        //        )/4;
 
 
-//        vec4 shadColor = texture2D(u_shadTex, shadCoord);
-//        vec4 nextShadColor = texture2D(u_shadTex, shadCoord+u_shadPxDims);
-//        shadColor = 0.5*(shadColor+nextShadColor);
+        //        vec4 shadColor = texture2D(u_shadTex, shadCoord);
+        //        vec4 nextShadColor = texture2D(u_shadTex, shadCoord+u_shadPxDims);
+        //        shadColor = 0.5*(shadColor+nextShadColor);
 
         gl_FragColor = vec4(vec3(shadColor.a), 0);
-//        gl_FragColor = vec4(vec3(1-shadColor.a),1);//Start by making it 0 to see if it works
+        //        gl_FragColor = vec4(vec3(1-shadColor.a),1);//Start by making it 0 to see if it works
     } else {
         gl_FragColor = vec4(1,1,1,1);
         gl_FragColor = vec4(0,0,0,0);
     }
-//    gl_FragColor = texture2D(u_dMapTex, gl_FragCoord.xy);
-//    float depth = (T.z-v_S.z);
+    //    gl_FragColor = texture2D(u_dMapTex, gl_FragCoord.xy);
+    //    float depth = (T.z-v_S.z);
 
 
     //gl_FragColor = vec4((T.xy-v_S.xy),1/depth,1);
-//    gl_FragColor = vec4(0.5,0,0.5,1);
+    //    gl_FragColor = vec4(0.5,0,0.5,1);
 
 }

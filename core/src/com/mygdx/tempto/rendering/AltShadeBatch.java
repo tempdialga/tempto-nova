@@ -2,7 +2,6 @@ package com.mygdx.tempto.rendering;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.GL30;
 import com.badlogic.gdx.graphics.Mesh;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
@@ -21,20 +20,14 @@ import com.mygdx.tempto.data.CentralTextureData;
 import com.mygdx.tempto.util.MiscFunctions;
 import com.mygdx.tempto.view.GameScreen;
 
-import org.lwjgl.util.vector.Matrix2f;
-import org.lwjgl.util.vector.Vector2f;
-import org.w3c.dom.Text;
-
 import java.nio.Buffer;
-import java.util.Arrays;
-import java.util.Vector;
 
 public class AltShadeBatch extends AltBatch {
 
     
 
     protected final static String SHADOWVERT_PATH_INTERNAL = "shaders/shadeVert.glsl";
-    protected final static String SHADOWFRAG_PATH_INTERNAL = "shaders/shadeFrag.glsl";
+    protected final static String SHADOWFRAG_PATH_INTERNAL = "shaders/shadeFrag_4samp.glsl";
 
     protected final static String DEPTHMAPCOORD_ATTRIBUTE = AltDepthBatch.DEPCOORD_ATTRIBUTE;
     protected final static String SHADOWTEXCOORD_ATTRIBUTE = "a_shadTexCoord";
