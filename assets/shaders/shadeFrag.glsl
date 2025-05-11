@@ -59,6 +59,11 @@ void main()
         u1 >= 0-coord_fudge && u0 <= 1+coord_fudge &&
         v1 >= 0-coord_fudge && v0 <= 1+coord_fudge) {
 
+        float cu0 = max(u0,0);
+        float cu1 = min(u1,1);
+        float cv0 = max(v0,0);
+        float cv1 = min(v1,1);
+
 //        u = clamp(u,0,1);
 //        float cu0 = max(u0,0);
 //        tu0 = 1-(cu0-u0)/(u1-u0);
@@ -144,10 +149,11 @@ void main()
 //        vec4 nextShadColor = texture2D(u_shadTex, shadCoord+u_shadPxDims);
 //        shadColor = 0.5*(shadColor+nextShadColor);
 
-        gl_FragColor = vec4(vec3(1-shadColor.a), 1 );
+        gl_FragColor = vec4(vec3(shadColor.a), 1 );
 //        gl_FragColor = vec4(vec3(1-shadColor.a),1);//Start by making it 0 to see if it works
     } else {
         gl_FragColor = vec4(1,1,1,1);
+        gl_FragColor = vec4(0,0,0,1);
     }
 //    gl_FragColor = texture2D(u_dMapTex, gl_FragCoord.xy);
 //    float depth = (T.z-v_S.z);

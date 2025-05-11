@@ -413,7 +413,10 @@ public class WorldMap implements RendersToScreen {
 //        this.shadeBatch.enableBlending();
 
         ScreenUtils.clear(1, 1, 1, 1);
-        this.shadeBatch.setBlendFunctionSeparate(GL20.GL_DST_COLOR, GL20.GL_ZERO, GL20.GL_ONE, GL20.GL_ZERO);
+        ScreenUtils.clear(0,0,0,1);
+        this.shadeBatch.setBlendFunctionSeparate(GL20.GL_DST_COLOR, GL20.GL_ZERO, GL20.GL_ONE, GL20.GL_ZERO);//Mult
+        this.shadeBatch.setBlendFunctionSeparate(GL20.GL_ONE, GL20.GL_ONE, GL20.GL_SRC_ALPHA, GL20.GL_DST_ALPHA);//Add
+
         this.shadeBatch.begin();
         for (int i = 0; i < 1; i++) {
 
@@ -439,7 +442,7 @@ public class WorldMap implements RendersToScreen {
         this.lightBatch.setBlendFunctionSeparate(GL20.GL_DST_COLOR, GL20.GL_ZERO, GL20.GL_ONE, GL20.GL_ZERO);
         this.lightBatch.begin();
         this.lightBatch.setViewport(this.worldViewport);
-        this.lightBatch.drawLight(mouseLight, this.depthMap, this.camera, viewBounds);
+//        this.lightBatch.drawLight(mouseLight, this.depthMap, this.camera, viewBounds);
         this.lightBatch.end();
 
 
@@ -466,6 +469,7 @@ public class WorldMap implements RendersToScreen {
         this.debugRenderer.end();
 
         this.finalPassBatch.setProjectionMatrix(this.camera.combined);
+        this.finalPassBatch.setBlendFunction(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         this.finalPassBatch.begin();
 
         for (Entity entity : this.entities) {
