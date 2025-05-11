@@ -413,10 +413,11 @@ public class WorldMap implements RendersToScreen {
 //        this.shadeBatch.enableBlending();
 
         ScreenUtils.clear(1, 1, 1, 1);
-        ScreenUtils.clear(0,0,0,1);
+//        ScreenUtils.clear(0,0,0,1);
         this.shadeBatch.setBlendFunctionSeparate(GL20.GL_DST_COLOR, GL20.GL_ZERO, GL20.GL_ONE, GL20.GL_ZERO);//Mult
-        this.shadeBatch.setBlendFunctionSeparate(GL20.GL_ONE, GL20.GL_ONE, GL20.GL_SRC_ALPHA, GL20.GL_DST_ALPHA);//Add
-
+//        this.shadeBatch.setBlendFunctionSeparate(GL20.GL_ONE, GL20.GL_ONE, GL20.GL_SRC_ALPHA, GL20.GL_DST_ALPHA);//Add
+        this.shadeBatch.setBlendFunction(GL20.GL_ONE, GL20.GL_ONE);
+        Gdx.gl.glBlendEquation(GL20.GL_FUNC_REVERSE_SUBTRACT); //naturally switch to subtracting actually
         this.shadeBatch.begin();
         for (int i = 0; i < 1; i++) {
 
@@ -440,9 +441,10 @@ public class WorldMap implements RendersToScreen {
 //
         this.lightBatch.setProjectionMatrix(this.camera.combined);
         this.lightBatch.setBlendFunctionSeparate(GL20.GL_DST_COLOR, GL20.GL_ZERO, GL20.GL_ONE, GL20.GL_ZERO);
+        Gdx.gl.glBlendEquation(GL20.GL_FUNC_ADD);
         this.lightBatch.begin();
         this.lightBatch.setViewport(this.worldViewport);
-//        this.lightBatch.drawLight(mouseLight, this.depthMap, this.camera, viewBounds);
+        this.lightBatch.drawLight(mouseLight, this.depthMap, this.camera, viewBounds);
         this.lightBatch.end();
 
 
@@ -468,6 +470,7 @@ public class WorldMap implements RendersToScreen {
         this.debugRenderer.circle(this.camera.position.x, this.camera.position.y, 1);
         this.debugRenderer.end();
 
+        Gdx.gl.glBlendEquation(GL20.GL_FUNC_ADD);
         this.finalPassBatch.setProjectionMatrix(this.camera.combined);
         this.finalPassBatch.setBlendFunction(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         this.finalPassBatch.begin();

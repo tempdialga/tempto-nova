@@ -149,11 +149,11 @@ void main()
 //        vec4 nextShadColor = texture2D(u_shadTex, shadCoord+u_shadPxDims);
 //        shadColor = 0.5*(shadColor+nextShadColor);
 
-        gl_FragColor = vec4(vec3(shadColor.a), 1 );
+        gl_FragColor = vec4(vec3(shadColor.a), 0);
 //        gl_FragColor = vec4(vec3(1-shadColor.a),1);//Start by making it 0 to see if it works
     } else {
         gl_FragColor = vec4(1,1,1,1);
-        gl_FragColor = vec4(0,0,0,1);
+        gl_FragColor = vec4(0,0,0,0);
     }
 //    gl_FragColor = texture2D(u_dMapTex, gl_FragCoord.xy);
 //    float depth = (T.z-v_S.z);
