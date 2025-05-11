@@ -525,4 +525,20 @@ public class MiscFunctions {
         return concatVector2sColumn(vectors, false);
     }
 
+    public void expandClockwiseConvexPolygon(Polygon target, float dist) {
+        float[] oldVerts = target.getTransformedVertices();
+        float[] newVerts = new float[oldVerts.length];
+        System.arraycopy(oldVerts, 0, newVerts, 0, oldVerts.length);
+
+        for (int jx = 0; jx < oldVerts.length; jx += 2) {
+            int jy = jx+1;
+            int ix = jx-2; if (ix < 0) ix = oldVerts.length-2;
+            int iy = ix+1;
+            int kx = jx+2; if (kx >= oldVerts.length) kx = 0;
+            int ky = kx+1;
+
+            Vector2 x;
+        }
+    }
+
 }

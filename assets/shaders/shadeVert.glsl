@@ -3,7 +3,6 @@ attribute vec2 a_depCoord0;
 attribute vec2 a_shadTexCoord0; //Coordinates on the shadow texture
 attribute vec2 a_shadTexDims0; //Width on the shadow texture
 attribute vec2 a_shadTexDepCoord0; //Coordinates on the shadow texture for the depth part of that shadow
-
 attribute vec3 a_a;
 attribute vec3 a_ab;
 attribute vec3 a_ac;

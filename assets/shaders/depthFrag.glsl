@@ -16,10 +16,11 @@ void main()
 
     float base_d_px = 1/base.r;
 //    float mod_d_px = 1/dMap.r-2;
-    float mod_d_px = 2*(dMap.r-0.5)-0.01;//Fudge it a little
+    float mod_d_px = 3*(dMap.r-0.5)-0.01;//Fudge it a little
 
     vec4 final = vec4(
     1/(base_d_px-mod_d_px),
+//    1/base_d_px,
     v_color.gb,
     tMap.a);
 //    final.rgb=dMap.rgb;

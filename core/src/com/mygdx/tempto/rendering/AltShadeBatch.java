@@ -40,8 +40,12 @@ public class AltShadeBatch extends AltBatch {
     protected final static String SHADOWTEXDIMS_ATTRIBUTE = "a_shadTexDims";
     protected final static String SHADOWTEXDEPCOORD_ATTRIBUTE = "a_shadTexDepCoord"; //Coordinates of the depth texture on the same texture as the base texture
 
+
     protected final static String DMAPTEX_UNIFORM = "u_dMapTex";
     protected final static String SHADTEX_UNIFORM = "u_shadTex";
+    protected final static String SHADPXDIM_UNIFORM = "u_shadPxDims";
+    protected final static String SHADTEXWIDTH_UNIFORM = "u_shadTexWidth";
+    protected final static String SHADTEXHEIGHT_UNIFORM = "u_shadTexHeight";
 
     protected final static String   A_ATTRIBUTE = "a_a",
                                     AB_ATTRIBUTE = "a_ab",
@@ -215,6 +219,15 @@ public class AltShadeBatch extends AltBatch {
         Vector2 c = new Vector2(b).add(cU.x, cU.y);
         Vector2 d = new Vector2(c).sub(cV.x, cV.y);
 
+        //Expand out
+        float expand = 0.5f;
+        Vector2 u_exp = new Vector2(cU.x, cU.y).nor().scl(expand);
+        Vector2 v_exp = new Vector2(cV.x, cV.y).nor().scl(expand);
+        Vector2 a_exp = new Vector2(a).sub(u_exp).sub(v_exp);
+        Vector2 b_exp = new Vector2(b).sub(u_exp).add(v_exp);
+        Vector2 c_exp = new Vector2(c).add(u_exp).add(v_exp);
+        Vector2 d_exp = new Vector2(d).add(u_exp).sub(v_exp);
+
         Vector2 zero = new Vector2();
         float r2 = source.radius()*source.radius();
         if (!(
@@ -255,6 +268,12 @@ public class AltShadeBatch extends AltBatch {
         Vector2 maxFLR = new Vector2();
         boolean rightLeftAcute = Intersector.intersectLines(maxFL, maxFL_Adj, maxFR, maxFR_Adj, maxFLR);
         Polygon shadowRange;
+
+        a.set(a_exp);
+        b.set(b_exp);
+        c.set(c_exp);
+        d.set(d_exp);
+
         if (afterFR != farthestLeft) {
             if (!rightLeftAcute) {//Angle > 90⁰, use two tangents to describe max shadow range instead of parallelogram
                 shadowRange = new Polygon(new float[]{
@@ -354,15 +373,16 @@ public class AltShadeBatch extends AltBatch {
     @Override
     protected void setupMatrices () {
         combinedMatrix.set(projectionMatrix).mul(transformMatrix);
+        ShaderProgram shaderToSet;
         if (customShader != null) {
-            customShader.setUniformMatrix("u_projTrans", combinedMatrix);
-            customShader.setUniformi(DMAPTEX_UNIFORM, 0);
-            customShader.setUniformi(SHADTEX_UNIFORM, 1);
+            shaderToSet = customShader;
         } else {
-            shader.setUniformMatrix("u_projTrans", combinedMatrix);
-            shader.setUniformi(DMAPTEX_UNIFORM, 0);
-            shader.setUniformi(SHADTEX_UNIFORM, 1);
+            shaderToSet = shader;
         }
+        shaderToSet.setUniformMatrix("u_projTrans", combinedMatrix);
+        shaderToSet.setUniformi(DMAPTEX_UNIFORM, 0);
+        shaderToSet.setUniformi(SHADTEX_UNIFORM, 1);
+
     }
     @Override
     public void draw(TextureRegion region, float x, float y) {
@@ -408,6 +428,13 @@ public class AltShadeBatch extends AltBatch {
         lastShadowTexture.bind(1);
         lastTexture.bind(0);
 
+        ShaderProgram shaderToUse = customShader != null ? customShader : shader;
+        shaderToUse.setUniform2fv(SHADPXDIM_UNIFORM, new float[]{
+                invShadTexWidth, invShadTexHeight
+        }, 0, 2);
+        shaderToUse.setUniformi(SHADTEXWIDTH_UNIFORM, this.lastShadowTexture.getWidth());
+        shaderToUse.setUniformi(SHADTEXHEIGHT_UNIFORM, this.lastShadowTexture.getHeight());
+
         Mesh mesh = this.mesh;
         mesh.setVertices(vertices, 0, idx);
         Buffer indicesBuffer = (Buffer)mesh.getIndicesBuffer(true);
@@ -423,7 +450,7 @@ public class AltShadeBatch extends AltBatch {
             }
         }
 
-        mesh.render(customShader != null ? customShader : shader, GL20.GL_TRIANGLES, 0, count);
+        mesh.render(shaderToUse, GL20.GL_TRIANGLES, 0, count);
 
         idx = 0;
     }

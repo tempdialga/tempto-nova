@@ -43,6 +43,21 @@ public class AltDepthBatch extends AltBatch{
     public static final String DEPCOORD_ATTRIBUTE = "a_depCoord";
     public static final String DEPTH_VERT_PATH_INTERNAL = "shaders/depthVert.glsl", DEPTH_FRAG_PATH_INTERNAL = "shaders/depthFrag.glsl";
 
+    /**Vertex specific color information.
+     * In the depth map, color encodes depth and angle, so for a texture representing a rotated plane, the color should be set vertex by vertex.
+     * Wound clockwise from origin around either +V through +U+V then +U, or y, xy, x; not sure which yet
+     *    ^Y  B C
+     *        A D
+     *           X>
+     *
+     * I think at least TODO: actually test that these are set up correctly for y flipping, and how exactly that's defined
+     *
+     * TODO: define a function(s) to set all 4 of these for common angle scenarios.*/
+    protected float colorPackedA;
+    protected float colorPackedB;
+    protected float colorPackedC;
+    protected float colorPackedD;
+
 
 
     /** Constructs a new SpriteBatch with a size of 1000, one buffer, and the default shader.

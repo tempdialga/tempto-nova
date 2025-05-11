@@ -375,7 +375,7 @@ public class WorldMap implements RendersToScreen {
         this.shadowBuffer.begin();
 
         Vector3 mouseCoords = camera.unproject(new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0));
-        mouseCoords.z=-10;
+        mouseCoords.z=-20;
         LightSource mouseLight = new LightSource(mouseCoords, Color.YELLOW, 250);
 
 
