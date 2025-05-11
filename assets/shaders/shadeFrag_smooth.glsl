@@ -59,50 +59,52 @@ void main()
         u1 >= 0-coord_fudge && u0 <= 1+coord_fudge &&
         v1 >= 0-coord_fudge && v0 <= 1+coord_fudge) {
 
-//        u = clamp(u,0,1);
-//        float cu0 = max(u0,0);
-//        tu0 = 1-(cu0-u0)/(u1-u0);
-//        float cu1 = min(u1,1);
-//        tu0 = 1-(u1-cu1)/(u1-u0);
+        u = clamp(u,0,1);
+        float cu0 = max(u0,0);
+        float cu1 = min(u1,1);
+        float cv0 = max(v0,0);
+        float cv1 = min(v1,1);
+
         float reg_px_width = 16;
         float reg_px_height = 16;
+
+
 
 //        vec2 shadCoord_0 = v_shadUV + (v_shadWH*vec2(u,1-v));
 //        vec4 shadCol_0 = texture2D(u_shadTex, shadCoord_0);
 //        if (u < 0 || u > 1) shadCol_0 = vec4(0);
-        vec2 shadCoord00 = v_shadUV + (v_shadWH*vec2(u0,1-v0));
+        vec2 shadCoord00 = v_shadUV + (v_shadWH*vec2(cu0,1-cv0));
         vec4 shadCol00 = texture2D(u_shadTex, shadCoord00);
-        if (u0 < 0 || v0 < 0) shadCol00 = vec4(0);
-        vec2 shadCoord10 = v_shadUV + (v_shadWH*vec2(u1,1-v0));
+//        if (u0 < 0 || v0 < 0) shadCol00 = vec4(0);
+        vec2 shadCoord10 = v_shadUV + (v_shadWH*vec2(cu1,1-cv0));
         vec4 shadCol10 = texture2D(u_shadTex, shadCoord10);
-        if (u1 > 1 || v0 < 0) shadCol10 = vec4(0);
+//        if (u1 > 1 || v0 < 0) shadCol10 = vec4(0);
 
         float u_ = floor(u1*reg_px_width)/float(reg_px_width);//Last pixel boundary before the farthest u value (typically between them, but if it's left of both the math still works out
         float du = u1-u0;
         float tu0 = (u_-u0)/du, tu1 = (u1-u_)/du;
 
-        vec2 shadCoord01 = v_shadUV + (v_shadWH*vec2(u0,1-v1));
+        vec2 shadCoord01 = v_shadUV + (v_shadWH*vec2(cu0,1-cv1));
         vec4 shadCol01 = texture2D(u_shadTex, shadCoord01);
-        if (u0 < 0 || v1 > 1) shadCol01 = vec4(0);
-        vec2 shadCoord11 = v_shadUV + (v_shadWH*vec2(u1,1-v1));
+//        if (u0 < 0 || v1 > 1) shadCol01 = vec4(0);
+        vec2 shadCoord11 = v_shadUV + (v_shadWH*vec2(cu1,1-cv1));
         vec4 shadCol11 = texture2D(u_shadTex, shadCoord11);
 
         float v_ = floor(v1*reg_px_height)/float(reg_px_height);//Same but vertically
         float dv = v1-v0;
         float tv0 = (v_-v0)/dv, tv1 = (v1-v_)/dv;
 
-        if (u1 > 1 || v1 > 1) shadCol11 = vec4(0);
+//        if (u1 > 1 || v1 > 1) shadCol11 = vec4(0);
+
+        vec4 shadColor = (
+            shadCol00*tu0*tv0  +shadCol10*tu1*tv0 +
+            shadCol01*tu0*tv1  +shadCol11*tu1*tv1
+        );
 
 //        vec4 shadColor = (
-//            shadCol00*tu0*tv0  +shadCol10*tu1*tv0 +
-//            shadCol01*tu0*tv1  +shadCol11*tu1*tv1
-//        );
-
-        float shadFudge = 1.1f; //i.e. if there is already a shadow make it a little more opaque
-        vec4 shadColor = shadFudge*(
-            shadCol00+shadCol10+
-            shadCol01+shadCol11
-        )/4;
+//            shadCol00+shadCol10+
+//            shadCol01+shadCol11
+//        )/4;
 //        vec4 shadColor = vec4((u_-u0)/du);
 
 
@@ -143,7 +145,6 @@ void main()
 //        vec4 shadColor = texture2D(u_shadTex, shadCoord);
 //        vec4 nextShadColor = texture2D(u_shadTex, shadCoord+u_shadPxDims);
 //        shadColor = 0.5*(shadColor+nextShadColor);
-
         gl_FragColor = vec4(vec3(1-shadColor.a), 1 );
 //        gl_FragColor = vec4(vec3(1-shadColor.a),1);//Start by making it 0 to see if it works
     } else {
