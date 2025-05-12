@@ -61,7 +61,6 @@ import com.mygdx.tempto.view.GameScreen;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Iterator;
 
 import space.earlygrey.shapedrawer.ShapeDrawer;
@@ -375,7 +374,7 @@ public class WorldMap implements RendersToScreen {
         this.shadowBuffer.begin();
 
         Vector3 mouseCoords = camera.unproject(new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0));
-        mouseCoords.z=-20;
+        mouseCoords.z=0;
         LightSource mouseLight = new LightSource(mouseCoords, Color.YELLOW, 250);
 
 
@@ -586,8 +585,12 @@ public class WorldMap implements RendersToScreen {
 //        }
     }
 
+    public Vector2 mouseWorldCoords() {
+        return screenToWorldCoords(Gdx.input.getX(), Gdx.input.getY());
+    }
+
     public Vector2 screenToWorldCoords(float screenX, float screenY) {
-        Vector3 mousePos = this.camera.unproject(new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0));//Find the world position they're looking at
+        Vector3 mousePos = this.camera.unproject(new Vector3(screenX, screenY, 0));//Find the world position they're looking at
         return new Vector2(mousePos.x, mousePos.y);
     }
 

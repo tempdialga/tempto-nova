@@ -214,7 +214,7 @@ public class AltShadeBatch extends AltBatch {
         Vector2 d = new Vector2(c).sub(cV.x, cV.y);
 
         //Expand out
-        float expand = 1.5f;
+        float expand = 2.5f;
         Vector2 u_exp = new Vector2(cU.x, cU.y).nor().scl(expand);
         Vector2 v_exp = new Vector2(cV.x, cV.y).nor().scl(expand);
         Vector2 a_exp = new Vector2(a).sub(u_exp).sub(v_exp);

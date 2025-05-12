@@ -16,7 +16,7 @@ uniform float u_elapsedTime; //Elapsed time in seconds (for debugging purposes)
 
 
 varying vec3 v_a; //Location of point a, origin of shadow texture, in depth map coordinates (x = screen[0-1], y = screen[0-1], z is pixels away from camera)
-varying vec3 v_ab; //Vector from point a to b, corresponding to u on the
+varying vec3 v_ab; //Vector from point a to b, corresponding to u on the texture
 varying vec3 v_ac; //Vector
 varying vec3 v_S; //Location of light source S, in depth map coordinates (x = screen[0-1], y = screen[0-1], z is pixels away from camera)
 //uniform vec3 u_laS; //Vector from a to the light source (S - a)
@@ -26,6 +26,8 @@ void main()
 
     vec4 dmap = texture2D(u_dMapTex, v_dMapCoords);
     vec3 T = vec3(v_dMapCoords, 1/dmap.r-1);//Coordinates of target
+    float z_mod = 10*sin(3*u_elapsedTime);
+//    T.z += z_mod;
     vec3 laS = v_S - v_a; //Vector from a to light source S
     vec3 lST = T - v_S; //Vector from light source S to target T
 
@@ -33,14 +35,29 @@ void main()
     float det = dot(-lST,nA);
 
     float det_recip = 1/det;
-    float t = det_recip*dot(nA, laS);
+    float t = det_recip*dot(nA, laS); //I think this is from S to T, so 0 should mean at the light and 1 should mean at the surface
     float u = det_recip*dot(cross(v_ac, -lST), laS);
     float v = det_recip*dot(cross(-lST, v_ab), laS);
 
-    float r = (0.5+0.5*sin(3*u_elapsedTime))*0.7/32.0; //Impromptu radius of less than half a pixel on a 16x16 texture
+    float r = /*(0.5+0.5*sin(3*u_elapsedTime))**/0.7/32.0; //Impromptu radius of less than half a pixel on a 16x16 texture
+
+    float base_r_u = r; //How many u pixels the light extends out by (separate because theoretically someone might squish a shadow texture, but the same for now because god why would you do that)
+    float base_r_v = r;
+    vec3 ST_nor = normalize(lST);
+    vec3 ab_nor = normalize(v_ab);
+    vec3 ac_nor = normalize(v_ac);
+
+    float r_u = base_r_u*               // Base pixel radius if it was directly facing the light rays going to the target
+//        (1*length(cross(ST_nor,ab_nor)))*  // Extend so that it reaches that radius at its angular offset
+        (1-t);                          // If the shadow's right behind the caster, the difference isn't that much, whereas if the caster is right up against the source, it makes all the difference
+
+    float r_v = base_r_v*
+//        (1*length(cross(ST_nor,ac_nor)))*
+        (1-t);
+
     //Extreme coordinates of the light region
-    float u0 = u-r, u1 = u+r;
-    float v0 = v-r, v1 = v+r;
+    float u0 = u-r_u, u1 = u+r_u;
+    float v0 = v-r_v, v1 = v+r_v;
     //Cutoff factors, how much either extreme goes off the edge'
     //    float tu0 = 1-(max(u0,0)-u0)/(r*2), tu1 = 1-(u1-min(u1,1))/(r*2);
     //    float tv0 = (max(v0,0)-v0)/(r*2), tv1 = (v1-min(v1,1))/(r*2);

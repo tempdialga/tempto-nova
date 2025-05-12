@@ -38,9 +38,25 @@ void main()
     float v = det_recip*dot(cross(-lST, v_ab), laS);
 
     float r = 0.99*(0.5+0.49*sin(3*u_elapsedTime))/32.0; //Impromptu radius of less than half a pixel on a 16x16 texture
+    r = 0.7/32.0;
+
+    float base_r_u = r; //How many u pixels the light extends out by (separate because theoretically someone might squish a shadow texture, but the same for now because god why would you do that)
+    float base_r_v = r;
+    vec3 ST_nor = normalize(lST);
+    vec3 ab_nor = normalize(v_ab);
+    vec3 ac_nor = normalize(v_ac);
+
+    float r_u = base_r_u*                   // Base pixel radius if it was directly facing the light rays going to the target
+        (1/length(cross(ST_nor,ab_nor)))*   // Extend so that it reaches that radius at its angular offset
+        (1-t);                              // If the shadow's right behind the caster, the difference isn't that much, whereas if the caster is right up against the source, it makes all the difference
+
+    float r_v = base_r_v*
+        (1/length(cross(ST_nor,ac_nor)))*
+        (1-t);
+
     //Extreme coordinates of the light region
-    float u0 = u-r, u1 = u+r;
-    float v0 = v-r, v1 = v+r;
+    float u0 = u-r_u, u1 = u+r_u;
+    float v0 = v-r_v, v1 = v+r_v;
     //Cutoff factors, how much either extreme goes off the edge'
 //    float tu0 = 1-(max(u0,0)-u0)/(r*2), tu1 = 1-(u1-min(u1,1))/(r*2);
 //    float tv0 = (max(v0,0)-v0)/(r*2), tv1 = (v1-min(v1,1))/(r*2);
