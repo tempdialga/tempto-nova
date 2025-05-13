@@ -7,6 +7,7 @@ varying vec2 v_shadWH;//width and height of of the region of the shadow texture
 varying vec2 v_shadDE;//origin coordinate on the shadow texture but which correspond to the depth texture instead of the normal
 
 
+uniform vec2 u_viewDims; //Dimensions of the screen in world coordinates
 uniform sampler2D u_dMapTex;//Corresponds to the depth map
 uniform sampler2D u_shadTex;//Corresponds to the shadow texture
 uniform vec2 u_shadPxDims; //how wide/tall each pixel on u_shadTex is
@@ -43,17 +44,23 @@ void main()
 
     float base_r_u = r; //How many u pixels the light extends out by (separate because theoretically someone might squish a shadow texture, but the same for now because god why would you do that)
     float base_r_v = r;
-    vec3 ST_nor = normalize(lST);
-    vec3 ab_nor = normalize(v_ab);
-    vec3 ac_nor = normalize(v_ac);
+    vec3 ST_nor = normalize(vec3(lST.xy*u_viewDims, lST.z));
+    vec3 ab_nor = normalize(vec3(vec2(v_ab.xy*u_viewDims),v_ab.z));
+    vec3 ac_nor = normalize(vec3(vec2(v_ac.xy*u_viewDims),v_ac.z));
 
-    float r_u = base_r_u*               // Base pixel radius if it was directly facing the light rays going to the target
-//        (1*length(cross(ST_nor,ab_nor)))*  // Extend so that it reaches that radius at its angular offset
-        (1-t);                          // If the shadow's right behind the caster, the difference isn't that much, whereas if the caster is right up against the source, it makes all the difference
+    float r_u = base_r_u               // Base pixel radius if it was directly facing the light rays going to the target
+//        *(1/length(cross(ST_nor,ab_nor)))  // Extend so that it reaches that radius at its angular offset
+//        *(1/sqrt(1-pow(dot(ST_nor,ab_nor), 2)))  // Extend so that it reaches that radius at its angular offset
+        *(1-t)
+    ;                          // If the shadow's right behind the caster, the difference isn't that much, whereas if the caster is right up against the source, it makes all the difference
+    //By visualizing this, it looks like these vectors seem to be flat 0 or 1, so I think it might definitely be with our vectors
 
-    float r_v = base_r_v*
-//        (1*length(cross(ST_nor,ac_nor)))*
-        (1-t);
+
+    float r_v = base_r_v
+//        *(1/length(cross(ST_nor,ac_nor)))
+//        *(1/sqrt(1-pow(dot(ST_nor,ac_nor), 2)))  // Extend so that it reaches that radius at its angular offset
+        *(1-t)
+    ;
 
     //Extreme coordinates of the light region
     float u0 = u-r_u, u1 = u+r_u;
@@ -178,8 +185,9 @@ void main()
         //        vec4 nextShadColor = texture2D(u_shadTex, shadCoord+u_shadPxDims);
         //        shadColor = 0.5*(shadColor+nextShadColor);
 
-        gl_FragColor = vec4(vec3(shadColor.a), 0);
-        //        gl_FragColor = vec4(vec3(1-shadColor.a),1);//Start by making it 0 to see if it works
+//        gl_FragColor = vec4(u_viewDims, 0, 0);
+//        gl_FragColor = vec4(vec3(sqrt(1-pow(dot(ST_nor,ab_nor), 2)),sqrt(1-pow(dot(ST_nor,ac_nor), 2)),shadColor.a), 0);
+        gl_FragColor = vec4(vec3(shadColor.a),0);//Start by making it 0 to see if it works
     } else {
         gl_FragColor = vec4(1,1,1,1);
         gl_FragColor = vec4(0,0,0,0);

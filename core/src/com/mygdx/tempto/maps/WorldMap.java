@@ -374,7 +374,7 @@ public class WorldMap implements RendersToScreen {
         this.shadowBuffer.begin();
 
         Vector3 mouseCoords = camera.unproject(new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0));
-        mouseCoords.z=0;
+        mouseCoords.z=-10;
         LightSource mouseLight = new LightSource(mouseCoords, Color.YELLOW, 250);
 
 
@@ -418,6 +418,7 @@ public class WorldMap implements RendersToScreen {
         this.shadeBatch.setBlendFunction(GL20.GL_ONE, GL20.GL_ONE);
         Gdx.gl.glBlendEquation(GL20.GL_FUNC_REVERSE_SUBTRACT); //naturally switch to subtracting actually
         this.shadeBatch.begin();
+        this.shadeBatch.setViewport(this.worldViewport);
         for (int i = 0; i < 1; i++) {
 
 
@@ -443,7 +444,7 @@ public class WorldMap implements RendersToScreen {
         Gdx.gl.glBlendEquation(GL20.GL_FUNC_ADD);
         this.lightBatch.begin();
         this.lightBatch.setViewport(this.worldViewport);
-        this.lightBatch.drawLight(mouseLight, this.depthMap, this.camera, viewBounds);
+//        this.lightBatch.drawLight(mouseLight, this.depthMap, this.camera, viewBounds);
         this.lightBatch.end();
 
 

@@ -16,6 +16,7 @@ import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.utils.viewport.Viewport;
 import com.mygdx.tempto.data.CentralTextureData;
 import com.mygdx.tempto.util.MiscFunctions;
 import com.mygdx.tempto.view.GameScreen;
@@ -57,6 +58,7 @@ public class AltShadeBatch extends AltBatch {
 
     protected Texture lastShadowTexture;
     protected float invShadTexWidth = 0, invShadTexHeight = 0;
+    private int loc_u_viewDims = -10;
 
     public AltShadeBatch() {this(1000, null);}
 
@@ -378,6 +380,12 @@ public class AltShadeBatch extends AltBatch {
         shaderToSet.setUniformi(SHADTEX_UNIFORM, 1);
 
     }
+
+    public void setViewport(Viewport viewport) {
+        if (this.loc_u_viewDims == -10) this.loc_u_viewDims = this.shader.fetchUniformLocation("u_viewDims", true);
+        this.shader.setUniform2fv(this.loc_u_viewDims, new float[]{viewport.getWorldWidth(), viewport.getWorldHeight()}, 0, 2);
+    }
+
     @Override
     public void draw(TextureRegion region, float x, float y) {
 
