@@ -444,7 +444,7 @@ public class WorldMap implements RendersToScreen {
         Gdx.gl.glBlendEquation(GL20.GL_FUNC_ADD);
         this.lightBatch.begin();
         this.lightBatch.setViewport(this.worldViewport);
-//        this.lightBatch.drawLight(mouseLight, this.depthMap, this.camera, viewBounds);
+        this.lightBatch.drawLight(mouseLight, this.depthMap, this.camera, viewBounds);
         this.lightBatch.end();
 
 

@@ -6,7 +6,7 @@ varying vec2 v_shadUV;//origin coordinate on shadow texture
 varying vec2 v_shadWH;//width and height of of the region of the shadow texture
 varying vec2 v_shadDE;//origin coordinate on the shadow texture but which correspond to the depth texture instead of the normal
 
-
+uniform vec2 u_viewDims; //World dimensions of the screen
 uniform sampler2D u_dMapTex;//Corresponds to the depth map
 uniform sampler2D u_shadTex;//Corresponds to the shadow texture
 uniform vec2 u_shadPxDims; //how wide/tall each pixel on u_shadTex is
@@ -25,25 +25,52 @@ void main()
 {
 
     vec4 dmap = texture2D(u_dMapTex, v_dMapCoords);
-    vec3 T = vec3(v_dMapCoords, 1/dmap.r-1);//Coordinates of target
-    vec3 laS = v_S - v_a; //Vector from a to light source S
-    vec3 lST = T - v_S; //Vector from light source S to target T
+    vec3 w_T = vec3(v_dMapCoords, 1/dmap.r-1);//Coordinates of target (screeen coords)
+    vec3 T = vec3(w_T.xy*u_viewDims, w_T.z);//Coordinates of target
+    vec3 S = vec3(v_S.xy*u_viewDims, v_S.z);
+    vec3 a = vec3(v_a.xy*u_viewDims, v_a.z);
+    vec3 ab = vec3(v_ab.xy*u_viewDims, v_ab.z);
+    vec3 ac = vec3(v_ac.xy*u_viewDims, v_ac.z);
+    float z_mod = 10*sin(3*u_elapsedTime);
+    //    T.z += z_mod;
+    vec3 laS = S - a; //Vector from a to light source S
+    vec3 lST = T - S; //Vector from light source S to target T
 
-    vec3 nA = cross(v_ab, v_ac);//This value is reused, and coincides with the normal area vector to the parallelogram
+    vec3 nA = cross(ab, ac);//This value is reused, and coincides with the normal area vector to the parallelogram
     float det = dot(-lST,nA);
 
     float det_recip = 1/det;
-    float t = det_recip*dot(nA, laS);
-    float u = det_recip*dot(cross(v_ac, -lST), laS);
-    float v = det_recip*dot(cross(-lST, v_ab), laS);
+    float t = det_recip*dot(nA, laS); //I think this is from S to T, so 0 should mean at the light and 1 should mean at the surface
+    float u = det_recip*dot(cross(ac, -lST), laS);
+    float v = det_recip*dot(cross(-lST, ab), laS);
 
-    float r = (0.5+0.5*sin(3*u_elapsedTime))*0.7/32.0; //Impromptu radius of less than half a pixel on a 16x16 texture
+    float half_px_size = 1/32.0;
+    float r_px = 1.7; //Impromptu radius of less than half a pixel on a 16x16 texture
+    float r = r_px * half_px_size;
+
+    float base_r_u = r; //How many u pixels the light extends out by (separate because theoretically someone might squish a shadow texture, but the same for now because god why would you do that)
+    float base_r_v = r;
+    vec3 ab_nor = normalize(ab);
+    vec3 ac_nor = normalize(ac);
+
+    //Ignore the part of ST parallel to each texture vector,
+    vec3 ST_along_ab = ab_nor * dot(lST, ab_nor);
+    vec3 ST_along_ac = ac_nor * dot(lST, ac_nor);
+    vec3 ST_nor = normalize(lST);
+
+    float r_u = base_r_u                                            // Base pixel radius if it was directly facing the light rays going to the target
+    *pow(1/length(cross(normalize(lST-ST_along_ac),ab_nor)), 1)     // Extend so that it reaches that radius at its angular offset
+    *(1-t)                                                          // If the shadow's right behind the caster, the difference isn't that much, whereas if the caster is right up against the source, it makes all the difference
+    ;
+
+    float r_v = base_r_v
+    *pow(1/length(cross(normalize(lST-ST_along_ab),ac_nor)), 1)
+    *(1-t)
+    ;
+
     //Extreme coordinates of the light region
-    float u0 = u-r, u1 = u+r;
-    float v0 = v-r, v1 = v+r;
-    //Cutoff factors, how much either extreme goes off the edge'
-//    float tu0 = 1-(max(u0,0)-u0)/(r*2), tu1 = 1-(u1-min(u1,1))/(r*2);
-//    float tv0 = (max(v0,0)-v0)/(r*2), tv1 = (v1-min(v1,1))/(r*2);
+    float u0 = u-r_u, u1 = u+r_u;
+    float v0 = v-r_v, v1 = v+r_v;
 
     vec2 shadCoord = v_shadUV + (v_shadWH*vec2(u,1-v));
     vec2 shadDepCoord = v_shadDE + (v_shadWH*vec2(u,1-v));
