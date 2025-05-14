@@ -28,7 +28,7 @@ public class AltShadeBatch extends AltBatch {
     
 
     protected final static String SHADOWVERT_PATH_INTERNAL = "shaders/shadeVert.glsl";
-    protected final static String SHADOWFRAG_PATH_INTERNAL = "shaders/shadeFrag_4samp.glsl";
+    protected final static String SHADOWFRAG_PATH_INTERNAL = "shaders/shadeFrag_4samp_direct.glsl";
 
     protected final static String DEPTHMAPCOORD_ATTRIBUTE = AltDepthBatch.DEPCOORD_ATTRIBUTE;
     protected final static String SHADOWTEXCOORD_ATTRIBUTE = "a_shadTexCoord";
@@ -216,7 +216,7 @@ public class AltShadeBatch extends AltBatch {
         Vector2 d = new Vector2(c).sub(cV.x, cV.y);
 
         //Expand out
-        float expand = 2.5f;
+        float expand = 5.5f;
         Vector2 u_exp = new Vector2(cU.x, cU.y).nor().scl(expand);
         Vector2 v_exp = new Vector2(cV.x, cV.y).nor().scl(expand);
         Vector2 a_exp = new Vector2(a).sub(u_exp).sub(v_exp);
