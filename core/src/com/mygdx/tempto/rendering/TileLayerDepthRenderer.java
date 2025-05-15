@@ -38,7 +38,7 @@ public class TileLayerDepthRenderer extends TileLayerRenderer{
             float frontColor = packedColor(originalLayer.getBaseDepth(), originalLayer.getBaseNormVec(), 0);
             colorPackedA = frontColor;
             colorPackedB = frontColor;
-            float backColor = packedColor(originalLayer.getBaseDepth()+w, originalLayer.getBaseNormVec(), 0);
+            float backColor = packedColor(originalLayer.getBaseDepth()+0.707f*16, originalLayer.getBaseNormVec(), 0);
             colorPackedC = backColor;
             colorPackedD = backColor;
         } else {

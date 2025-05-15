@@ -7,6 +7,7 @@ precision mediump float;
 varying LOWP vec4 v_color;
 varying vec2 v_texCoords;
 varying vec2 v_depCoords;
+varying float v_depth;
 uniform sampler2D u_texture;
 void main()
 {
@@ -15,7 +16,8 @@ void main()
 
     vec4 dMap = texture2D(u_texture, v_depCoords);
 
-    float base_d_px = 1/base.r;
+//    float base_d_px = 1/base.r;
+    float base_d_px = v_depth;
 //    float mod_d_px = 1/dMap.r-2;
     float mod_d_px = 3*(dMap.r-0.5)-0.01;//Fudge it a little
 
