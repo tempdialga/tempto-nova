@@ -88,6 +88,7 @@ public class AltDepthBatch extends AltBatch{
                 new VertexAttribute(VertexAttributes.Usage.ColorPacked, 4, ShaderProgram.COLOR_ATTRIBUTE),
                 new VertexAttribute(VertexAttributes.Usage.TextureCoordinates, 2, ShaderProgram.TEXCOORD_ATTRIBUTE + "0"),
                 new VertexAttribute(VertexAttributes.Usage.TextureCoordinates, 2, DEPCOORD_ATTRIBUTE+"0")), DEPTH_SPRITE_SIZE);
+        this.depthEnabled = true;
     }
 
 

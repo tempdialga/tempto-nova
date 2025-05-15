@@ -41,6 +41,8 @@ public abstract class AltBatch implements Batch {
     protected int blendSrcFuncAlpha = GL20.GL_SRC_ALPHA;
     protected int blendDstFuncAlpha = GL20.GL_ONE_MINUS_SRC_ALPHA;
 
+    protected boolean depthEnabled = false;
+
     protected final ShaderProgram shader;
     protected ShaderProgram customShader = null;
     protected boolean ownsShader;
@@ -109,7 +111,7 @@ public abstract class AltBatch implements Batch {
         if (drawing) throw new IllegalStateException("SpriteBatch.end must be called before begin.");
         renderCalls = 0;
 
-        Gdx.gl.glDepthMask(false);
+        Gdx.gl.glDepthMask(this.depthEnabled);
         if (customShader != null)
             customShader.bind();
         else

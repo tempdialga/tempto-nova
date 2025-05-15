@@ -12,6 +12,7 @@ void main()
 {
     vec4 base = v_color;
     vec4 tMap = texture2D(u_texture, v_texCoords);
+
     vec4 dMap = texture2D(u_texture, v_depCoords);
 
     float base_d_px = 1/base.r;
@@ -26,9 +27,16 @@ void main()
 //    final.rgb=dMap.rgb;
     //depth = floor(base.a)/(dMap.r+0.5 + )
     gl_FragColor = final;
-    if (final.r < gl_FragDepth) {
-        discard;
+    if (tMap.a > 0.01) {
+        gl_FragDepth = final.r;
+    } else {
+        gl_FragDepth = 0;
     }
-    gl_FragDepth = final.r;
+//    if (final.r < gl_FragDepth) {
+//        gl_FragColor = vec4(1);
+//        discard;
+//    } else {
+//
+//    }
 //    gl_FragColor = vec4(1);
 }

@@ -26,7 +26,8 @@ public class TileLayerDepthRenderer extends TileLayerRenderer{
 
     float packedColor(float depth, Vector2 normalVector, float reflectivity) {
         System.out.println("Normal vector: " + normalVector);
-        return Color.toFloatBits(1/depth, normalVector.x, normalVector.y, reflectivity);
+//        return Color.toFloatBits(1/depth, normalVector.x, normalVector.y, reflectivity);
+        return Color.toFloatBits(1/depth, 0, 0, reflectivity);
     }
 
     @Override
