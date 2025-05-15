@@ -6,9 +6,12 @@ import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapTile;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.maps.tiled.renderers.BatchTiledMapRenderer;
+import com.badlogic.gdx.math.Vector2;
 import com.mygdx.tempto.data.CentralTextureData;
 import com.mygdx.tempto.entity.decoration.TileLayer;
 import com.mygdx.tempto.rendering.AltBatch.Depth;
+
+import org.lwjgl.Sys;
 
 public class TileLayerDepthRenderer extends TileLayerRenderer{
     public static final int NUM_VERTICES_WITH_DEPTH = BatchTiledMapRenderer.NUM_VERTICES+8;
@@ -18,11 +21,33 @@ public class TileLayerDepthRenderer extends TileLayerRenderer{
 
     @Override
     float packedColorForLayer(TileLayer layer) {
-        return Color.toFloatBits(1/(layer.getBaseDepth()), this.currentBaseDepth.g, this.currentBaseDepth.b, this.currentBaseDepth.a);
+        return Color.toFloatBits(1/(layer.getBaseDepth()), layer.getBaseNormVec().x, layer.getBaseNormVec().y, this.currentBaseDepth.a);
+    }
+
+    float packedColor(float depth, Vector2 normalVector, float reflectivity) {
+        System.out.println("Normal vector: " + normalVector);
+        return Color.toFloatBits(1/depth, normalVector.x, normalVector.y, reflectivity);
     }
 
     @Override
-    void drawTile(TiledMapTileLayer.Cell cell, float x, float y, float w, float h, float[] vertices, float color) {
+    void drawTile(TileLayer originalLayer, TiledMapTileLayer.Cell cell, float x, float y, float w, float h, float[] vertices, float color) {
+        float flatColor = packedColorForLayer(originalLayer);
+        float colorPackedA, colorPackedB, colorPackedC, colorPackedD;
+        if (originalLayer.isRotate()) {
+            float frontColor = packedColor(originalLayer.getBaseDepth(), originalLayer.getBaseNormVec(), 0);
+            colorPackedA = frontColor;
+            colorPackedB = frontColor;
+            float backColor = packedColor(originalLayer.getBaseDepth()+w, originalLayer.getBaseNormVec(), 0);
+            colorPackedC = backColor;
+            colorPackedD = backColor;
+        } else {
+            colorPackedA = flatColor;
+            colorPackedB = flatColor;
+            colorPackedC = flatColor;
+            colorPackedD = flatColor;
+        }
+
+
         TiledMapTile tile = cell.getTile();
 
         final boolean flipX = cell.getFlipHorizontally();
@@ -58,7 +83,7 @@ public class TileLayerDepthRenderer extends TileLayerRenderer{
 
         vertices[iX1] = x1;
         vertices[iY1] = y1;
-        vertices[iC1] = color;
+        vertices[iC1] = colorPackedA;
         vertices[iU1] = u1;
         vertices[iV1] = v1;
         vertices[iD1] = d1;
@@ -66,7 +91,7 @@ public class TileLayerDepthRenderer extends TileLayerRenderer{
 
         vertices[iX2] = x1;
         vertices[iY2] = y2;
-        vertices[iC2] = color;
+        vertices[iC2] = colorPackedB;
         vertices[iU2] = u1;
         vertices[iV2] = v2;
         vertices[iD2] = d1;
@@ -74,7 +99,7 @@ public class TileLayerDepthRenderer extends TileLayerRenderer{
 
         vertices[iX3] = x2;
         vertices[iY3] = y2;
-        vertices[iC3] = color;
+        vertices[iC3] = colorPackedC;
         vertices[iU3] = u2;
         vertices[iV3] = v2;
         vertices[iD3] = d2;
@@ -82,7 +107,7 @@ public class TileLayerDepthRenderer extends TileLayerRenderer{
 
         vertices[iX4] = x2;
         vertices[iY4] = y1;
-        vertices[iC4] = color;
+        vertices[iC4] = colorPackedD;
         vertices[iU4] = u2;
         vertices[iV4] = v1;
         vertices[iD4] = d2;

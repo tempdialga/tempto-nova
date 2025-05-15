@@ -54,7 +54,7 @@ public class AltLightBatch extends AltBatch{
     }
 
     public void drawLight(LightSource source, Texture depthMap, OrthographicCamera camera, Rectangle viewBounds) {
-        float radius = source.radius();
+        float radius = source.spread();
         Vector3 p = source.pos();
         Vector3 p_screen = camera.project(new Vector3(p));
         p_screen.x /= (float) TemptoNova.PIXEL_GAME_WIDTH;

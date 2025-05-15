@@ -20,6 +20,7 @@ varying vec3 v_a; //Location of point a, origin of shadow texture, in depth map 
 varying vec3 v_ab; //Vector from point a to b, corresponding to u on the texture
 varying vec3 v_ac; //Vector
 varying vec3 v_S; //Location of light source S, in depth map coordinates (x = screen[0-1], y = screen[0-1], z is pixels away from camera)
+varying float v_R; //Radius of the body casting the light,
 //uniform vec3 u_laS; //Vector from a to the light source (S - a)
 
 void main()
@@ -46,9 +47,10 @@ void main()
     float u = det_recip*dot(cross(ac, -lST), laS);
     float v = det_recip*dot(cross(-lST, ab), laS);
 
-    float half_px_size = 1/32.0;
-    float r_px = 1.7; //Impromptu radius of less than half a pixel on a 16x16 texture
-    float r = r_px*half_px_size;
+//    float half_px_size = 1/32.0;
+    float px_size = 1/16.0;
+    float r_px = v_R; //Radius of the light caster
+    float r = r_px*px_size;
 
     float base_r_u = r; //How far on u the light extends out by (separate because theoretically someone might squish a shadow texture, but the same for now because god why would you do that)
     float base_r_v = r;

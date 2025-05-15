@@ -7,6 +7,7 @@ attribute vec3 a_a;
 attribute vec3 a_ab;
 attribute vec3 a_ac;
 attribute vec3 a_S;
+attribute float a_lightBodyRadius; //Radius of the body casting the light
 
 uniform mat4 u_projTrans;
 
@@ -18,6 +19,7 @@ varying vec3 v_a; //Location of point a, origin of shadow texture, in depth map 
 varying vec3 v_ab; //Vector from point a to b, corresponding to width on the shadow texture region
 varying vec3 v_ac; //Vector from point a to c, corresponding to height on the shadow texture region
 varying vec3 v_S; //Location of light source S, in depth map coordinates (x = screen[0-1], y = screen[0-1], z is pixels away from camera)
+varying float v_R; //Radius of the body casting the light (world coordinates)
 
 void main()
 {
@@ -31,4 +33,5 @@ void main()
     v_ab = a_ab;
     v_ac = a_ac;
     v_S = a_S;
+    v_R = a_lightBodyRadius;
 }

@@ -28,13 +28,13 @@ public class AltShadeBatch extends AltBatch {
     
 
     protected final static String SHADOWVERT_PATH_INTERNAL = "shaders/shadeVert.glsl";
-    protected final static String SHADOWFRAG_PATH_INTERNAL = "shaders/shadeFrag_4samp_direct.glsl";
+    protected final static String SHADOWFRAG_PATH_INTERNAL = "shaders/shadeFrag_4samp.glsl";
 
     protected final static String DEPTHMAPCOORD_ATTRIBUTE = AltDepthBatch.DEPCOORD_ATTRIBUTE;
     protected final static String SHADOWTEXCOORD_ATTRIBUTE = "a_shadTexCoord";
     protected final static String SHADOWTEXDIMS_ATTRIBUTE = "a_shadTexDims";
     protected final static String SHADOWTEXDEPCOORD_ATTRIBUTE = "a_shadTexDepCoord"; //Coordinates of the depth texture on the same texture as the base texture
-
+    protected final static String LIGHTBODYRADIUS_ATTRIBUTE = "a_lightBodyRadius"; //Radius, in world coordinates, of the body that casts the light
 
     protected final static String DMAPTEX_UNIFORM = "u_dMapTex";
     protected final static String SHADTEX_UNIFORM = "u_shadTex";
@@ -48,9 +48,9 @@ public class AltShadeBatch extends AltBatch {
                                     S_ATTRIBUTE = "a_S";
 
     private static int i=0;
-    public static final int X1 = i++, Y1 = i++, D1 = i++, E1 = i++, ShU1 = i++, ShV1 = i++, ShW1 = i++, ShH1 = i++, ShD1 = i++, ShE1 = i++, AX1 = i++, AY1 = i++, AZ1 = i++, ABX1 = i++, ABY1 = i++, ABZ1 = i++, ACX1 = i++, ACY1 = i++, ACZ1 = i++, SX1 = i++, SY1 = i++, SZ1 = i++,
-                            X2 = i++, Y2 = i++, D2 = i++, E2 = i++, ShU2 = i++, ShV2 = i++, ShW2 = i++, ShH2 = i++, ShD2 = i++, ShE2 = i++, AX2 = i++, AY2 = i++, AZ2 = i++, ABX2 = i++, ABY2 = i++, ABZ2 = i++, ACX2 = i++, ACY2 = i++, ACZ2 = i++, SX2 = i++, SY2 = i++, SZ2 = i++,
-                            X3 = i++, Y3 = i++, D3 = i++, E3 = i++, ShU3 = i++, ShV3 = i++, ShW3 = i++, ShH3 = i++, ShD3 = i++, ShE3 = i++, AX3 = i++, AY3 = i++, AZ3 = i++, ABX3 = i++, ABY3 = i++, ABZ3 = i++, ACX3 = i++, ACY3 = i++, ACZ3 = i++, SX3 = i++, SY3 = i++, SZ3 = i++;
+    public static final int X1 = i++, Y1 = i++, D1 = i++, E1 = i++, ShU1 = i++, ShV1 = i++, ShW1 = i++, ShH1 = i++, ShD1 = i++, ShE1 = i++, AX1 = i++, AY1 = i++, AZ1 = i++, ABX1 = i++, ABY1 = i++, ABZ1 = i++, ACX1 = i++, ACY1 = i++, ACZ1 = i++, SX1 = i++, SY1 = i++, SZ1 = i++, R1 = i++,
+                            X2 = i++, Y2 = i++, D2 = i++, E2 = i++, ShU2 = i++, ShV2 = i++, ShW2 = i++, ShH2 = i++, ShD2 = i++, ShE2 = i++, AX2 = i++, AY2 = i++, AZ2 = i++, ABX2 = i++, ABY2 = i++, ABZ2 = i++, ACX2 = i++, ACY2 = i++, ACZ2 = i++, SX2 = i++, SY2 = i++, SZ2 = i++, R2 = i++,
+                            X3 = i++, Y3 = i++, D3 = i++, E3 = i++, ShU3 = i++, ShV3 = i++, ShW3 = i++, ShH3 = i++, ShD3 = i++, ShE3 = i++, AX3 = i++, AY3 = i++, AZ3 = i++, ABX3 = i++, ABY3 = i++, ABZ3 = i++, ACX3 = i++, ACY3 = i++, ACZ3 = i++, SX3 = i++, SY3 = i++, SZ3 = i++, R3 = i++;
     protected final static int SHADOW_SPRITE_SIZE = i;
 
 
@@ -79,7 +79,8 @@ public class AltShadeBatch extends AltBatch {
                 new VertexAttribute(VertexAttributes.Usage.Generic, 3, A_ATTRIBUTE),
                 new VertexAttribute(VertexAttributes.Usage.Generic, 3, AB_ATTRIBUTE),
                 new VertexAttribute(VertexAttributes.Usage.Generic, 3, AC_ATTRIBUTE),
-                new VertexAttribute(VertexAttributes.Usage.Generic, 3, S_ATTRIBUTE));
+                new VertexAttribute(VertexAttributes.Usage.Generic, 3, S_ATTRIBUTE),
+                new VertexAttribute(VertexAttributes.Usage.Generic, 1, LIGHTBODYRADIUS_ATTRIBUTE));
     }
 
     @Override
@@ -96,9 +97,14 @@ public class AltShadeBatch extends AltBatch {
         Vector3 cU = caster.u();
         Vector3 cV = caster.v();
         Vector3 S = source.pos();
-        float r = source.radius();
+        float r = source.spread();
 
         final float[] vertices = new float[SHADOW_SPRITE_SIZE];
+
+        //Light Radius
+        vertices[R1] = source.bodyRadius();
+        vertices[R2] = source.bodyRadius();
+        vertices[R3] = source.bodyRadius();
 
         //Initialize data that's the same for all vertices
         //Shadow location information TODO: Do we need to preemptively project these into [0-1] screen coords?
@@ -225,7 +231,7 @@ public class AltShadeBatch extends AltBatch {
         Vector2 d_exp = new Vector2(d).add(u_exp).sub(v_exp);
 
         Vector2 zero = new Vector2();
-        float r2 = source.radius()*source.radius();
+        float r2 = source.spread()*source.spread();
         if (!(
             Intersector.intersectSegmentCircle(a, b, zero, r2) ||
             Intersector.intersectSegmentCircle(b, c, zero, r2) ||
@@ -257,8 +263,8 @@ public class AltShadeBatch extends AltBatch {
 
 
 
-        Vector2 maxFL = new Vector2(farthestLeft).nor().scl(source.radius());
-        Vector2 maxFR = new Vector2(farthestRight).nor().scl(source.radius());
+        Vector2 maxFL = new Vector2(farthestLeft).nor().scl(source.spread());
+        Vector2 maxFR = new Vector2(farthestRight).nor().scl(source.spread());
         Vector2 maxFL_Adj = new Vector2(maxFL).rotate90(-1).add(maxFL);
         Vector2 maxFR_Adj = new Vector2(maxFR).rotate90(+1).add(maxFR);
         Vector2 maxFLR = new Vector2();

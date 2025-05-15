@@ -43,6 +43,8 @@ public class AltDepthBatch extends AltBatch{
     public static final String DEPCOORD_ATTRIBUTE = "a_depCoord";
     public static final String DEPTH_VERT_PATH_INTERNAL = "shaders/depthVert.glsl", DEPTH_FRAG_PATH_INTERNAL = "shaders/depthFrag.glsl";
 
+
+
     /**Vertex specific color information.
      * In the depth map, color encodes depth and angle, so for a texture representing a rotated plane, the color should be set vertex by vertex.
      * Wound clockwise from origin around either +V through +U+V then +U, or y, xy, x; not sure which yet
@@ -149,10 +151,10 @@ public class AltDepthBatch extends AltBatch{
 //        vertices[idx + 18] = u2;
 //        vertices[idx + 19] = v;
         this.writeSpriteToDepthVertices(vertices,
-                x, y, color, u, v, d, e,
-                x, fy2, color, u, v2, d, e2,
-                fx2, fy2, color, u2, v2, d2, e2,
-                fy2, y, color, u2, v, d2, e);
+                x, y, this.colorPackedA, u, v, d, e,
+                x, fy2, this.colorPackedB, u, v2, d, e2,
+                fx2, fy2, this.colorPackedC, u2, v2, d2, e2,
+                fy2, y, this.colorPackedD, u2, v, d2, e);
     }
 
     @Override
@@ -256,10 +258,10 @@ public class AltDepthBatch extends AltBatch{
 
         float color = this.colorPacked;
         this.writeSpriteToDepthVertices(vertices,
-                x1, y1, color, u, v, d, e,
-                x2, y2, color, u, v2, d, e2,
-                x3, y3, color, u2, v2, d2, e2,
-                x4, y4, color, u2, v, d2, e);
+                x1, y1, this.colorPackedA, u, v, d, e,
+                x2, y2, this.colorPackedB, u, v2, d, e2,
+                x3, y3, this.colorPackedC, u2, v2, d2, e2,
+                x4, y4, this.colorPackedD, u2, v, d2, e);
     }
 
     @Override
@@ -394,10 +396,10 @@ public class AltDepthBatch extends AltBatch{
         float color = this.colorPacked;
 
         this.writeSpriteToDepthVertices(vertices,
-                x1, y1, color, u1, v1, d1, e1,
-                x2, y2, color, u2, v2, d2, e2,
-                x3, y3, color, u3, v3, d3, e3,
-                x4, y4, color, u4, v4, d4, e4);
+                x1, y1, this.colorPackedA, u1, v1, d1, e1,
+                x2, y2, this.colorPackedB, u2, v2, d2, e2,
+                x3, y3, this.colorPackedC, u3, v3, d3, e3,
+                x4, y4, this.colorPackedD, u4, v4, d4, e4);
 
     }
 
@@ -499,5 +501,21 @@ public class AltDepthBatch extends AltBatch{
         this.idx = idx + this.spriteSize;
     }
 
-
+    public void setPackedColors_Flat(float depth) {
+        float flatColor = Color.toFloatBits(1/(depth), 0, 0, 0);
+        this.colorPackedA = flatColor;
+        this.colorPackedB = flatColor;
+        this.colorPackedC = flatColor;
+        this.colorPackedD = flatColor;
+    }
+    /**Debug function for the rotated tile debug setup (each tile rotated around its left edge into the screen by 45 degrees*/
+    public void setPackedColors_LeftRot(float depth, float width) {
+        float nor_x = 0.707f;
+        float rotColorLeft = Color.toFloatBits(1/depth, nor_x, 0, 0);
+        float rotColorRight = Color.toFloatBits(1/(depth - width*nor_x), nor_x, 0, 0);
+        this.colorPackedA = rotColorLeft;
+        this.colorPackedB = rotColorLeft;
+        this.colorPackedC = rotColorRight;
+        this.colorPackedD = rotColorRight;
+    }
 }

@@ -5,11 +5,12 @@ import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.maps.tiled.TiledMapTile;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
-import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.XmlReader;
 import com.mygdx.tempto.entity.Entity;
 import com.mygdx.tempto.maps.WorldMap;
+import com.mygdx.tempto.rendering.AltDepthBatch;
 import com.mygdx.tempto.rendering.ShadowCaster;
 import com.mygdx.tempto.rendering.TileLayerDepthRenderer;
 import com.mygdx.tempto.rendering.TileLayerFinalRenderer;
@@ -23,6 +24,7 @@ public class TileLayer implements Entity, RendersToWorld {
     TiledMapTileLayer mapLayer;
     XmlReader.Element originalElement;
     float baseDepth; //In pixel space, e.g. 10 pixels
+    Vector2 baseNormVec; //Only includes x and y, since z can be inferred
     WorldMap parent;
     boolean rotate; //Whether this layer's tiles are rotated, for now just flipped back along the left side, goes -z instead of +x
 
@@ -36,6 +38,10 @@ public class TileLayer implements Entity, RendersToWorld {
         this.baseDepth = baseDepth;
         this.ID = "tiles_"+this.baseDepth;
         this.rotate = rotate;
+        this.baseNormVec = new Vector2();
+        if (rotate) {
+            this.baseNormVec.x = (float) Math.cos(Math.toRadians(45));
+        }
     }
 
 
@@ -64,7 +70,8 @@ public class TileLayer implements Entity, RendersToWorld {
     }
 
     @Override
-    public void renderToDepthMap(Batch depthBatch, OrthographicCamera worldCamera) {
+    public void renderToDepthMap(AltDepthBatch depthBatch, OrthographicCamera worldCamera) {
+
         TileLayerDepthRenderer renderer = this.parent.tileDepthRenderer;
         renderer.setView(worldCamera);
         renderer.renderTileLayer(this);
@@ -158,6 +165,10 @@ public class TileLayer implements Entity, RendersToWorld {
 
     public float getBaseDepth() {
         return baseDepth;
+    }
+
+    public Vector2 getBaseNormVec() {
+        return baseNormVec;
     }
 
     public boolean isRotate() {

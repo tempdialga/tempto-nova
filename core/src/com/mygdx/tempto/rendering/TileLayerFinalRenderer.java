@@ -22,7 +22,6 @@ import static com.badlogic.gdx.graphics.g2d.Batch.Y3;
 import static com.badlogic.gdx.graphics.g2d.Batch.Y4;
 
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapTile;
@@ -47,7 +46,7 @@ public class TileLayerFinalRenderer extends TileLayerRenderer{
     }
 
     @Override
-    void drawTile(TiledMapTileLayer.Cell cell, float x, float y, float w, float h, float[] vertices, float color) {
+    void drawTile(TileLayer originalLayer, TiledMapTileLayer.Cell cell, float x, float y, float w, float h, float[] vertices, float color) {
         TiledMapTile tile = cell.getTile();
 
         final boolean flipX = cell.getFlipHorizontally();
