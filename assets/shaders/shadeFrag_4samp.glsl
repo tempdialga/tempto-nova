@@ -11,8 +11,6 @@ uniform vec2 u_viewDims; //Dimensions of the screen in world coordinates
 uniform sampler2D u_dMapTex;//Corresponds to the depth map
 uniform sampler2D u_shadTex;//Corresponds to the shadow texture
 uniform vec2 u_shadPxDims; //how wide/tall each pixel on u_shadTex is
-uniform int u_shadTexWidth; //How many pixels wide u_shadTex is (recip of u_shadPxDims.x)
-uniform int u_shadTexHeight; //How mnay puxels high u_shadTex is
 uniform float u_elapsedTime; //Elapsed time in seconds (for debugging purposes)
 
 
@@ -21,7 +19,6 @@ varying vec3 v_ab; //Vector from point a to b, corresponding to u on the texture
 varying vec3 v_ac; //Vector
 varying vec3 v_S; //Location of light source S, in depth map coordinates (x = screen[0-1], y = screen[0-1], z is pixels away from camera)
 varying float v_R; //Radius of the body casting the light,
-//uniform vec3 u_laS; //Vector from a to the light source (S - a)
 
 void main()
 {
@@ -47,13 +44,12 @@ void main()
     float u = det_recip*dot(cross(ac, -lST), laS);
     float v = det_recip*dot(cross(-lST, ab), laS);
 
-//    float half_px_size = 1/32.0;
-    float px_size = 1/16.0;
+    float px_size_u = u_shadPxDims.x / v_shadWH.x;//Pixel size in terms of u, i.e. u=this is 1 px right of u=0
+    float px_size_v = u_shadPxDims.y / v_shadWH.y;
     float r_px = v_R; //Radius of the light caster
-    float r = r_px*px_size;
 
-    float base_r_u = r; //How far on u the light extends out by (separate because theoretically someone might squish a shadow texture, but the same for now because god why would you do that)
-    float base_r_v = r;
+    float base_r_u = r_px * px_size_u; //How far on u the light extends out by (separate because theoretically someone might squish a shadow texture, but the same for now because god why would you do that)
+    float base_r_v = r_px * px_size_v;
     vec3 ab_nor = normalize(ab);
     vec3 ac_nor = normalize(ac);
 
@@ -144,9 +140,7 @@ void main()
         )/4;
 
 
-        vec2 r_redundant = u_shadPxDims*0.25;
-        float fu0 = u_shadPxDims.x*floor(u0*u_shadTexWidth);
-        float fv0 = u_shadPxDims.y*floor(v0*u_shadTexHeight);
+
 
 
         gl_FragColor = vec4(vec3(shadColor.a),0);//Start by making it 0 to see if it works

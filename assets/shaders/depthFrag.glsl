@@ -24,8 +24,7 @@ void main()
     vec4 final = vec4(
 //    1/(base_d_px-mod_d_px),
     1/base_d_px,
-    v_color.gb,
-    tMap.a);
+    v_color.gba);
 //    final.rgb=dMap.rgb;
     //depth = floor(base.a)/(dMap.r+0.5 + )
     gl_FragColor = final;

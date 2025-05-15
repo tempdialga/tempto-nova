@@ -11,8 +11,6 @@ import com.mygdx.tempto.data.CentralTextureData;
 import com.mygdx.tempto.entity.decoration.TileLayer;
 import com.mygdx.tempto.rendering.AltBatch.Depth;
 
-import org.lwjgl.Sys;
-
 public class TileLayerDepthRenderer extends TileLayerRenderer{
     public static final int NUM_VERTICES_WITH_DEPTH = BatchTiledMapRenderer.NUM_VERTICES+8;
     public TileLayerDepthRenderer(TiledMap map, AltDepthBatch batch) {
@@ -38,7 +36,7 @@ public class TileLayerDepthRenderer extends TileLayerRenderer{
             float frontColor = packedColor(originalLayer.getBaseDepth(), originalLayer.getBaseNormVec(), 0);
             colorPackedA = frontColor;
             colorPackedB = frontColor;
-            float backColor = packedColor(originalLayer.getBaseDepth()+w, originalLayer.getBaseNormVec(), 0);
+            float backColor = packedColor(originalLayer.getBaseDepth()+0.707f*16, originalLayer.getBaseNormVec(), 0);
             colorPackedC = backColor;
             colorPackedD = backColor;
         } else {

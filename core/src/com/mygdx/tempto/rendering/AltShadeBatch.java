@@ -28,7 +28,7 @@ public class AltShadeBatch extends AltBatch {
     
 
     protected final static String SHADOWVERT_PATH_INTERNAL = "shaders/shadeVert.glsl";
-    protected final static String SHADOWFRAG_PATH_INTERNAL = "shaders/shadeFrag_4samp.glsl";
+    protected final static String SHADOWFRAG_PATH_INTERNAL = "shaders/shadeFrag_9samp.glsl";
 
     protected final static String DEPTHMAPCOORD_ATTRIBUTE = AltDepthBatch.DEPCOORD_ATTRIBUTE;
     protected final static String SHADOWTEXCOORD_ATTRIBUTE = "a_shadTexCoord";
@@ -39,8 +39,6 @@ public class AltShadeBatch extends AltBatch {
     protected final static String DMAPTEX_UNIFORM = "u_dMapTex";
     protected final static String SHADTEX_UNIFORM = "u_shadTex";
     protected final static String SHADPXDIM_UNIFORM = "u_shadPxDims";
-    protected final static String SHADTEXWIDTH_UNIFORM = "u_shadTexWidth";
-    protected final static String SHADTEXHEIGHT_UNIFORM = "u_shadTexHeight";
 
     protected final static String   A_ATTRIBUTE = "a_a",
                                     AB_ATTRIBUTE = "a_ab",
@@ -163,14 +161,11 @@ public class AltShadeBatch extends AltBatch {
         
         //Shadow texture coordinates. This is confusing bc normally texture coords are interpolated, but that interpolation happens per fragment based on its own depth/intersection with the shadow plane described by a, b, and c above
         float sh_invTexWid = 1/(float)caster.shadowTexture().getTexture().getWidth(), sh_invTexHgt = 1/(float)caster.shadowTexture().getTexture().getHeight();
-//        float sh_u = caster.shadowTexture().getU()*sh_invTexWid, sh_v = caster.shadowTexture().getV()*sh_invTexHgt;
         float sh_w = caster.shadowTexture().getRegionWidth()*sh_invTexWid, sh_h = caster.shadowTexture().getRegionHeight()*sh_invTexHgt;
         float sh_u = caster.shadowTexture().getU(), sh_v = caster.shadowTexture().getV();
         TextureRegion depReg = CentralTextureData.baseToDepthPairs.get(caster.shadowTexture());
         float sh_d = depReg.getU(), sh_e = depReg.getV();
-//        float sh_w = caster.shadowTexture().getRegionWidth(), sh_h = caster.shadowTexture().getRegionHeight();
-//        float sh_u = 0, sh_v = 0;
-//        float sh_w = 1, sh_h = 1;
+
         vertices[ShU1] = sh_u;
         vertices[ShU2] = sh_u;
         vertices[ShU3] = sh_u;
@@ -361,16 +356,14 @@ public class AltShadeBatch extends AltBatch {
     protected void switchShadowTexture (Texture shadowTexture) {
         flush();
         this.lastShadowTexture = shadowTexture;
-        invShadTexWidth = 1.0f / shadowTexture.getWidth();
-        invShadTexHeight = 1.0f / shadowTexture.getHeight();
+        invShadTexWidth = 1.0f / (float) shadowTexture.getWidth();
+        invShadTexHeight = 1.0f / (float) shadowTexture.getHeight();
     }
 
     @Override
     public void end() {
         super.end();
     }
-
-    public float[] verticesOfShadowRegion(){return null;}
 
     @Override
     protected void setupMatrices () {
@@ -419,7 +412,6 @@ public class AltShadeBatch extends AltBatch {
 
     @Override
     public void begin() {
-//        this.enableBlending();
         super.begin();
     }
 
@@ -440,13 +432,11 @@ public class AltShadeBatch extends AltBatch {
         shaderToUse.setUniform2fv(SHADPXDIM_UNIFORM, new float[]{
                 invShadTexWidth, invShadTexHeight
         }, 0, 2);
-        shaderToUse.setUniformi(SHADTEXWIDTH_UNIFORM, this.lastShadowTexture.getWidth());
-        shaderToUse.setUniformi(SHADTEXHEIGHT_UNIFORM, this.lastShadowTexture.getHeight());
         shaderToUse.setUniformf("u_elapsedTime", GameScreen.elapsedTime);
 
         Mesh mesh = this.mesh;
         mesh.setVertices(vertices, 0, idx);
-        Buffer indicesBuffer = (Buffer)mesh.getIndicesBuffer(true);
+        Buffer indicesBuffer = mesh.getIndicesBuffer(true);
         indicesBuffer.position(0);
         indicesBuffer.limit(count);
 

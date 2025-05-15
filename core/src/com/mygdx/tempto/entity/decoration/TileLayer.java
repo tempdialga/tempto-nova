@@ -103,7 +103,8 @@ public class TileLayer implements Entity, RendersToWorld {
                 Vector3 u = new Vector3(tileRegion.getRegionWidth(), 0, 0);
 
                 if (this.rotate) { //Test: rotate back along left side
-                    u.z = u.x*(float) Math.cos(Math.toRadians(45));
+//                    u.z = u.x*(float) Math.cos(Math.toRadians(45));
+                    u.z = 16 *(float) Math.cos(Math.toRadians(45));
                     u.x = u.x*(float) Math.cos(Math.toRadians(45));
                 }
 

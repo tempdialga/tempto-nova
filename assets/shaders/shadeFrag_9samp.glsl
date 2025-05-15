@@ -6,20 +6,19 @@ varying vec2 v_shadUV;//origin coordinate on shadow texture
 varying vec2 v_shadWH;//width and height of of the region of the shadow texture
 varying vec2 v_shadDE;//origin coordinate on the shadow texture but which correspond to the depth texture instead of the normal
 
-uniform vec2 u_viewDims; //World dimensions of the screen
+
+uniform vec2 u_viewDims; //Dimensions of the screen in world coordinates
 uniform sampler2D u_dMapTex;//Corresponds to the depth map
 uniform sampler2D u_shadTex;//Corresponds to the shadow texture
 uniform vec2 u_shadPxDims; //how wide/tall each pixel on u_shadTex is
-uniform int u_shadTexWidth; //How many pixels wide u_shadTex is (recip of u_shadPxDims.x)
-uniform int u_shadTexHeight; //How mnay puxels high u_shadTex is
 uniform float u_elapsedTime; //Elapsed time in seconds (for debugging purposes)
 
 
 varying vec3 v_a; //Location of point a, origin of shadow texture, in depth map coordinates (x = screen[0-1], y = screen[0-1], z is pixels away from camera)
-varying vec3 v_ab; //Vector from point a to b, corresponding to u on the
+varying vec3 v_ab; //Vector from point a to b, corresponding to u on the texture
 varying vec3 v_ac; //Vector
 varying vec3 v_S; //Location of light source S, in depth map coordinates (x = screen[0-1], y = screen[0-1], z is pixels away from camera)
-//uniform vec3 u_laS; //Vector from a to the light source (S - a)
+varying float v_R; //Radius of the body casting the light,
 
 void main()
 {
@@ -31,6 +30,7 @@ void main()
     vec3 a = vec3(v_a.xy*u_viewDims, v_a.z);
     vec3 ab = vec3(v_ab.xy*u_viewDims, v_ab.z);
     vec3 ac = vec3(v_ac.xy*u_viewDims, v_ac.z);
+
     float z_mod = 10*sin(3*u_elapsedTime);
     //    T.z += z_mod;
     vec3 laS = S - a; //Vector from a to light source S
@@ -44,12 +44,12 @@ void main()
     float u = det_recip*dot(cross(ac, -lST), laS);
     float v = det_recip*dot(cross(-lST, ab), laS);
 
-    float half_px_size = 1/32.0;
-    float r_px = 1.7; //Impromptu radius of less than half a pixel on a 16x16 texture
-    float r = r_px * half_px_size;
+    float px_size_u = u_shadPxDims.x / v_shadWH.x;//Pixel size in terms of u, i.e. u=this is 1 px right of u=0
+    float px_size_v = u_shadPxDims.y / v_shadWH.y;
+    float r_px = v_R; //Radius of the light caster
 
-    float base_r_u = r; //How many u pixels the light extends out by (separate because theoretically someone might squish a shadow texture, but the same for now because god why would you do that)
-    float base_r_v = r;
+    float base_r_u = r_px * px_size_u; //How far on u the light extends out by (separate because theoretically someone might squish a shadow texture, but the same for now because god why would you do that)
+    float base_r_v = r_px * px_size_v;
     vec3 ab_nor = normalize(ab);
     vec3 ac_nor = normalize(ac);
 
@@ -58,10 +58,11 @@ void main()
     vec3 ST_along_ac = ac_nor * dot(lST, ac_nor);
     vec3 ST_nor = normalize(lST);
 
-    float r_u = base_r_u                                            // Base pixel radius if it was directly facing the light rays going to the target
-    *pow(1/length(cross(normalize(lST-ST_along_ac),ab_nor)), 1)     // Extend so that it reaches that radius at its angular offset
-    *(1-t)                                                          // If the shadow's right behind the caster, the difference isn't that much, whereas if the caster is right up against the source, it makes all the difference
-    ;
+    float r_u = base_r_u               // Base pixel radius if it was directly facing the light rays going to the target
+    *pow(1/length(cross(normalize(lST-ST_along_ac),ab_nor)), 1)  // Extend so that it reaches that radius at its angular offset
+    *(1-t)
+    ;                          // If the shadow's right behind the caster, the difference isn't that much, whereas if the caster is right up against the source, it makes all the difference
+
 
     float r_v = base_r_v
     *pow(1/length(cross(normalize(lST-ST_along_ab),ac_nor)), 1)
@@ -84,19 +85,9 @@ void main()
     float t_fudge = 0.0;
     float coord_fudge = 0.001;
     if (t+t_mod > t_fudge && t+t_mod < 1-t_fudge &&
-        u1 >= 0-coord_fudge && u0 <= 1+coord_fudge &&
-        v1 >= 0-coord_fudge && v0 <= 1+coord_fudge) {
+    u1 >= 0-coord_fudge && u0 <= 1+coord_fudge &&
+    v1 >= 0-coord_fudge && v0 <= 1+coord_fudge) {
 
-        float cu0 = max(u0,0);
-        float cu1 = min(u1,1);
-        float cv0 = max(v0,0);
-        float cv1 = min(v1,1);
-
-//        u = clamp(u,0,1);
-//        float cu0 = max(u0,0);
-//        tu0 = 1-(cu0-u0)/(u1-u0);
-//        float cu1 = min(u1,1);
-//        tu0 = 1-(u1-cu1)/(u1-u0);
         float reg_px_width = 16;
         float reg_px_height = 16;
 
@@ -107,7 +98,7 @@ void main()
         vec2 shadCoord_m = v_shadUV + (v_shadWH*vec2(u,1-v));//Shadow coords right in the middle
         vec4 shadCol_m = texture2D(u_shadTex, shadCoord_m);
         if (u < 0 || u > 1 ||
-            v < 0 || v > 1) shadCol_m = vec4(0);
+        v < 0 || v > 1) shadCol_m = vec4(0);
         vec2 shadCoord1m = v_shadUV + (v_shadWH*vec2(u1,1-v));//Shadow coords right in the middle
         vec4 shadCol1m = texture2D(u_shadTex, shadCoord1m);
         if (u1 > 1 ||
@@ -120,7 +111,7 @@ void main()
         vec2 shadCoordm0 = v_shadUV + (v_shadWH*vec2(u,1-v0));
         vec4 shadColm0 = texture2D(u_shadTex, shadCoordm0);
         if (u < 0 || u > 1 ||
-            v0 < 0) shadColm0 = vec4(0);
+        v0 < 0) shadColm0 = vec4(0);
         vec2 shadCoord10 = v_shadUV + (v_shadWH*vec2(u1,1-v0));
         vec4 shadCol10 = texture2D(u_shadTex, shadCoord10);
         if (u1 > 1 || v0 < 0) shadCol10 = vec4(0);
@@ -131,74 +122,22 @@ void main()
         vec2 shadCoordm1 = v_shadUV + (v_shadWH*vec2(u,1-v1));
         vec4 shadColm1 = texture2D(u_shadTex, shadCoordm1);
         if (u < 0 || u > 1 ||
-            v0 < 0) shadColm1 = vec4(0);
+        v0 < 0) shadColm1 = vec4(0);
         vec2 shadCoord11 = v_shadUV + (v_shadWH*vec2(u1,1-v1));
         vec4 shadCol11 = texture2D(u_shadTex, shadCoord11);
         if (u1 > 1 || v1 > 1) shadCol11 = vec4(0);
 
-//        vec4 shadColor = (
-//            shadCol00*tu0*tv0  +shadCol10*tu1*tv0 +
-//            shadCol01*tu0*tv1  +shadCol11*tu1*tv1
-//        );
 
         float shadFudge = 1.1f; //i.e. if there is already a shadow make it a little more opaque
         vec4 shadColor = shadFudge*(
-            shadCol00+shadColm0+shadCol10+
-            shadCol0m+shadCol_m+shadCol1m+
-            shadCol01+shadColm1+shadCol11
+        shadCol00+shadColm0+shadCol10+
+        shadCol0m+shadCol_m+shadCol1m+
+        shadCol01+shadColm1+shadCol11
         )/9;
-//        vec4 shadColor = vec4((u_-u0)/du);
 
-
-
-//        float area_px = 1;
-        vec2 r_redundant = u_shadPxDims*0.25;
-//        float u0 = shadCoord.x-r.x;
-        float fu0 = u_shadPxDims.x*floor(u0*u_shadTexWidth);
-//        float tu0 = 0.5;
-//        float u1 = shadCoord.x+r.x;
-//        float tu1 = 1-tu0; //True for now when the shadow is exactly 1px, need to interpret this for more cases later
-//
-//        float v0 = shadCoord.y-r.y;
-        float fv0 = u_shadPxDims.y*floor(v0*u_shadTexHeight);
-//        float tv0 = 0.5;
-//        float v1 = shadCoord.y+r.y;
-//        float tv1 = 1-tv0;
-//
-//        vec4 shadColor = (
-//            tu0*tv0*texture2D(u_shadTex, vec2(u0, v0))+
-//            tu1*tv0*texture2D(u_shadTex, vec2(u1, v0))+
-//            tu1*tv1*texture2D(u_shadTex, vec2(u1, v1))+
-//            tu0*tv1*texture2D(u_shadTex, vec2(u0, v1))
-//        )/(area_px);
-
-//        vec4 shadColor = (
-//        tu0*texture2D(u_shadTex, vec2(u0, v0))+
-//        tu1*texture2D(u_shadTex, vec2(u1, v0))
-//        )/(area_px);
-//        shadColor = (
-//            texture2D(u_shadTex, vec2(u0, v0))+
-//            texture2D(u_shadTex, vec2(u1, v0))+
-//            texture2D(u_shadTex, vec2(u1, v1))+
-//            texture2D(u_shadTex, vec2(u0, v1))
-//        )/4;
-
-
-//        vec4 shadColor = texture2D(u_shadTex, shadCoord);
-//        vec4 nextShadColor = texture2D(u_shadTex, shadCoord+u_shadPxDims);
-//        shadColor = 0.5*(shadColor+nextShadColor);
-
-        gl_FragColor = vec4(vec3(shadColor.a), 0);
-//        gl_FragColor = vec4(vec3(1-shadColor.a),1);//Start by making it 0 to see if it works
+        gl_FragColor = vec4(vec3(shadColor.a),0);
     } else {
-        gl_FragColor = vec4(1,1,1,1);
         gl_FragColor = vec4(0,0,0,0);
     }
-//    gl_FragColor = texture2D(u_dMapTex, gl_FragCoord.xy);
-//    float depth = (T.z-v_S.z);
-
-
-    //gl_FragColor = vec4((T.xy-v_S.xy),1/depth,1);
-//    gl_FragColor = vec4(0.5,0,0.5,1);
 
 }

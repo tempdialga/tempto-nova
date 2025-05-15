@@ -354,11 +354,12 @@ public class WorldMap implements RendersToScreen {
         this.depthBuffer.begin();
         float bgDepth = 20;
         Gdx.gl.glClearDepthf(1/bgDepth);
-        ScreenUtils.clear(1/bgDepth,0,0.2f,1, true);
+        ScreenUtils.clear(1/bgDepth,0,0f,0.5f, true);
         Gdx.gl.glEnable(GL20.GL_DEPTH_TEST);
         Gdx.gl.glDepthFunc(GL20.GL_GREATER);
 
         this.depthMapBatch.setProjectionMatrix(this.camera.combined);
+        this.depthMapBatch.disableBlending();
         this.depthMapBatch.begin();
         for (Entity entity : this.entities) {
             if (entity instanceof TileLayer renderable) { //Currently only tile layer bc this is the only one the batch supports atm
@@ -385,9 +386,6 @@ public class WorldMap implements RendersToScreen {
                 renders.addShadowCastersToList(casters);
             }
         }
-//        for (ShadowCaster caster : casters) {
-//            caster.origin().set(mouseCoords);
-//        }
 
         float width = camera.viewportWidth * camera.zoom;
         float height = camera.viewportHeight * camera.zoom;
@@ -411,7 +409,6 @@ public class WorldMap implements RendersToScreen {
 //        this.shadeBatch.enableBlending();
 
         ScreenUtils.clear(1, 1, 1, 1);
-//        ScreenUtils.clear(0,0,0,1);
         this.shadeBatch.setBlendFunctionSeparate(GL20.GL_DST_COLOR, GL20.GL_ZERO, GL20.GL_ONE, GL20.GL_ZERO);//Mult
 //        this.shadeBatch.setBlendFunctionSeparate(GL20.GL_ONE, GL20.GL_ONE, GL20.GL_SRC_ALPHA, GL20.GL_DST_ALPHA);//Add
         this.shadeBatch.setBlendFunction(GL20.GL_ONE, GL20.GL_ONE);
@@ -426,18 +423,13 @@ public class WorldMap implements RendersToScreen {
             ShadowCaster.numRangesVisible = 0;
             Collections.sort(casters);
             for (ShadowCaster caster : casters) {
-//            caster.origin().set(screenTestCaster.origin());
-//            caster.u().set(screenTestCaster.u());
-//            caster.v().set(screenTestCaster.v());
                 this.shadeBatch.drawShadow(caster, mouseLight, this.depthMap, this.camera, viewBounds, viewPoly);
-//            System.out.println("Caster has u of "+caster.u() + " and v of "+caster.v());
-//            System.out.println("Caster at: "+caster.origin() + ", Caster has u of "+caster.u() + " and v of "+caster.v());
             }
-//        this.shadeBatch.flush();
 
         }
         this.shadeBatch.end();
-//
+
+
         this.lightBatch.setProjectionMatrix(this.camera.combined);
         this.lightBatch.setBlendFunctionSeparate(GL20.GL_DST_COLOR, GL20.GL_ZERO, GL20.GL_ONE, GL20.GL_ZERO);
         Gdx.gl.glBlendEquation(GL20.GL_FUNC_ADD);
@@ -450,8 +442,6 @@ public class WorldMap implements RendersToScreen {
         this.shadowBuffer.end();
         this.shadowMap = this.shadowBuffer.getColorBufferTexture();
 
-//        Camera worldViewportCamera = this.worldViewport.getCamera();
-//        worldViewportCamera.position.set(this.worldViewport.getWorldWidth()/2, this.worldViewport.getWorldHeight()/2,1f);
 
         this.debugRenderer.setProjectionMatrix(this.camera.combined);
         this.debugRenderer.setColor(Color.BLACK);
