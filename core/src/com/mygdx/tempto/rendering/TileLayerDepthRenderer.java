@@ -7,6 +7,7 @@ import com.badlogic.gdx.maps.tiled.TiledMapTile;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.maps.tiled.renderers.BatchTiledMapRenderer;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Vector3;
 import com.mygdx.tempto.data.CentralTextureData;
 import com.mygdx.tempto.entity.decoration.TileLayer;
 import com.mygdx.tempto.rendering.AltBatch.Depth;
@@ -17,26 +18,33 @@ public class TileLayerDepthRenderer extends TileLayerRenderer{
         super(map, batch);
     }
 
+    /**Depth color encoding:
+     * r: 1/depth
+     * g: x of normal vector, scaled from [-1 1] to [0 1], so it's half precision and relative to 0.5 instead of 0
+     * b: y of normal vector, scaled just as with x
+     * a: reflectivity, scale TBD*/
     @Override
     float packedColorForLayer(TileLayer layer) {
-        return Color.toFloatBits(1/(layer.getBaseDepth()), layer.getBaseNormVec().x, layer.getBaseNormVec().y, this.currentBaseDepth.a);
+        return Color.toFloatBits(1/(layer.getBaseDepth()), layer.getBaseNormVec().x*0.5f+0.5f, layer.getBaseNormVec().y*0.5f+0.5f, 0.01f/8f);
     }
 
     float packedColor(float depth, Vector2 normalVector, float reflectivity) {
-        System.out.println("Normal vector: " + normalVector);
-//        return Color.toFloatBits(1/depth, normalVector.x, normalVector.y, reflectivity);
-        return Color.toFloatBits(1/depth, 0, 0, reflectivity);
+        return Color.toFloatBits(1/depth, normalVector.x*0.5f+0.5f, normalVector.y*0.5f+0.5f, reflectivity);
     }
 
     @Override
     void drawTile(TileLayer originalLayer, TiledMapTileLayer.Cell cell, float x, float y, float w, float h, float[] vertices, float color) {
+        float refl_coeff = 0.99f/8f;
         float flatColor = packedColorForLayer(originalLayer);
         float colorPackedA, colorPackedB, colorPackedC, colorPackedD;
         if (originalLayer.isRotate()) {
-            float frontColor = packedColor(originalLayer.getBaseDepth(), originalLayer.getBaseNormVec(), 0);
+            Vector2 altNormVec = new Vector2(0.707f*16, -w).nor(); //TEMPORARY: This uses y to represent z since y of the normal vec for debugging is 0
+            altNormVec.y = 0;
+
+            float frontColor = packedColor(originalLayer.getBaseDepth(), altNormVec, refl_coeff);
             colorPackedA = frontColor;
             colorPackedB = frontColor;
-            float backColor = packedColor(originalLayer.getBaseDepth()+0.707f*16, originalLayer.getBaseNormVec(), 0);
+            float backColor = packedColor(originalLayer.getBaseDepth()+0.707f*16, altNormVec, refl_coeff);
             colorPackedC = backColor;
             colorPackedD = backColor;
         } else {

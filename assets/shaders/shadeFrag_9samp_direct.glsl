@@ -100,29 +100,43 @@ void main()
 
     float shadFudge = 1.1f; //i.e. if there is already a shadow make it a little more opaque
 
-//    if (t+t_mod > t_fudge && t+t_mod < 1-t_fudge &&
-//    u >= 0-coord_fudge && u <= 1+coord_fudge &&
-//    v >= 0-coord_fudge && v <= 1+coord_fudge) {
-//        vec2 shadCoord = v_shadUV + v_shadWH*vec2(u, 1-v);
-//        shadColor.rgb += shadFudge*texture2D(u_shadTex, shadCoord).aaa;
-//    }
+    //    if (t+t_mod > t_fudge && t+t_mod < 1-t_fudge &&
+    //    u >= 0-coord_fudge && u <= 1+coord_fudge &&
+    //    v >= 0-coord_fudge && v <= 1+coord_fudge) {
+    //        vec2 shadCoord = v_shadUV + v_shadWH*vec2(u, 1-v);
+    //        shadColor.rgb += shadFudge*texture2D(u_shadTex, shadCoord).aaa;
+    //    }
 
 
 
-    vec3 S_a = vec3(S.x-w_r, S.y-w_r, S.z);
-    vec4 C_a = shadowFromS(S_a, T, a, ab, ac, t_mod);
-    vec3 S_b = vec3(S.x-w_r, S.y+w_r, S.z);
-    vec4 C_b = shadowFromS(S_b, T, a, ab, ac, t_mod);
-    vec3 S_c = vec3(S.x+w_r, S.y+w_r, S.z);
-    vec4 C_c = shadowFromS(S_c, T, a, ab, ac, t_mod);
-    vec3 S_d = vec3(S.x+w_r, S.y-w_r, S.z);
-    vec4 C_d = shadowFromS(S_d, T, a, ab, ac, t_mod);
+    vec3 S_00 = vec3(S.x-w_r, S.y-w_r, S.z);
+    vec4 C_00 = shadowFromS(S_00, T, a, ab, ac, t_mod);
+    vec3 S_0m = vec3(S.x-w_r, S.y    , S.z);
+    vec4 C_0m = shadowFromS(S_0m, T, a, ab, ac, t_mod);
+    vec3 S_01 = vec3(S.x-w_r, S.y+w_r, S.z);
+    vec4 C_01 = shadowFromS(S_01, T, a, ab, ac, t_mod);
 
-//    shadColor *= 0.25;
+    vec3 S_m0 = vec3(S.x, S.y-w_r, S.z);
+    vec4 C_m0 = shadowFromS(S_m0, T, a, ab, ac, t_mod);
+    vec3 S_mm = vec3(S.x, S.y , S.z);
+    vec4 C_mm = shadowFromS(S_mm, T, a, ab, ac, t_mod);
+    vec3 S_m1 = vec3(S.x, S.y+w_r, S.z);
+    vec4 C_m1 = shadowFromS(S_m1, T, a, ab, ac, t_mod);
+
+    vec3 S_10 = vec3(S.x+w_r, S.y-w_r, S.z);
+    vec4 C_10 = shadowFromS(S_10, T, a, ab, ac, t_mod);
+    vec3 S_1m = vec3(S.x+w_r, S.y , S.z);
+    vec4 C_1m = shadowFromS(S_1m, T, a, ab, ac, t_mod);
+    vec3 S_11 = vec3(S.x+w_r, S.y+w_r, S.z);
+    vec4 C_11 = shadowFromS(S_11, T, a, ab, ac, t_mod);
+
+
+    //    shadColor *= 0.25;
     vec4 shadColor = (
-        C_b + C_c +
-        C_a + C_d
-    )*shadFudge*0.25;
+    C_01 + C_m1 + C_11 +
+    C_0m + C_mm + C_1m +
+    C_00 + C_m0 + C_10
+    )*shadFudge/9.0;
 
     gl_FragColor = vec4(shadColor.aaa, 0);
 

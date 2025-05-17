@@ -48,8 +48,8 @@ void main()
     float px_size_v = u_shadPxDims.y / v_shadWH.y;
     float r_px = v_R; //Radius of the light caster
 
-    float base_r_u = r_px * px_size_u; //How far on u the light extends out by (separate because theoretically someone might squish a shadow texture, but the same for now because god why would you do that)
-    float base_r_v = r_px * px_size_v;
+    float source_r_u = r_px * px_size_u; //How far on u the light extends out by (separate because theoretically someone might squish a shadow texture, but the same for now because god why would you do that)
+    float source_r_v = r_px * px_size_v;
     vec3 ab_nor = normalize(ab);
     vec3 ac_nor = normalize(ac);
 
@@ -58,15 +58,15 @@ void main()
     vec3 ST_along_ac = ac_nor * dot(lST, ac_nor);
     vec3 ST_nor = normalize(lST);
 
-    float r_u = base_r_u               // Base pixel radius if it was directly facing the light rays going to the target
+    float r_u = source_r_u               // Base pixel radius if it was directly facing the light rays going to the target
     *pow(1/length(cross(normalize(lST-ST_along_ac),ab_nor)), 1)  // Extend so that it reaches that radius at its angular offset
-    *(1-t)
+//    *(1-t)
     ;                          // If the shadow's right behind the caster, the difference isn't that much, whereas if the caster is right up against the source, it makes all the difference
 
 
-    float r_v = base_r_v
+    float r_v = source_r_v
     *pow(1/length(cross(normalize(lST-ST_along_ab),ac_nor)), 1)
-    *(1-t)
+//    *(1-t)
     ;
 
     //Extreme coordinates of the light region

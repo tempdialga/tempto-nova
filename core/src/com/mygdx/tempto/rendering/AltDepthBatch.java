@@ -126,31 +126,6 @@ public class AltDepthBatch extends AltBatch{
         final float d2 = depthRegion.getU2();
         final float e2 = depthRegion.getV();
 
-        float color = this.colorPacked;
-//        int idx = this.idx;
-//        vertices[idx] = x;
-//        vertices[idx + 1] = y;
-//        vertices[idx + 2] = color;
-//        vertices[idx + 3] = u;
-//        vertices[idx + 4] = v;
-//
-//        vertices[idx + 5] = x;
-//        vertices[idx + 6] = fy2;
-//        vertices[idx + 7] = color;
-//        vertices[idx + 8] = u;
-//        vertices[idx + 9] = v2;
-//
-//        vertices[idx + 10] = fx2;
-//        vertices[idx + 11] = fy2;
-//        vertices[idx + 12] = color;
-//        vertices[idx + 13] = u2;
-//        vertices[idx + 14] = v2;
-//
-//        vertices[idx + 15] = fx2;
-//        vertices[idx + 16] = y;
-//        vertices[idx + 17] = color;
-//        vertices[idx + 18] = u2;
-//        vertices[idx + 19] = v;
         this.writeSpriteToDepthVertices(vertices,
                 x, y, this.colorPackedA, u, v, d, e,
                 x, fy2, this.colorPackedB, u, v2, d, e2,

@@ -28,7 +28,7 @@ public class AltShadeBatch extends AltBatch {
     
 
     protected final static String SHADOWVERT_PATH_INTERNAL = "shaders/shadeVert.glsl";
-    protected final static String SHADOWFRAG_PATH_INTERNAL = "shaders/shadeFrag_9samp.glsl";
+    protected final static String SHADOWFRAG_PATH_INTERNAL = "shaders/shadeFrag_9samp_direct.glsl";
 
     protected final static String DEPTHMAPCOORD_ATTRIBUTE = AltDepthBatch.DEPCOORD_ATTRIBUTE;
     protected final static String SHADOWTEXCOORD_ATTRIBUTE = "a_shadTexCoord";

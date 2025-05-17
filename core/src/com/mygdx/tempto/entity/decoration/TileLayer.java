@@ -117,47 +117,6 @@ public class TileLayer implements Entity, RendersToWorld {
             }
             y+=layer.getTileWidth();
         }
-
-//        Rectangle viewBounds = this.parent.tileDepthRenderer.getViewBounds();
-//        TiledMapTileLayer tiledLayer = layer;
-//
-//        final int layerWidth = tiledLayer.getWidth();
-//        final int layerHeight = tiledLayer.getHeight();
-//
-//        final float layerTileWidth = tiledLayer.getTileWidth() * unitScale;
-//        final float layerTileHeight = tiledLayer.getTileHeight() * unitScale;
-//
-//        final float layerOffsetX = tiledLayer.getRenderOffsetX() * unitScale - viewBounds.x * (tiledLayer.getParallaxX() - 1);
-//        // offset in tiled is y down, so we flip it
-//        final float layerOffsetY = -tiledLayer.getRenderOffsetY() * unitScale - viewBounds.y * (tiledLayer.getParallaxY() - 1);
-//
-//        final int col1 = Math.max(0, (int)((viewBounds.x - layerOffsetX) / layerTileWidth));
-//        final int col2 = Math.min(layerWidth,
-//                (int)((viewBounds.x + viewBounds.width + layerTileWidth - layerOffsetX) / layerTileWidth));
-//
-//        final int row1 = Math.max(0, (int)((viewBounds.y - layerOffsetY) / layerTileHeight));
-//        final int row2 = Math.min(layerHeight,
-//                (int)((viewBounds.y + viewBounds.height + layerTileHeight - layerOffsetY) / layerTileHeight));
-//
-//        float y = row2 * layerTileHeight + layerOffsetY;
-//        float xStart = col1 * layerTileWidth + layerOffsetX;
-//        for (int row = row2; row >= row1; row--) {
-//            float x = xStart;
-//            for (int col = col1; col < col2; col++) {
-//                final TiledMapTileLayer.Cell cell = tiledLayer.getCell(col, row);
-//                if (cell == null) {
-//                    x += layerTileWidth;
-//                    continue;
-//                }
-//                final TiledMapTile tile = cell.getTile();
-//
-//                if (tile != null) {
-//                    this.drawTile(cell, x, y, vertices, color);
-//                }
-//                x += layerTileWidth;
-//            }
-//            y -= layerTileHeight;
-//        }
     }
 
     public TiledMapTileLayer getMapLayer() {

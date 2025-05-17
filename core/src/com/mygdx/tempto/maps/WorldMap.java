@@ -502,14 +502,6 @@ public class WorldMap implements RendersToScreen {
         FileHandle saveFile = Gdx.files.local(this.mapDataFilePath);//Grab filepath
         saveFile.writeString(new Json().prettyPrint(mapData.prettyPrint(JsonWriter.OutputType.json, 50)), false);//Write a pretty print of the json value to that file path
 
-//        String mapXML = this.mapWriter.writeTiledMapToString(this.tiledMap);
-//
-//        //String absoluteAssetPath = "C:\\Users\\Owen\\Desktop\\TemptoDev\\CurrentDev\\TemptoNova\\assets\\maps\\";
-//        String toMapData = "data/maps/";
-//        FileHandle file = Gdx.files.external(toMapData + "testmap.tmx");
-//        file.writeString(mapXML, false);
-//        file.writeString(mapXML, false);
-        //System.out.println(mapXML);
     }
 
     /**Cycles through entities and, if they have changes to be reflected to the base map file, compiles those changes*/
