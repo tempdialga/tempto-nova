@@ -131,6 +131,8 @@ public class WorldMap implements RendersToScreen {
     Texture depthMap;
     FrameBuffer shadowBuffer;
     Texture shadowMap;
+    FrameBuffer lightBuffer;
+    Texture lightMap;
     public TileLayerFinalRenderer tileFinalRenderer;
     public TileLayerDepthRenderer tileDepthRenderer;
 
@@ -277,6 +279,9 @@ public class WorldMap implements RendersToScreen {
         int n = 1; //n*n*4 channels maximum lights, just 1 for now while we test
         this.shadowBuffer = new FrameBuffer(Pixmap.Format.RGBA4444,TemptoNova.PIXEL_GAME_WIDTH*n, TemptoNova.PIXEL_GAME_HEIGHT*n, false);
 
+        //Initialize the light map
+        this.lightBuffer = new FrameBuffer(Pixmap.Format.RGBA8888, TemptoNova.PIXEL_GAME_WIDTH, TemptoNova.PIXEL_GAME_HEIGHT, false);
+
         //Initialize tilemap renderer
         this.tileFinalRenderer = new TileLayerFinalRenderer(this.tiledMap, this.finalPassBatch);
         this.tileDepthRenderer = new TileLayerDepthRenderer(this.tiledMap, this.depthMapBatch);
@@ -354,7 +359,7 @@ public class WorldMap implements RendersToScreen {
         this.depthBuffer.begin();
         float bgDepth = 20;
         Gdx.gl.glClearDepthf(1/bgDepth);
-        ScreenUtils.clear(1/bgDepth,0,0f,0.5f, true);
+        ScreenUtils.clear(1/bgDepth,0.5f,0.5f,0.5f, true);
         Gdx.gl.glEnable(GL20.GL_DEPTH_TEST);
         Gdx.gl.glDepthFunc(GL20.GL_GREATER);
 
@@ -399,7 +404,7 @@ public class WorldMap implements RendersToScreen {
                 viewBounds.x+w, viewBounds.y
         });
 
-        ShadowCaster screenTestCaster = new ShadowCaster(new TextureRegion(depthMap), new Vector3(viewBounds.x, viewBounds.y, 0), new Vector3(viewBounds.width, 0, 0), new Vector3(0, viewBounds.height, 0));
+//        ShadowCaster screenTestCaster = new ShadowCaster(new TextureRegion(depthMap), new Vector3(viewBounds.x, viewBounds.y, 0), new Vector3(viewBounds.width, 0, 0), new Vector3(0, viewBounds.height, 0));
 //        casters.add(screenTestCaster);
 //        System.out.println(casters.size() + " casters found");
 
@@ -429,18 +434,27 @@ public class WorldMap implements RendersToScreen {
         }
         this.shadeBatch.end();
 
+        this.shadowBuffer.end();
+        this.shadowMap = this.shadowBuffer.getColorBufferTexture();
+
+
+        this.lightBuffer.begin();
 
         this.lightBatch.setProjectionMatrix(this.camera.combined);
-        this.lightBatch.setBlendFunctionSeparate(GL20.GL_DST_COLOR, GL20.GL_ZERO, GL20.GL_ONE, GL20.GL_ZERO);
+        ScreenUtils.clear(0,0,0,1f);
+        Gdx.gl.glColorMask(true, true, true, false);
+//        this.lightBatch.setBlendFunctionSeparate(GL20.GL_DST_COLOR, GL20.GL_ZERO, GL20.GL_ONE, GL20.GL_ZERO);
         Gdx.gl.glBlendEquation(GL20.GL_FUNC_ADD);
         this.lightBatch.begin();
         this.lightBatch.setViewport(this.worldViewport);
-        this.lightBatch.drawLight(mouseLight, this.depthMap, this.camera, viewBounds);
+        this.lightBatch.drawLight(mouseLight, this.depthMap, this.shadowMap, this.camera, viewBounds);
         this.lightBatch.end();
 
+        this.lightBuffer.end();
+        this.lightMap = this.lightBuffer.getColorBufferTexture();
+        Gdx.gl.glColorMask(true, true, true, true);
 
-        this.shadowBuffer.end();
-        this.shadowMap = this.shadowBuffer.getColorBufferTexture();
+
 
 
         this.debugRenderer.setProjectionMatrix(this.camera.combined);
@@ -472,7 +486,7 @@ public class WorldMap implements RendersToScreen {
         float hw = TemptoNova.PIXEL_GAME_WIDTH/2f, hh = TemptoNova.PIXEL_GAME_HEIGHT/2f;
         float x = this.camera.position.x-hw, y = this.camera.position.y;
         this.finalPassBatch.draw(this.depthMap, x, y, hw, -hh);
-        this.finalPassBatch.draw(this.shadowMap, x, y+hh, hw, -hh);
+        this.finalPassBatch.draw(this.lightMap, x, y+hh, hw*2, -hh*2);
         this.finalPassBatch.end();
 
         this.miscWorldBatch.setProjectionMatrix(this.camera.combined);

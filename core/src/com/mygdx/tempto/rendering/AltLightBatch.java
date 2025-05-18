@@ -1,6 +1,7 @@
 package com.mygdx.tempto.rendering;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Mesh;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
@@ -14,11 +15,16 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.mygdx.tempto.TemptoNova;
 
+import java.nio.Buffer;
+
 public class AltLightBatch extends AltBatch{
 
     public static final int LIGHT_SPRITE_SIZE = 20;
 
     public static final String LIGHTCOORD_ATTRIBUTE = "a_lightCoord";
+
+    protected final static String DMAPTEX_UNIFORM = "u_dMapTex";
+    protected final static String SHADMAP_UNIFORM = "u_shadMapTex";
 
     public static final String LIGHT_VERT_PATH_INTERNAL = "shaders/lightVert.glsl", LIGHT_FRAG_PATH_INTERNAL = "shaders/lightFrag.glsl";
 
@@ -30,6 +36,7 @@ public class AltLightBatch extends AltBatch{
 
     protected int loc_u_S;//Location of the uniform for u_S (light source)
     protected int loc_u_viewDims = -10;//Location of the uniform for u_viewDims (dimensions of the view window)
+    protected Texture lastShadowTexture;
 
     public AltLightBatch() {
         this(1000, null);
@@ -53,7 +60,67 @@ public class AltLightBatch extends AltBatch{
         return new ShaderProgram(Gdx.files.internal(LIGHT_VERT_PATH_INTERNAL), Gdx.files.internal(LIGHT_FRAG_PATH_INTERNAL));
     }
 
-    public void drawLight(LightSource source, Texture depthMap, OrthographicCamera camera, Rectangle viewBounds) {
+    @Override
+    protected void setupMatrices () {
+        combinedMatrix.set(projectionMatrix).mul(transformMatrix);
+        ShaderProgram shaderToSet;
+        if (customShader != null) {
+            shaderToSet = customShader;
+        } else {
+            shaderToSet = shader;
+        }
+        shaderToSet.setUniformMatrix("u_projTrans", combinedMatrix);
+        shaderToSet.setUniformi(DMAPTEX_UNIFORM, 0);
+        shaderToSet.setUniformi(SHADMAP_UNIFORM, 1);
+
+    }
+
+
+    @Override
+    public void flush () {
+        if (idx == 0) return;
+
+        renderCalls++;
+        totalRenderCalls++;
+        int spritesInBatch = idx / spriteSize;
+        if (spritesInBatch > maxSpritesInBatch) maxSpritesInBatch = spritesInBatch;
+        int count = spritesInBatch * this.indicesPerSprite;
+
+        lastShadowTexture.bind(1);
+        lastTexture.bind(0);
+
+        Mesh mesh = this.mesh;
+        mesh.setVertices(vertices, 0, idx);
+        Buffer indicesBuffer = (Buffer)mesh.getIndicesBuffer(true);
+        indicesBuffer.position(0);
+        indicesBuffer.limit(count);
+
+        if (blendingDisabled) {
+            Gdx.gl.glDisable(GL20.GL_BLEND);
+        } else {
+            Gdx.gl.glEnable(GL20.GL_BLEND);
+            if (blendSrcFunc != -1) {
+                Gdx.gl.glBlendFuncSeparate(blendSrcFunc, blendDstFunc, blendSrcFuncAlpha, blendDstFuncAlpha);
+            }
+        }
+
+        mesh.render(customShader != null ? customShader : shader, GL20.GL_TRIANGLES, 0, count);
+
+        idx = 0;
+    }
+
+    protected void switchShadowTexture (Texture shadowTexture) {
+        flush();
+        lastShadowTexture = shadowTexture;
+//        invTexWidth = 1.0f / texture.getWidth();
+//        invTexHeight = 1.0f / texture.getHeight();
+    }
+
+    public void drawLight(LightSource source, Texture depthMap, Texture shadowMap, OrthographicCamera camera, Rectangle viewBounds) {
+
+        if (shadowMap != lastShadowTexture)
+            switchShadowTexture(shadowMap);
+
         float radius = source.spread();
         Vector3 p = source.pos();
         Vector3 p_screen = camera.project(new Vector3(p));
@@ -64,7 +131,7 @@ public class AltLightBatch extends AltBatch{
 
 //        float l = p.x-radius, r=p.x+radius, u=p.y+radius, d=p.y-radius;
         float l = viewBounds.x, r=viewBounds.x+viewBounds.width, u=viewBounds.y+viewBounds.height, d=viewBounds.y;
-        float u1 = 0, v1 = 0, u2 = 1, v2 = 1; //Uh wait actually do we need these
+//        float u1 = 0, v1 = 0, u2 = 1, v2 = 1; //Uh wait actually do we need these
         float[] verts = new float[LIGHT_SPRITE_SIZE];
         p = p_screen;
 

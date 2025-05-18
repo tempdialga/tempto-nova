@@ -62,8 +62,8 @@ void main()
 //    1/(base._d_px-mod_d_px),
     1/base_d_px,
     N_comb.xy*0.5+0.5,
-//    dMap.a
-    1
+    dMap.a
+//    1
     );
     //depth = floor(base.a)/(dMap.r+0.5 + )
     gl_FragColor = final;
