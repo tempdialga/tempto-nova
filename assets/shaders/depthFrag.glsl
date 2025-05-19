@@ -55,12 +55,15 @@ void main()
 
 //    float base_d_px = 1/base.r;
     float base_d_px = v_depth;
-//    float mod_d_px = 1/dMap.r-2;
-    float mod_d_px = 3*(dMap.r-0.5)-0.01;//Fudge it a little
+    float depth_mod_max = -3.0; //Since per pixel modifier is on a linear range instead of 1/z (so you can modify it), this is the maximum depth that can be added or subtracted
+                                //Positive modifying means going forward, which means a lower z coordinate because z goes away from the screen
+
+    //    float mod_d_px = 1/dMap.r-2;
+    float mod_d_px = depth_mod_max*(dMap.r-0.5)/*-0.01*/;//Fudge it a little
 
     vec4 final = vec4(
-//    1/(base._d_px-mod_d_px),
-    1/base_d_px,
+    1/(base_d_px+mod_d_px),
+//    1/base_d_px,
     N_comb.xy*0.5+0.5,
     dMap.a
 //    1
