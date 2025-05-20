@@ -224,15 +224,24 @@ public class WorldMap implements RendersToScreen {
                     }
                 }
             } else if (layer instanceof TiledMapTileLayer tileLayer) {
+                if (!layer.isVisible()) continue;
                 //Tile layers, only for rendering I think
                 String name = layer.getName();
+                TileLayer temptoLayer;
                 if (name.endsWith("px")) { //Confirms that it's a rendering layer, named [#]px from the screen
                     float depth = Float.parseFloat(name.substring(0,name.length()-2));
-                    entities.add(new TileLayer(this, tileLayer, this.mapLoader.layerElements.get(layer), depth));
+                    temptoLayer = (new TileLayer(this, tileLayer, this.mapLoader.layerElements.get(layer), depth));
                 } else if (name.endsWith("px_rot")) { //Same but it's one testing rotated elements
                     float depth = Float.parseFloat(name.substring(0,name.length()-6));
-                    entities.add(new TileLayer(this, tileLayer, this.mapLoader.layerElements.get(layer), depth, true));
+                    temptoLayer = (new TileLayer(this, tileLayer, this.mapLoader.layerElements.get(layer), depth, true));
+                } else if (name.endsWith("px_wav")) {
+                    float depth = Float.parseFloat(name.substring(0,name.length()-6));
+                    temptoLayer = (new TileLayer(this, tileLayer, this.mapLoader.layerElements.get(layer), depth));
+                    temptoLayer.setWaver(true);
+                } else {
+                    continue;
                 }
+                entities.add(temptoLayer);
             }
         }
 
@@ -355,9 +364,15 @@ public class WorldMap implements RendersToScreen {
 
         this.worldViewport.apply();
 
+        //Define light at the mouse coordinates for simplicity
+        Vector3 mouseCoords = camera.unproject(new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0));
+        mouseCoords.z=-9 + 10*(float) Math.sin(3*GameScreen.elapsedTime);
+        System.out.println("Mouse depth: " +mouseCoords.z);
+        LightSource mouseLight = new LightSource(mouseCoords, Color.YELLOW, 250, LightSource.SPHERE_APPROX, 0.9f);
+
         // Render depth buffer
         this.depthBuffer.begin();
-        float bgDepth = 20;
+        float bgDepth = 150;
         Gdx.gl.glClearDepthf(1/bgDepth);
         ScreenUtils.clear(1/bgDepth,0.5f,0.5f,0.5f, true);
         Gdx.gl.glEnable(GL20.GL_DEPTH_TEST);
@@ -368,6 +383,9 @@ public class WorldMap implements RendersToScreen {
         this.depthMapBatch.begin();
         for (Entity entity : this.entities) {
             if (entity instanceof TileLayer renderable) { //Currently only tile layer bc this is the only one the batch supports atm
+//                if (renderable.isWaver()) {
+//                    renderable.setBaseDepth(mouseCoords.z + 20 + 10);
+//                }
                 renderable.renderToDepthMap(this.depthMapBatch, this.camera);
             }
         }
@@ -379,9 +397,6 @@ public class WorldMap implements RendersToScreen {
         //Render lights ! :D
         this.shadowBuffer.begin();
 
-        Vector3 mouseCoords = camera.unproject(new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0));
-        mouseCoords.z=-10;
-        LightSource mouseLight = new LightSource(mouseCoords, Color.YELLOW, 250, LightSource.SPHERE_APPROX, 0.9f);
 
         this.shadeBatch.setProjectionMatrix(this.camera.combined);
 
@@ -476,6 +491,10 @@ public class WorldMap implements RendersToScreen {
         Gdx.gl.glBlendEquation(GL20.GL_FUNC_ADD);
         this.finalPassBatch.setProjectionMatrix(this.camera.combined);
         this.finalPassBatch.setBlendFunction(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+//        this.finalPassBatch.setBlendFunction(GL20.GL_ONE, GL20.GL_ONE);
+//        ScreenUtils.clear(0,0,0,1);
+//        Gdx.gl.glColorMask(true, false, false, false);
+//        this.finalPassBatch.disableBlending();
         this.finalPassBatch.begin();
 
         for (Entity entity : this.entities) {
@@ -485,15 +504,17 @@ public class WorldMap implements RendersToScreen {
         }
         float hw = TemptoNova.PIXEL_GAME_WIDTH/2f, hh = TemptoNova.PIXEL_GAME_HEIGHT/2f;
         float x = this.camera.position.x-hw, y = this.camera.position.y;
-        this.finalPassBatch.draw(this.depthMap, x, y, hw, -hh);
-        this.finalPassBatch.draw(this.lightMap, x, y+hh, hw*2, -hh*2);
+//        for (int i = 0; i < 100; i++)
+            this.finalPassBatch.draw(this.depthMap, x, y, hw, -hh);
+        this.finalPassBatch.draw(this.shadowMap, x, y+hh, hw, -hh);
+        this.finalPassBatch.draw(this.lightMap, x+hw, y, hw, -hh);
         this.finalPassBatch.end();
 
         this.miscWorldBatch.setProjectionMatrix(this.camera.combined);
         this.miscWorldBatch.begin();
         this.editor.renderToWorld(this.miscWorldBatch, camera);
         this.miscWorldBatch.end();
-
+//        Gdx.gl.glColorMask(true, true, true,  true);
     }
 
     /**Renders anything of the world that should be rendered using the screen camera*/

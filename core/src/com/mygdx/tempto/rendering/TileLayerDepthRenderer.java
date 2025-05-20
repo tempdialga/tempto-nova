@@ -25,11 +25,12 @@ public class TileLayerDepthRenderer extends TileLayerRenderer{
      * a: reflectivity, scale TBD*/
     @Override
     float packedColorForLayer(TileLayer layer) {
-        return Color.toFloatBits(1/(layer.getBaseDepth()), layer.getBaseNormVec().x*0.5f+0.5f, layer.getBaseNormVec().y*0.5f+0.5f, 0.01f/8f);
+        return packedColor(layer.getBaseDepth(), layer.getBaseNormVec(), 0.01f/8f);
+//        return Color.toFloatBits(1/(layer.getBaseDepth()), layer.getBaseNormVec().x*0.5f+0.5f, layer.getBaseNormVec().y*0.5f+0.5f, 0.01f/8f);
     }
 
     float packedColor(float depth, Vector2 normalVector, float reflectivity) {
-        return Color.toFloatBits(1/depth, normalVector.x*0.5f+0.5f, normalVector.y*0.5f+0.5f, reflectivity);
+        return Color.toFloatBits(1 - depth/256f, normalVector.x*0.5f+0.5f, normalVector.y*0.5f+0.5f, reflectivity);
     }
 
     @Override

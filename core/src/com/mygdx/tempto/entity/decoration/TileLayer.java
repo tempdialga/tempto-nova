@@ -15,6 +15,9 @@ import com.mygdx.tempto.rendering.ShadowCaster;
 import com.mygdx.tempto.rendering.TileLayerDepthRenderer;
 import com.mygdx.tempto.rendering.TileLayerFinalRenderer;
 import com.mygdx.tempto.rendering.RendersToWorld;
+import com.mygdx.tempto.view.GameScreen;
+
+import org.lwjgl.Sys;
 
 import java.util.List;
 
@@ -27,7 +30,7 @@ public class TileLayer implements Entity, RendersToWorld {
     Vector2 baseNormVec; //Only includes x and y, since z can be inferred
     WorldMap parent;
     boolean rotate; //Whether this layer's tiles are rotated, for now just flipped back along the left side, goes -z instead of +x
-
+    boolean waver; //Debug test: If true, varies depth by a sine wave of 10 px
     public TileLayer(WorldMap parent, TiledMapTileLayer mapLayer, XmlReader.Element originalElement, float baseDepth) {
         this(parent, mapLayer, originalElement, baseDepth, false);
     }
@@ -36,7 +39,7 @@ public class TileLayer implements Entity, RendersToWorld {
         this.mapLayer = mapLayer;
         this.originalElement = originalElement;
         this.baseDepth = baseDepth;
-        this.ID = "tiles_"+this.baseDepth;
+        this.ID = originalElement.getName();
         this.rotate = rotate;
         this.baseNormVec = new Vector2();
         if (rotate) {
@@ -44,6 +47,13 @@ public class TileLayer implements Entity, RendersToWorld {
         }
     }
 
+    public void setWaver(boolean waver) {
+        this.waver = waver;
+    }
+
+    public boolean isWaver() {
+        return waver;
+    }
 
     @Override
     public void update(float deltaTime, WorldMap world) {
@@ -80,6 +90,7 @@ public class TileLayer implements Entity, RendersToWorld {
     @Override
     public void addShadowCastersToList(List<ShadowCaster> centralList) {this.addShadowCastersToList(centralList, 1.0f);}
     public void addShadowCastersToList(List<ShadowCaster> centralList, float unitScale) {
+        System.out.println("Layer depth: " + this.getBaseDepth());
 //        RendersToWorld.super.addShadowCastersToList(centralList);
 
         TiledMapTileLayer layer = this.mapLayer;
@@ -109,7 +120,7 @@ public class TileLayer implements Entity, RendersToWorld {
                 }
 
                 ShadowCaster cellCaster = new ShadowCaster(tileRegion,
-                        new Vector3(x1, y1, this.baseDepth),
+                        new Vector3(x1, y1, this.getBaseDepth()),
                         u,
                         new Vector3(0, tileRegion.getRegionHeight(), 0));
                 centralList.add(cellCaster);
@@ -124,7 +135,17 @@ public class TileLayer implements Entity, RendersToWorld {
     }
 
     public float getBaseDepth() {
+        if (this.waver) {
+            float newDepth = baseDepth /*+ 10 * (float) (Math.sin(3 * GameScreen.elapsedTime))*/;
+//            System.out.println("Layer depth: ");
+            return newDepth;
+        }
+
         return baseDepth;
+    }
+
+    public void setBaseDepth(float baseDepth) {
+        this.baseDepth = baseDepth;
     }
 
     public Vector2 getBaseNormVec() {

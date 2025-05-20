@@ -54,15 +54,16 @@ void main()
 //    N_comb = normalize(N_comb);
 
 //    float base_d_px = 1/base.r;
-    float base_d_px = v_depth;
-    float depth_mod_max = -3.0; //Since per pixel modifier is on a linear range instead of 1/z (so you can modify it), this is the maximum depth that can be added or subtracted
+    float base_d_px = (1-base.r)*256.0;
+    float depth_mod_max = -2; //Since per pixel modifier is on a linear range instead of 1/z (so you can modify it), this is the maximum depth that can be added or subtracted
                                 //Positive modifying means going forward, which means a lower z coordinate because z goes away from the screen
 
     //    float mod_d_px = 1/dMap.r-2;
-    float mod_d_px = depth_mod_max*(dMap.r-0.5)/*-0.01*/;//Fudge it a little
+    float mod_d_px = /*1.001**/floor(depth_mod_max*(dMap.r-0.5)-0.5)/*-0.01*/;//Round to nearest integer bc r only has 256 states for 256 pixels of depth
+    mod_d_px = depth_mod_max*(dMap.r-0.5)-0.5;
 
     vec4 final = vec4(
-    1/(base_d_px+mod_d_px),
+    1 - ((base_d_px+mod_d_px)/256.0),
 //    1/base_d_px,
     N_comb.xy*0.5+0.5,
     dMap.a

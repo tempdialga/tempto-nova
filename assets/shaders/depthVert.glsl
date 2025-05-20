@@ -11,7 +11,7 @@ varying float v_depth;
 void main()
 {
     v_color = a_color;
-    v_depth = 1/a_color.r;
+    v_depth = (1 - a_color.r)*256;
     v_color.a = v_color.a * (255.0/254.0);
     v_texCoords = a_texCoord0;
     v_depCoords = a_depCoord0;
