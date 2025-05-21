@@ -8,6 +8,7 @@ attribute vec3 a_ab;
 attribute vec3 a_ac;
 attribute vec3 a_S;
 attribute float a_lightBodyRadius; //Radius of the body casting the light
+attribute vec4 a_positionChannel; //Where on the shadow map (column, row, column width, row width) this shadow is to be drawn
 
 uniform mat4 u_projTrans;
 
@@ -34,4 +35,9 @@ void main()
     v_ac = a_ac;
     v_S = a_S;
     v_R = a_lightBodyRadius;
+
+    gl_Position.xy += vec2(1)+2*a_positionChannel.xy;
+    gl_Position.xy *= a_positionChannel.zw;
+    gl_Position.xy -= vec2(1);
+//    gl_Position.xy += a_positionChannel.xy*a_positionChannel.zw;
 }

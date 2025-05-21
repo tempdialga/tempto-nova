@@ -19,9 +19,12 @@ import java.nio.Buffer;
 
 public class AltLightBatch extends AltBatch{
 
-    public static final int LIGHT_SPRITE_SIZE = 20;
+
 
     public static final String LIGHTCOORD_ATTRIBUTE = "a_lightCoord";
+    public static final String SHADOWCHANNEL_ATTRIBUTE = "a_shadowChannel";
+    public static final String LIGHTCOLOR_ATTRIBUTE = "a_lightColor";
+    public static final String POSCHANNEL_ATTRIBUTE = "a_positionChannel";
 
     protected final static String DMAPTEX_UNIFORM = "u_dMapTex";
     protected final static String SHADMAP_UNIFORM = "u_shadMapTex";
@@ -29,10 +32,12 @@ public class AltLightBatch extends AltBatch{
     public static final String LIGHT_VERT_PATH_INTERNAL = "shaders/lightVert.glsl", LIGHT_FRAG_PATH_INTERNAL = "shaders/lightFrag.glsl";
 
     private static int i=0;
-    public static final int X1 = i++, Y1 = i++, /*U1 = i++, V1 = i++,*/ A1 = i++, B1 = i++, C1 = i++,
-                            X2 = i++, Y2 = i++, /*U2 = i++, V2 = i++,*/ A2 = i++, B2 = i++, C2 = i++,
-                            X3 = i++, Y3 = i++, /*U3 = i++, V3 = i++,*/ A3 = i++, B3 = i++, C3 = i++,
-                            X4 = i++, Y4 = i++, /*U4 = i++, V4 = i++,*/ A4 = i++, B4 = i++, C4 = i++;
+    public static final int X1 = i++, Y1 = i++, /*U1 = i++, V1 = i++,*/ A1 = i++, B1 = i++, C1 = i++, Ch1 = i++, Col1 = i++, ChC1 = i++, ChR1 = i++, ChW1 = i++, ChH1 = i++,
+                            X2 = i++, Y2 = i++, /*U2 = i++, V2 = i++,*/ A2 = i++, B2 = i++, C2 = i++, Ch2 = i++, Col2 = i++, ChC2 = i++, ChR2 = i++, ChW2 = i++, ChH2 = i++,
+                            X3 = i++, Y3 = i++, /*U3 = i++, V3 = i++,*/ A3 = i++, B3 = i++, C3 = i++, Ch3 = i++, Col3 = i++, ChC3 = i++, ChR3 = i++, ChW3 = i++, ChH3 = i++,
+                            X4 = i++, Y4 = i++, /*U4 = i++, V4 = i++,*/ A4 = i++, B4 = i++, C4 = i++, Ch4 = i++, Col4 = i++, ChC4 = i++, ChR4 = i++, ChW4 = i++, ChH4 = i++;
+
+    public static final int LIGHT_SPRITE_SIZE = i;
 
     protected int loc_u_S;//Location of the uniform for u_S (light source)
     protected int loc_u_viewDims = -10;//Location of the uniform for u_viewDims (dimensions of the view window)
@@ -45,7 +50,10 @@ public class AltLightBatch extends AltBatch{
         super(size, defaultShader, new Mesh((Gdx.gl30 != null) ? Mesh.VertexDataType.VertexBufferObjectWithVAO : defaultVertexDataType, false, size * 4, size * 6,
                 new VertexAttribute(VertexAttributes.Usage.Position, 2, ShaderProgram.POSITION_ATTRIBUTE),
 //                new VertexAttribute(VertexAttributes.Usage.TextureCoordinates, 2, AltDepthBatch.DEPCOORD_ATTRIBUTE + "0"),
-                new VertexAttribute(VertexAttributes.Usage.Position, 3, LIGHTCOORD_ATTRIBUTE+"0")), LIGHT_SPRITE_SIZE);
+                new VertexAttribute(VertexAttributes.Usage.Position, 3, LIGHTCOORD_ATTRIBUTE+"0"),
+                new VertexAttribute(VertexAttributes.Usage.Generic, 1, SHADOWCHANNEL_ATTRIBUTE),
+                new VertexAttribute(VertexAttributes.Usage.ColorPacked, 4, LIGHTCOLOR_ATTRIBUTE),
+                new VertexAttribute(VertexAttributes.Usage.Generic, 4, POSCHANNEL_ATTRIBUTE)), LIGHT_SPRITE_SIZE);
 
 
     }
@@ -116,12 +124,11 @@ public class AltLightBatch extends AltBatch{
 //        invTexHeight = 1.0f / texture.getHeight();
     }
 
-    public void drawLight(LightSource source, Texture depthMap, Texture shadowMap, OrthographicCamera camera, Rectangle viewBounds) {
+    public void drawLight(LightSource source, Texture depthMap, Texture shadowMap, OrthographicCamera camera, Rectangle viewBounds, float shadowColorChannel, int horizontal_idx, int horizontal_total, int vertical_idx, int vertical_total) {
 
         if (shadowMap != lastShadowTexture)
             switchShadowTexture(shadowMap);
 
-        float radius = source.spread();
         Vector3 p = source.pos();
         Vector3 p_screen = camera.project(new Vector3(p));
         p_screen.x /= (float) TemptoNova.PIXEL_GAME_WIDTH;
@@ -158,6 +165,38 @@ public class AltLightBatch extends AltBatch{
         verts[A4] = p.x;
         verts[B4] = p.y;
         verts[C4] = p.z;
+
+        verts[Ch1] = shadowColorChannel;
+        verts[Ch2] = shadowColorChannel;
+        verts[Ch3] = shadowColorChannel;
+        verts[Ch4] = shadowColorChannel;
+
+        float packedColor = source.color().toFloatBits();
+        verts[Col1] = packedColor;
+        verts[Col2] = packedColor;
+        verts[Col3] = packedColor;
+        verts[Col4] = packedColor;
+
+        //Region of the shadow map to read from
+        verts[ChC1] = horizontal_idx;
+        verts[ChR1] = vertical_idx;
+        verts[ChC2] = horizontal_idx;
+        verts[ChR2] = vertical_idx;
+        verts[ChC3] = horizontal_idx;
+        verts[ChR3] = vertical_idx;
+        verts[ChC4] = horizontal_idx;
+        verts[ChR4] = vertical_idx;
+
+
+        float cw = 1f/((float) horizontal_total), ch = 1f/((float) vertical_total);
+        verts[ChW1] = cw;
+        verts[ChH1] = ch;
+        verts[ChW2] = cw;
+        verts[ChH2] = ch;
+        verts[ChW3] = cw;
+        verts[ChH3] = ch;
+        verts[ChW4] = cw;
+        verts[ChH4] = ch;
 
         this.draw(depthMap, verts, 0, verts.length);
     }

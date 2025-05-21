@@ -20,6 +20,7 @@ varying vec3 v_a; //Location of point a, origin of shadow texture, in depth map 
 varying vec3 v_ab; //Vector from point a to b, corresponding to u on the texture
 varying vec3 v_ac; //Vector
 varying vec3 v_S; //Location of light source S, in depth map coordinates (x = screen[0-1], y = screen[0-1], z is pixels away from camera)
+varying float v_R; //Radius of the light casting body
 //uniform vec3 u_laS; //Vector from a to the light source (S - a)
 
 vec3 intersectionRayPlane(in vec3 S, in vec3 T,
@@ -125,7 +126,7 @@ void main()
     vec3 S = vec3(v_S.xy*u_viewDims, v_S.z);//Coordinates of light center
 
     //Approach 2: Physically model different light source points
-    float w_r = 1.7*0.5;//Radius in world coordinates
+    float w_r = v_R;//Radius in world coordinates
     float T_r = -0.33; //How much to extend out sampling around the target point itself
 
     vec3 a = vec3(v_a.xy*u_viewDims, v_a.z);
@@ -287,7 +288,7 @@ void main()
     C_00 + C_m0 + C_10
     )*shadFudge/9.0;
 
-    gl_FragColor = vec4(shadColor.aaa, 0);
+    gl_FragColor = vec4(shadColor.aaaa);
 //    gl_FragColor = vec4(-(S-T).zzz/40.0, 0);
 //    gl_FragColor = vec4(vec3(-d_mm/depth_mod_max), 0);
 //    gl_FragColor = vec4(vec3(t_mod_mm*20), 0);

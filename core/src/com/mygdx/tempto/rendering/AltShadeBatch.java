@@ -35,6 +35,7 @@ public class AltShadeBatch extends AltBatch {
     protected final static String SHADOWTEXDIMS_ATTRIBUTE = "a_shadTexDims";
     protected final static String SHADOWTEXDEPCOORD_ATTRIBUTE = "a_shadTexDepCoord"; //Coordinates of the depth texture on the same texture as the base texture
     protected final static String LIGHTBODYRADIUS_ATTRIBUTE = "a_lightBodyRadius"; //Radius, in world coordinates, of the body that casts the light
+    protected final static String POSCHANNEL_ATTRIBUTE = "a_positionChannel"; //Information about which region of the shadowmap the p
 
     protected final static String DMAPTEX_UNIFORM = "u_dMapTex";
     protected final static String SHADTEX_UNIFORM = "u_shadTex";
@@ -46,9 +47,9 @@ public class AltShadeBatch extends AltBatch {
                                     S_ATTRIBUTE = "a_S";
 
     private static int i=0;
-    public static final int X1 = i++, Y1 = i++, D1 = i++, E1 = i++, ShU1 = i++, ShV1 = i++, ShW1 = i++, ShH1 = i++, ShD1 = i++, ShE1 = i++, AX1 = i++, AY1 = i++, AZ1 = i++, ABX1 = i++, ABY1 = i++, ABZ1 = i++, ACX1 = i++, ACY1 = i++, ACZ1 = i++, SX1 = i++, SY1 = i++, SZ1 = i++, R1 = i++,
-                            X2 = i++, Y2 = i++, D2 = i++, E2 = i++, ShU2 = i++, ShV2 = i++, ShW2 = i++, ShH2 = i++, ShD2 = i++, ShE2 = i++, AX2 = i++, AY2 = i++, AZ2 = i++, ABX2 = i++, ABY2 = i++, ABZ2 = i++, ACX2 = i++, ACY2 = i++, ACZ2 = i++, SX2 = i++, SY2 = i++, SZ2 = i++, R2 = i++,
-                            X3 = i++, Y3 = i++, D3 = i++, E3 = i++, ShU3 = i++, ShV3 = i++, ShW3 = i++, ShH3 = i++, ShD3 = i++, ShE3 = i++, AX3 = i++, AY3 = i++, AZ3 = i++, ABX3 = i++, ABY3 = i++, ABZ3 = i++, ACX3 = i++, ACY3 = i++, ACZ3 = i++, SX3 = i++, SY3 = i++, SZ3 = i++, R3 = i++;
+    public static final int X1 = i++, Y1 = i++, D1 = i++, E1 = i++, ShU1 = i++, ShV1 = i++, ShW1 = i++, ShH1 = i++, ShD1 = i++, ShE1 = i++, AX1 = i++, AY1 = i++, AZ1 = i++, ABX1 = i++, ABY1 = i++, ABZ1 = i++, ACX1 = i++, ACY1 = i++, ACZ1 = i++, SX1 = i++, SY1 = i++, SZ1 = i++, R1 = i++, ChC1 = i++, ChR1 = i++, ChW1 = i++, ChH1 = i++,
+                            X2 = i++, Y2 = i++, D2 = i++, E2 = i++, ShU2 = i++, ShV2 = i++, ShW2 = i++, ShH2 = i++, ShD2 = i++, ShE2 = i++, AX2 = i++, AY2 = i++, AZ2 = i++, ABX2 = i++, ABY2 = i++, ABZ2 = i++, ACX2 = i++, ACY2 = i++, ACZ2 = i++, SX2 = i++, SY2 = i++, SZ2 = i++, R2 = i++, ChC2 = i++, ChR2 = i++, ChW2 = i++, ChH2 = i++,
+                            X3 = i++, Y3 = i++, D3 = i++, E3 = i++, ShU3 = i++, ShV3 = i++, ShW3 = i++, ShH3 = i++, ShD3 = i++, ShE3 = i++, AX3 = i++, AY3 = i++, AZ3 = i++, ABX3 = i++, ABY3 = i++, ABZ3 = i++, ACX3 = i++, ACY3 = i++, ACZ3 = i++, SX3 = i++, SY3 = i++, SZ3 = i++, R3 = i++, ChC3 = i++, ChR3 = i++, ChW3 = i++, ChH3 = i++;
     protected final static int SHADOW_SPRITE_SIZE = i;
 
 
@@ -78,7 +79,8 @@ public class AltShadeBatch extends AltBatch {
                 new VertexAttribute(VertexAttributes.Usage.Generic, 3, AB_ATTRIBUTE),
                 new VertexAttribute(VertexAttributes.Usage.Generic, 3, AC_ATTRIBUTE),
                 new VertexAttribute(VertexAttributes.Usage.Generic, 3, S_ATTRIBUTE),
-                new VertexAttribute(VertexAttributes.Usage.Generic, 1, LIGHTBODYRADIUS_ATTRIBUTE));
+                new VertexAttribute(VertexAttributes.Usage.Generic, 1, LIGHTBODYRADIUS_ATTRIBUTE),
+                new VertexAttribute(VertexAttributes.Usage.Generic, 4, POSCHANNEL_ATTRIBUTE));
     }
 
     @Override
@@ -89,7 +91,7 @@ public class AltShadeBatch extends AltBatch {
     private float cross2D(Vector2 lineEnd, Vector2 point) {
         return lineEnd.x*point.y - lineEnd.y*point.x;
     }
-    public void drawShadow(ShadowCaster caster, LightSource source, Texture depthMap, OrthographicCamera camera, Rectangle viewBounds, Polygon viewPolygonClockwise) {
+    public void drawShadow(ShadowCaster caster, LightSource source, Texture depthMap, OrthographicCamera camera, Rectangle viewBounds, Polygon viewPolygonClockwise, int horizontal_idx, int horizontal_total, int vertical_idx, int vertical_total) {
         
         Vector3 cPos = caster.origin();
         Vector3 cU = caster.u();
@@ -99,13 +101,33 @@ public class AltShadeBatch extends AltBatch {
 
         final float[] vertices = new float[SHADOW_SPRITE_SIZE];
 
+
+        //Initialize data that's the same for all vertices
+
+
+        //Region of the shadow map to project to
+        vertices[ChC1] = horizontal_idx;
+        vertices[ChR1] = vertical_idx;
+        vertices[ChC2] = horizontal_idx;
+        vertices[ChR2] = vertical_idx;
+        vertices[ChC3] = horizontal_idx;
+        vertices[ChR3] = vertical_idx;
+
+        float cw = 1f/((float) horizontal_total), ch = 1f/((float) vertical_total);
+        vertices[ChW1] = cw;
+        vertices[ChH1] = ch;
+        vertices[ChW2] = cw;
+        vertices[ChH2] = ch;
+        vertices[ChW3] = cw;
+        vertices[ChH3] = ch;
+
+
         //Light Radius
         vertices[R1] = source.bodyRadius();
         vertices[R2] = source.bodyRadius();
         vertices[R3] = source.bodyRadius();
 
-        //Initialize data that's the same for all vertices
-        //Shadow location information TODO: Do we need to preemptively project these into [0-1] screen coords?
+        //Shadow location information
         Vector3 cPos_nor = new Vector3(cPos);
         cPos_nor.x = MiscFunctions.parameterizeWithDistance(viewBounds.x, viewBounds.width, cPos.x);
         cPos_nor.y = MiscFunctions.parameterizeWithDistance(viewBounds.y, viewBounds.height, cPos.y);
@@ -323,6 +345,14 @@ public class AltShadeBatch extends AltBatch {
     }
 
     protected void pushConvexShadowPolygon(float[] polygonVerts, float[] preloadedMeshVerts, Texture shadowTexture, Texture depthMap, Rectangle viewBounds) {
+
+        //clamp to view range
+        for (int i = 0; i < polygonVerts.length; i+=2) {
+            polygonVerts[i] = MiscFunctions.clamp(polygonVerts[i], viewBounds.x, viewBounds.x+viewBounds.width);
+            int j = i+1;
+            polygonVerts[j] = MiscFunctions.clamp(polygonVerts[j], viewBounds.y, viewBounds.y+viewBounds.height);
+        }
+
         if (shadowTexture != this.lastShadowTexture) { //If it's using a different shadowTexture than before
             this.switchShadowTexture(shadowTexture);
         }
