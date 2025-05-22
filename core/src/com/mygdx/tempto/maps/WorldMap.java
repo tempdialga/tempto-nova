@@ -126,6 +126,7 @@ public class WorldMap implements RendersToScreen {
     SpriteBatch miscWorldBatch;
     AltDepthBatch depthMapBatch;
     ArrayList<LightSource> lightSources;
+    final int debugLightCount = 40;
     AltLightBatch lightBatch;
     AltShadeBatch shadeBatch;
     AltFinalBatch finalPassBatch;
@@ -300,7 +301,7 @@ public class WorldMap implements RendersToScreen {
         this.lightSources.add(new LightSource(new Vector3(), new Color(1,0.9f, 0.5f, 1), 250, LightSource.SPHERE_APPROX, 1));
         this.lightSources.add(new LightSource(new Vector3(), Color.CYAN, 250, LightSource.SPHERE_APPROX, 1));
         this.lightSources.add(new LightSource(new Vector3(), Color.CHARTREUSE, 250, LightSource.SPHERE_APPROX, 1));
-        for (int i = 3; i < 21; i++) {
+        for (int i = 3; i < this.debugLightCount; i++) {
             this.lightSources.add(new LightSource(new Vector3(), new Color(Color.CORAL).mul(0.5f), 550, LightSource.SPHERE_APPROX, 1));
         }
 
@@ -384,7 +385,7 @@ public class WorldMap implements RendersToScreen {
         this.lightSources.get(0).pos().set(mouseCoords);
         this.lightSources.get(1).pos().set(mouseCoords).add(-40, -40, -10);
         this.lightSources.get(2).pos().set(mouseCoords).add(40, -20, -1);
-        for (int i = 3; i < 21; i++) {
+        for (int i = 3; i < debugLightCount; i++) {
             this.lightSources.get(i).pos().set(mouseCoords).add(30-10*i, 50+10*(float)Math.sin(0.5f*i+2*elapsedTime), -20);
         }
 //        LightSource mouseLight = new LightSource(mouseCoords, Color.YELLOW, 250, LightSource.SPHERE_APPROX, 0.9f);
@@ -408,12 +409,15 @@ public class WorldMap implements RendersToScreen {
                 renderable.renderToDepthMap(this.depthMapBatch, this.camera);
             }
         }
+
+
         this.depthMapBatch.end();
         this.depthBuffer.end();
         this.depthMap = depthBuffer.getColorBufferTexture();
         Gdx.gl.glDisable(GL20.GL_DEPTH_TEST);
 
         //Render lights ! :D
+        this.shadeBatch.switchShader((int)(elapsedTime*0.5f) % (AltShadeBatch.NINE_SAMPLE+1)); //Debug: switch shadow shaders every 2 seconds
         this.shadowBuffer.begin();
 
 
@@ -447,6 +451,8 @@ public class WorldMap implements RendersToScreen {
 //        this.shadeBatch.setProjectionMatrix(this.camera.combined);
 //        this.shadeBatch.enableBlending();
 
+        final int RED = 0, GREEN = 1, BLUE = 2, ALPHA = 3;
+        int color_channel = RED;
         int shadMapCol = 0;
         int shadMapHTotal = this.shadowBuffer.getWidth() / TemptoNova.PIXEL_GAME_WIDTH;
         int shadMapRow = 0;
@@ -463,10 +469,8 @@ public class WorldMap implements RendersToScreen {
 
 
         Collections.sort(casters);
+        Gdx.gl.glColorMask(color_channel == RED, color_channel == GREEN, color_channel == BLUE, color_channel == ALPHA);
         for (int i = 0; i < this.lightSources.size(); i++) {
-            int color_channel = i % 4;
-
-            int RED = 0, GREEN = 1, BLUE = 2, ALPHA = 3;
             Gdx.gl.glColorMask(color_channel == RED, color_channel == GREEN, color_channel == BLUE, color_channel == ALPHA);
 
             LightSource source = this.lightSources.get(i);
@@ -476,14 +480,20 @@ public class WorldMap implements RendersToScreen {
             for (ShadowCaster caster : casters) {
                 this.shadeBatch.drawShadow(caster, source, this.depthMap, this.camera, viewBounds, viewPoly, shadMapCol, shadMapHTotal, shadMapRow, shadMapVTotal);
             }
-            this.shadeBatch.flush();
 
-            if (color_channel == ALPHA) {//Iterate position
-                shadMapCol++;
-                if (shadMapCol >= shadMapHTotal) {
-                    shadMapCol = 0;
-                    shadMapRow++;
-                }
+
+            shadMapCol++; //Iterate position
+            if (shadMapCol >= shadMapHTotal) {
+                shadMapCol = 0;
+                shadMapRow++;
+            }
+
+            if (shadMapRow >= shadMapVTotal) { //Then, when positions run out, switch to the next color channel
+                color_channel++;
+
+                shadMapRow = 0;
+                shadMapCol = 0;
+                this.shadeBatch.flush();
             }
         }
         this.shadeBatch.end();
@@ -507,16 +517,20 @@ public class WorldMap implements RendersToScreen {
         this.lightBatch.setViewport(this.worldViewport);
         shadMapRow = 0;
         shadMapCol = 0;
+        color_channel = RED;
         for (int i = 0; i < this.lightSources.size(); i++) {
-            float color_channel = i % 4 + 0.01f;
+            float color_channel_float = color_channel + 0.01f;
             this.lightBatch.drawLight(this.lightSources.get(i), this.depthMap, this.shadowMap, this.camera, viewBounds, color_channel, shadMapCol, shadMapRow);
-            int ALPHA = 3;
-            if (color_channel == ALPHA) {//Iterate position
-                shadMapCol++;
-                if (shadMapCol >= shadMapHTotal) {
-                    shadMapCol = 0;
-                    shadMapRow++;
-                }
+
+            shadMapCol++;//Iterate position
+            if (shadMapCol >= shadMapHTotal) {
+                shadMapCol = 0;
+                shadMapRow++;
+            }
+            if (shadMapRow >= shadMapVTotal) {//Loop to first position and switch color channel
+                shadMapRow = 0;
+                shadMapCol = 0;
+                color_channel++;
             }
         }
         this.lightBatch.end();

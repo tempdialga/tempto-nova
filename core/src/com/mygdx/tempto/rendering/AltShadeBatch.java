@@ -28,7 +28,20 @@ public class AltShadeBatch extends AltBatch {
     
 
     protected final static String SHADOWVERT_PATH_INTERNAL = "shaders/shadeVert.glsl";
-    protected final static String SHADOWFRAG_PATH_INTERNAL = "shaders/shadeFrag_9samp_direct.glsl";
+    protected final static String SHADOWFRAG_PATH_INTERNAL = "shaders/shadeFrag_1samp_direct.glsl";
+
+    protected final static String   FRAGPATH_1F = "shaders/shadeFrag_1flat_direct.glsl",
+                                    FRAGPATH_1S = "shaders/shadeFrag_1samp_direct.glsl",
+                                    FRAGPATH_9F = "shaders/shadeFrag_9flat_direct.glsl",
+                                    FRAGPATH_9S = "shaders/shadeFrag_9samp_direct.glsl";
+
+    public final static int ONE_FLAT = 0, ONE_SAMPLE = 1, NINE_FLAT = 2, NINE_SAMPLE = 3;
+    protected final static ShaderProgram[] shadowShaders = {
+            new ShaderProgram(Gdx.files.internal(SHADOWVERT_PATH_INTERNAL), Gdx.files.internal(FRAGPATH_1F)),
+            new ShaderProgram(Gdx.files.internal(SHADOWVERT_PATH_INTERNAL), Gdx.files.internal(FRAGPATH_1S)),
+            new ShaderProgram(Gdx.files.internal(SHADOWVERT_PATH_INTERNAL), Gdx.files.internal(FRAGPATH_9F)),
+            new ShaderProgram(Gdx.files.internal(SHADOWVERT_PATH_INTERNAL), Gdx.files.internal(FRAGPATH_9S))
+    };
 
     protected final static String DEPTHMAPCOORD_ATTRIBUTE = AltDepthBatch.DEPCOORD_ATTRIBUTE;
     protected final static String SHADOWTEXCOORD_ATTRIBUTE = "a_shadTexCoord";
@@ -58,6 +71,7 @@ public class AltShadeBatch extends AltBatch {
     protected static Mesh.VertexDataType meshVertexDataType = (Gdx.gl30 != null) ? Mesh.VertexDataType.VertexBufferObjectWithVAO : defaultVertexDataType;
 
     protected Texture lastShadowTexture;
+    protected int currentShadowShader = ONE_FLAT;
     protected float invShadTexWidth = 0, invShadTexHeight = 0;
     private int loc_u_viewDims = -10;
     private float[] posChannelDims = new float[]{1f,1f};
@@ -68,7 +82,6 @@ public class AltShadeBatch extends AltBatch {
         super(size, defaultShader, createShadowMesh(size),
                 SHADOW_SPRITE_SIZE,
                 false);
-
     }
 
     public static Mesh createShadowMesh(int size) {
@@ -84,6 +97,11 @@ public class AltShadeBatch extends AltBatch {
                 new VertexAttribute(VertexAttributes.Usage.Generic, 3, S_ATTRIBUTE),
                 new VertexAttribute(VertexAttributes.Usage.Generic, 1, LIGHTBODYRADIUS_ATTRIBUTE),
                 new VertexAttribute(VertexAttributes.Usage.Generic, 2, POSCHANNEL_ATTRIBUTE));
+    }
+
+    public void switchShader(int shadowShader) {
+        this.currentShadowShader = shadowShader;
+        this.setShader(shadowShaders[shadowShader]);
     }
 
     @Override
@@ -405,9 +423,13 @@ public class AltShadeBatch extends AltBatch {
             shaderToSet = shader;
         }
         shaderToSet.setUniformMatrix("u_projTrans", combinedMatrix);
+
         shaderToSet.setUniformi(DMAPTEX_UNIFORM, 0);
+        ShaderProgram.pedantic = false;//Just for this one variable since some shaders might not use it
         shaderToSet.setUniformi(SHADTEX_UNIFORM, 1);
+        ShaderProgram.pedantic = true;
         shaderToSet.setUniform2fv(POSDIMS_UNIFORM, this.posChannelDims, 0, 2);
+
 
     }
 
