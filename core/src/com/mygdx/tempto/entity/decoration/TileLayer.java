@@ -15,13 +15,14 @@ import com.mygdx.tempto.rendering.ShadowCaster;
 import com.mygdx.tempto.rendering.TileLayerDepthRenderer;
 import com.mygdx.tempto.rendering.TileLayerFinalRenderer;
 import com.mygdx.tempto.rendering.RendersToWorld;
-import com.mygdx.tempto.view.GameScreen;
 
-import org.lwjgl.Sys;
+import org.eclipse.collections.impl.map.mutable.primitive.IntBooleanHashMap;
 
 import java.util.List;
 
 public class TileLayer implements Entity, RendersToWorld {
+
+    protected static final IntBooleanHashMap FLAT_TILES = new IntBooleanHashMap();//Surely there can't be more than 1,000 kinds of tiles right
 
     String ID;
     TiledMapTileLayer mapLayer;
@@ -87,6 +88,37 @@ public class TileLayer implements Entity, RendersToWorld {
         renderer.renderTileLayer(this);
     }
 
+    /**Takes the given {@link TiledMapTileLayer}, and marks that any tiles present on that layer are flat, and don't need textures for their shadows.*/
+    public static void setFlatTiles(TiledMapTileLayer flatLayer) {
+        FLAT_TILES.clear();
+        int col1 = 0;
+        int row1 = 0;
+        float xStart = 0;
+        float y = 0;
+        for (int row = row1; row < flatLayer.getHeight(); row++) {
+            float x = xStart;
+            for (int col = col1; col < flatLayer.getWidth(); col++) {
+                final TiledMapTileLayer.Cell cell = flatLayer.getCell(col, row);
+                if (cell == null) {
+                    x+=flatLayer.getTileWidth();
+                    continue;
+                }
+                TiledMapTile tile = cell.getTile();
+                FLAT_TILES.put(tile.getId(), true);
+
+                x+=flatLayer.getTileWidth();
+            }
+            y+=flatLayer.getTileWidth();
+        }
+    }
+
+    /**Returns whether the given kind of tile is flat, i.e., its shadow can be represented by the shadow of a generic quadrangle*/
+    public static boolean isTileFlat(int tileID) {
+        //Check if we've already said this tile is flat, and if we haven't, assume it's not for the future
+        return FLAT_TILES.getIfAbsentPut(tileID, false);
+    }
+
+
     @Override
     public void addShadowCastersToList(List<ShadowCaster> centralList) {this.addShadowCastersToList(centralList, 1.0f);}
     public void addShadowCastersToList(List<ShadowCaster> centralList, float unitScale) {
@@ -107,6 +139,7 @@ public class TileLayer implements Entity, RendersToWorld {
                     continue;
                 }
                 TiledMapTile tile = cell.getTile();
+
                 float x1 = x + tile.getOffsetX() * unitScale;
                 float y1 = y + tile.getOffsetY() * unitScale;
                 TextureRegion tileRegion = tile.getTextureRegion();
@@ -122,7 +155,7 @@ public class TileLayer implements Entity, RendersToWorld {
                 ShadowCaster cellCaster = new ShadowCaster(tileRegion,
                         new Vector3(x1, y1, this.getBaseDepth()),
                         u,
-                        new Vector3(0, tileRegion.getRegionHeight(), 0));
+                        new Vector3(0, tileRegion.getRegionHeight(), 0), isTileFlat(tile.getId()));
                 centralList.add(cellCaster);
                 x+=layer.getTileWidth();
             }

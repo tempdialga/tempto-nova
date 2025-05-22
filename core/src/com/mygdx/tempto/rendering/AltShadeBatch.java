@@ -42,6 +42,7 @@ public class AltShadeBatch extends AltBatch {
             new ShaderProgram(Gdx.files.internal(SHADOWVERT_PATH_INTERNAL), Gdx.files.internal(FRAGPATH_9F)),
             new ShaderProgram(Gdx.files.internal(SHADOWVERT_PATH_INTERNAL), Gdx.files.internal(FRAGPATH_9S))
     };
+    public static final int NUM_SHADOW_SHADERS = shadowShaders.length;
 
     protected final static String DEPTHMAPCOORD_ATTRIBUTE = AltDepthBatch.DEPCOORD_ATTRIBUTE;
     protected final static String SHADOWTEXCOORD_ATTRIBUTE = "a_shadTexCoord";
@@ -99,7 +100,7 @@ public class AltShadeBatch extends AltBatch {
                 new VertexAttribute(VertexAttributes.Usage.Generic, 2, POSCHANNEL_ATTRIBUTE));
     }
 
-    public void switchShader(int shadowShader) {
+    public void switchShadowShader(int shadowShader) {
         this.currentShadowShader = shadowShader;
         this.setShader(shadowShaders[shadowShader]);
     }

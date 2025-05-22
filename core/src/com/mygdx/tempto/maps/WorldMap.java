@@ -247,6 +247,9 @@ public class WorldMap implements RendersToScreen {
                     temptoLayer = (new TileLayer(this, tileLayer, this.mapLoader.layerElements.get(layer), depth));
                     temptoLayer.setWaver(true);
                 } else {
+                    if (name.equals("flats")) {
+                        TileLayer.setFlatTiles(tileLayer);
+                    }
                     continue;
                 }
                 entities.add(temptoLayer);
@@ -302,7 +305,7 @@ public class WorldMap implements RendersToScreen {
         this.lightSources.add(new LightSource(new Vector3(), Color.CYAN, 250, LightSource.SPHERE_APPROX, 1));
         this.lightSources.add(new LightSource(new Vector3(), Color.CHARTREUSE, 250, LightSource.SPHERE_APPROX, 1));
         for (int i = 3; i < this.debugLightCount; i++) {
-            this.lightSources.add(new LightSource(new Vector3(), new Color(Color.CORAL).mul(0.5f), 550, LightSource.SPHERE_APPROX, 1));
+            this.lightSources.add(new LightSource(new Vector3(), new Color(Color.CORAL).mul(0.5f), 550, LightSource.SPHERE_APPROX, 0));
         }
 
         //Initialize tilemap renderer
@@ -417,7 +420,7 @@ public class WorldMap implements RendersToScreen {
         Gdx.gl.glDisable(GL20.GL_DEPTH_TEST);
 
         //Render lights ! :D
-        this.shadeBatch.switchShader((int)(elapsedTime*0.5f) % (AltShadeBatch.NINE_SAMPLE+1)); //Debug: switch shadow shaders every 2 seconds
+        this.shadeBatch.switchShadowShader((int)(elapsedTime*0.5f) % (AltShadeBatch.NINE_SAMPLE+1)); //Debug: switch shadow shaders every 2 seconds
         this.shadowBuffer.begin();
 
 
@@ -469,31 +472,38 @@ public class WorldMap implements RendersToScreen {
 
 
         Collections.sort(casters);
-        Gdx.gl.glColorMask(color_channel == RED, color_channel == GREEN, color_channel == BLUE, color_channel == ALPHA);
-        for (int i = 0; i < this.lightSources.size(); i++) {
+
+        for (int shadowShader = 0; shadowShader < AltShadeBatch.NUM_SHADOW_SHADERS; shadowShader++) {
+            this.shadeBatch.switchShadowShader(shadowShader);
+            color_channel = RED;
+            shadMapCol = 0;
+            shadMapRow = 0;
             Gdx.gl.glColorMask(color_channel == RED, color_channel == GREEN, color_channel == BLUE, color_channel == ALPHA);
+            for (int i = 0; i < this.lightSources.size(); i++) {
+                Gdx.gl.glColorMask(color_channel == RED, color_channel == GREEN, color_channel == BLUE, color_channel == ALPHA);
 
-            LightSource source = this.lightSources.get(i);
+                LightSource source = this.lightSources.get(i);
 
-            ShadowCaster.numRangesVisible = 0;
+                ShadowCaster.numRangesVisible = 0;
 
-            for (ShadowCaster caster : casters) {
-                this.shadeBatch.drawShadow(caster, source, this.depthMap, this.camera, viewBounds, viewPoly, shadMapCol, shadMapHTotal, shadMapRow, shadMapVTotal);
-            }
+                for (ShadowCaster caster : casters) {
+                    if (caster.shadowShader(source) == shadowShader) this.shadeBatch.drawShadow(caster, source, this.depthMap, this.camera, viewBounds, viewPoly, shadMapCol, shadMapHTotal, shadMapRow, shadMapVTotal);
+                }
 
 
-            shadMapCol++; //Iterate position
-            if (shadMapCol >= shadMapHTotal) {
-                shadMapCol = 0;
-                shadMapRow++;
-            }
+                shadMapCol++; //Iterate position
+                if (shadMapCol >= shadMapHTotal) {
+                    shadMapCol = 0;
+                    shadMapRow++;
+                }
 
-            if (shadMapRow >= shadMapVTotal) { //Then, when positions run out, switch to the next color channel
-                color_channel++;
+                if (shadMapRow >= shadMapVTotal) { //Then, when positions run out, switch to the next color channel
+                    color_channel++;
 
-                shadMapRow = 0;
-                shadMapCol = 0;
-                this.shadeBatch.flush();
+                    shadMapRow = 0;
+                    shadMapCol = 0;
+                    this.shadeBatch.flush();
+                }
             }
         }
         this.shadeBatch.end();
