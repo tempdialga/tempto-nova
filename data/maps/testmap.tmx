@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.9" tiledversion="1.9.2" renderorder="right-down" infinite="0" orientation="orthogonal" hexsidelength="0" tileheight="16" height="60" tilewidth="16" width="60">
+	<tileset firstgid="1" source="test-collection.tsx"/>
+	<tileset firstgid="2" source="padded-tiles.tsx"/>
+	<objectgroup id="1" name="Terrain">
+		<object id="0" x="100.0" y="453.0">
+			<properties>
+				<property name="height" value="0.0"/>
+				<property name="id" value="lt_terrain_2"/>
+				<property name="width" value="0.0"/>
+			</properties>
+			<polygon points="124.5,-526.0 184.5,-523.0 202.5,-475.0 302.5,-477.0 305.5,-424.0 109.5,-423.0"/>
+			<polygon points="124.5,-526.0 184.5,-523.0 202.5,-475.0 302.5,-477.0 305.5,-424.0 109.5,-423.0"/>
+		</object>
+		<object id="1" x="342.0" y="541.0">
+			<properties>
+				<property name="height" value="0.0"/>
+				<property name="id" value="lt_terrain_3"/>
+				<property name="width" value="0.0"/>
+			</properties>
+			<polygon points="347.007,-530.256 403.007,-547.256 421.309,-528.954 440.667,-528.954 440.667,-488.954 414.167,-488.954 414.167,-478.954 397.167,-478.954 397.167,-477.974 414.167,-477.954 414.167,-437.954 403.167,-437.954 403.167,-410.454 402.771,-410.454 420.0,-386.0 475.0,-399.0 482.324,-434.954 463.667,-434.954 463.667,-437.454 434.667,-437.454 434.667,-437.954 433.667,-437.954 433.667,-438.454 433.167,-438.454 433.167,-478.454 460.167,-478.454 460.167,-490.954 479.167,-490.954 479.167,-508.454 497.296,-508.454 519.0,-615.0 610.0,-544.0 496.0,-288.0 325.0,-354.0 342.0,-419.0 363.167,-423.954 363.167,-429.693 335.0,-423.0 324.0,-386.5 289.5,-409.5 282.0,-456.0 357.167,-473.592 357.167,-493.454 374.167,-493.454 374.167,-509.246 345.667,-504.519 345.667,-482.454 305.667,-482.454 305.667,-482.954 266.167,-482.954 266.167,-522.954 306.167,-522.954 306.167,-522.454 342.079,-522.454"/>
+			<polygon points="347.007,-530.256 403.007,-547.256 421.309,-528.954 440.667,-528.954 440.667,-488.954 414.167,-488.954 414.167,-478.954 397.167,-478.954 397.167,-477.974 414.167,-477.954 414.167,-437.954 403.167,-437.954 403.167,-410.454 402.771,-410.454 420.0,-386.0 475.0,-399.0 482.324,-434.954 463.667,-434.954 463.667,-437.454 434.667,-437.454 434.667,-437.954 433.667,-437.954 433.667,-438.454 433.167,-438.454 433.167,-478.454 460.167,-478.454 460.167,-490.954 479.167,-490.954 479.167,-508.454 497.296,-508.454 519.0,-615.0 610.0,-544.0 496.0,-288.0 325.0,-354.0 342.0,-419.0 363.167,-423.954 363.167,-429.693 335.0,-423.0 324.0,-386.5 289.5,-409.5 282.0,-456.0 357.167,-473.592 357.167,-493.454 374.167,-493.454 374.167,-509.246 345.667,-504.519 345.667,-482.454 305.667,-482.454 305.667,-482.954 266.167,-482.954 266.167,-522.954 306.167,-522.954 306.167,-522.454 342.079,-522.454"/>
+		</object>
+		<object id="2" x="260.5" y="222.0">
+			<properties>
+				<property name="height" value="0.0"/>
+				<property name="id" value="lt_terrain_1"/>
+				<property name="width" value="0.0"/>
+			</properties>
+			<polygon points="22.0,-20.0 -17.1667,42.6667 -156.0,34.0 -119.0,-82.0 273.0,-65.0 273.0,35.0"/>
+			<polygon points="22.0,-20.0 -17.1667,42.6667 -156.0,34.0 -119.0,-82.0 273.0,-65.0 273.0,35.0"/>
+		</object>
+		<object id="3" x="0.0" y="960.0">
+			<properties>
+				<property name="height" value="0.0"/>
+				<property name="id" value="testmap_terrain_2"/>
+				<property name="width" value="0.0"/>
+			</properties>
+			<polygon points="310.5,-478.0 333.765,-488.0 325.5,-488.0 325.5,-520.0 357.5,-520.0 357.5,-498.202 367.5,-502.5 403.5,-505.5 401.244,-486.5 411.398,-486.5 414.5,-512.5 388.0,-510.0 386.5,-522.0 416.0,-529.336 416.0,-544.0 448.0,-544.0 448.0,-537.294 464.0,-541.272 464.0,-560.0 496.0,-560.0 496.0,-529.416 497.32,-528.0 512.0,-528.0 512.0,-544.0 544.0,-544.0 544.0,-528.0 608.0,-528.0 608.0,-510.5 610.877,-510.5 623.344,-539.5 605.0,-539.5 605.0,-571.5 637.0,-571.5 637.0,-546.091 683.284,-527.327 668.284,-502.327 717.784,-473.827 703.284,-456.827 634.0,-484.611 634.0,-473.947 706.77,-454.061 730.77,-478.061 753.27,-461.061 717.77,-409.561 660.264,-435.062 613.764,-391.062 574.362,-418.0 551.0,-418.0 551.0,-429.5 520.0,-429.5 520.0,-448.0 504.833,-448.0 498.5,-429.0 410.5,-424.809 410.5,-405.0 378.5,-405.0 378.5,-424.919 314.0,-422.5"/>
+			<polygon points="310.5,-478.0 333.765,-488.0 325.5,-488.0 325.5,-520.0 357.5,-520.0 357.5,-498.202 367.5,-502.5 403.5,-505.5 401.244,-486.5 411.398,-486.5 414.5,-512.5 388.0,-510.0 386.5,-522.0 416.0,-529.336 416.0,-544.0 448.0,-544.0 448.0,-537.294 464.0,-541.272 464.0,-560.0 496.0,-560.0 496.0,-529.416 497.32,-528.0 512.0,-528.0 512.0,-544.0 544.0,-544.0 544.0,-528.0 608.0,-528.0 608.0,-510.5 610.877,-510.5 623.344,-539.5 605.0,-539.5 605.0,-571.5 637.0,-571.5 637.0,-546.091 683.284,-527.327 668.284,-502.327 717.784,-473.827 703.284,-456.827 634.0,-484.611 634.0,-473.947 706.77,-454.061 730.77,-478.061 753.27,-461.061 717.77,-409.561 660.264,-435.062 613.764,-391.062 574.362,-418.0 551.0,-418.0 551.0,-429.5 520.0,-429.5 520.0,-448.0 504.833,-448.0 498.5,-429.0 410.5,-424.809 410.5,-405.0 378.5,-405.0 378.5,-424.919 314.0,-422.5"/>
+		</object>
+		<object id="4" x="0.0" y="960.0">
+			<properties>
+				<property name="height" value="0.0"/>
+				<property name="id" value="testmap_terrain_5"/>
+				<property name="width" value="0.0"/>
+			</properties>
+			<polygon points="668.265,-424.402 723.765,-394.902 760.765,-454.402 807.765,-418.902 732.765,-351.402 634.265,-394.402"/>
+			<polygon points="668.265,-424.402 723.765,-394.902 760.765,-454.402 807.765,-418.902 732.765,-351.402 634.265,-394.402"/>
+		</object>
+		<object id="5" x="0.0" y="960.0">
+			<properties>
+				<property name="height" value="0.0"/>
+				<property name="id" value="testmap_terrain_6"/>
+				<property name="width" value="0.0"/>
+			</properties>
+			<polygon points="681.5,-542.0 681.5,-560.0 672.0,-560.0 672.0,-592.0 704.0,-592.0 704.0,-576.0 720.0,-576.0 720.0,-592.0 736.0,-592.0 736.0,-608.0 800.0,-608.0 800.0,-544.0 768.0,-544.0 768.0,-519.02 819.529,-498.408 792.029,-433.908 727.029,-492.908 720.529,-481.908 684.529,-500.408 696.959,-542.0"/>
+			<polygon points="681.5,-542.0 681.5,-560.0 672.0,-560.0 672.0,-592.0 704.0,-592.0 704.0,-576.0 720.0,-576.0 720.0,-592.0 736.0,-592.0 736.0,-608.0 800.0,-608.0 800.0,-544.0 768.0,-544.0 768.0,-519.02 819.529,-498.408 792.029,-433.908 727.029,-492.908 720.529,-481.908 684.529,-500.408 696.959,-542.0"/>
+		</object>
+		<object id="6" x="0.0" y="960.0">
+			<properties>
+				<property name="height" value="0.0"/>
+				<property name="id" value="testmap_terrain_7"/>
+				<property name="width" value="0.0"/>
+			</properties>
+			<polygon points="238.5,-493.5 238.5,-525.5 260.0,-525.5 260.0,-561.0 272.136,-561.0 276.0,-568.5 311.5,-568.0 325.0,-545.5 292.0,-524.462 292.0,-509.5 318.0,-509.5 318.0,-525.0 350.0,-525.0 350.0,-493.0 334.5,-493.0 334.5,-477.5 270.5,-477.5 270.5,-493.5"/>
+			<polygon points="238.5,-493.5 238.5,-525.5 260.0,-525.5 260.0,-561.0 272.136,-561.0 276.0,-568.5 311.5,-568.0 325.0,-545.5 292.0,-524.462 292.0,-509.5 318.0,-509.5 318.0,-525.0 350.0,-525.0 350.0,-493.0 334.5,-493.0 334.5,-477.5 270.5,-477.5 270.5,-493.5"/>
+		</object>
+		<object id="7" x="0.0" y="960.0">
+			<properties>
+				<property name="height" value="0.0"/>
+				<property name="id" value="testmap_terrain_8"/>
+				<property name="width" value="0.0"/>
+			</properties>
+			<polygon points="218.984,-439.464 251.484,-460.964 280.484,-420.464 217.984,-398.964 201.484,-416.464"/>
+			<polygon points="218.984,-439.464 251.484,-460.964 280.484,-420.464 217.984,-398.964 201.484,-416.464"/>
+		</object>
+		<object id="8" x="0.0" y="960.0">
+			<properties>
+				<property name="height" value="0.0"/>
+				<property name="id" value="testmap_terrain_9"/>
+				<property name="width" value="0.0"/>
+			</properties>
+			<polygon points="408.5,-402.0 408.5,-434.0 429.5,-434.0 429.5,-443.5 446.0,-443.5 446.0,-463.5 453.5,-463.5 453.5,-491.5 477.5,-491.5 477.5,-495.0 528.5,-495.0 528.5,-480.0 560.0,-480.0 560.0,-528.0 624.0,-528.0 624.0,-432.0 560.0,-432.0 560.0,-448.0 528.0,-448.0 528.0,-463.0 497.0,-463.0 497.0,-440.0 478.0,-440.0 478.0,-431.5 461.5,-431.5 461.5,-417.0 471.0,-417.0 471.0,-385.0 439.0,-385.0 439.0,-402.0"/>
+			<polygon points="408.5,-402.0 408.5,-434.0 429.5,-434.0 429.5,-443.5 446.0,-443.5 446.0,-463.5 453.5,-463.5 453.5,-491.5 477.5,-491.5 477.5,-495.0 528.5,-495.0 528.5,-480.0 560.0,-480.0 560.0,-528.0 624.0,-528.0 624.0,-432.0 560.0,-432.0 560.0,-448.0 528.0,-448.0 528.0,-463.0 497.0,-463.0 497.0,-440.0 478.0,-440.0 478.0,-431.5 461.5,-431.5 461.5,-417.0 471.0,-417.0 471.0,-385.0 439.0,-385.0 439.0,-402.0"/>
+		</object>
+		<object id="9" x="0.0" y="960.0">
+			<properties>
+				<property name="height" value="0.0"/>
+				<property name="id" value="testmap_terrain_10"/>
+				<property name="width" value="0.0"/>
+			</properties>
+			<polygon points="275.5,-462.5 301.0,-463.0 301.5,-450.0 278.5,-442.0"/>
+			<polygon points="275.5,-462.5 301.0,-463.0 301.5,-450.0 278.5,-442.0"/>
+		</object>
+		<object id="10" x="0.0" y="960.0">
+			<properties>
+				<property name="height" value="0.0"/>
+				<property name="id" value="testmap_terrain_11"/>
+				<property name="width" value="0.0"/>
+			</properties>
+			<polygon points="288.5,-437.5 308.0,-433.0 308.0,-421.0 288.0,-421.0"/>
+			<polygon points="288.5,-437.5 308.0,-433.0 308.0,-421.0 288.0,-421.0"/>
+		</object>
+	</objectgroup>
+
+	<layer height="60" visible="0" id="2" name="25pxNO" width="60">
+		<data encoding="base64" compression="zlib">
+			eJzt0cEJADAMA7GQ/Yfut3SAPmwJPMDhGQAAAID/9lqDtt5kOz1/vq3pzXqzewEAAAAAAAAAGh0jsAA5
+		</data>
+	</layer>
+
+	<layer height="60" id="1" name="12px" width="60">
+		<data encoding="base64" compression="zlib">
+			eJztz0EOABAQBEH8/zv+J27ui4StSuY+XQoAAFn0ZRno/Vu2XgA4pQU31buXQ3b0vkSvXr16X5GtFwAAAAAAAOCWAabvCX4=
+		</data>
+	</layer>
+
+	<layer height="60" id="1" name="12px_rot" width="60">
+		<data encoding="base64" compression="zlib">
+			eJztzgENAAAIA6Dbv7Qt7uYgAQkAAAAAAAAAAABA31wHAAAA4LkFR7wAAg==
+		</data>
+	</layer>
+
+	<layer height="60" id="1" name="8px" width="60">
+		<data encoding="base64" compression="zlib">
+			eJztz0ENAAAIxLDz7waHWCA8oU0mYAkAAAAAAAAAsFHDrvDr99IvAAAAAMAHDVHbG6k=
+		</data>
+	</layer>
+
+	<layer height="60" id="3" name="5px" width="60">
+		<data encoding="base64" compression="zlib">
+			eJzt0cEJgDAMQNHa3aozKLr/GlboVfCiwfY9+JBjQlICAAAAiJVboxjtXuhJqS2tErzLF7baXjva3Lv5Zu7V9dO1NcJ/+Z/8sF64173uBYBYU/QCAAAAAPCSE+b3BOU=
+		</data>
+	</layer>
+
+	<layer height="60" id="1" name="2px_rot" width="60">
+		<data encoding="base64" compression="zlib">
+			eJzt2DEWwBAURUGWY7PZg52mVqHIF8zUine7f6QEAMAJ8sTb57MV/1RXDwimFwBgXO+WKCEr4uht6d3bbb2wu5m/KwBY7bZbUu/Z9AIAAADwAkQUBzM=
+		</data>
+	</layer>
+
+	<layer height="60" id="4" name="2px" width="60">
+		<data encoding="base64" compression="zlib">
+			eJztz8kNwlAQRMFvguPIkgJLCoBTYMkJcoB86AgsWcI28q+S+jSXeaUAAAAA/Idn9pr6iR9bdtze2WesR0bS1TtHeuetb++qKWWdbbJtM8hLg+rbu0vjPjtkxwp6T2k8Z5esraD3msZbds8eFfQCwBQWUz8AAAAAAABU4QuSMQyL
+		</data>
+	</layer>
+
+	<layer height="60" id="1" name="5px" width="60">
+		<data encoding="base64" compression="zlib">
+			eJzt2DEOgCAQBECeqH/Qr+Af8LPSkFBYWSDhZpLNtZdstykB8EWuuf5+YqBSc//9xCA5xeq3pFj9AgAAEM9Ws7/cVR0158sF5tI2yChbZNsgI2yRrdM+K2ud9gEAAAAAAGAeD4WEFA8=
+		</data>
+	</layer>
+
+	<layer height="60" id="1" name="flats" width="60">
+		<data encoding="base64" compression="zlib">
+			eJztzrENgDAUQ8HAzGQH2CHsmj8BVMQSupNcuXmtPdte/j/b0wHwkaPW0xELnbUrHbHQqN3pCAAAAAAAAAAAAAAAAOIm2WADNw==
+		</data>
+	</layer>
+</map>

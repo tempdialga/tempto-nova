@@ -1,0 +1,35 @@
+{
+lt_terrain_2: {
+	color: e6de19ff
+}
+lt_terrain_3: {
+	color: db8be9ff
+}
+lt_terrain_1: {
+	color: e3aafbff
+}
+testmap_terrain_2: {
+	color: c0b1e6ff
+}
+testmap_terrain_5: {
+	color: f430b2ff
+}
+testmap_terrain_6: {
+	color: 708899ff
+}
+testmap_terrain_7: {
+	color: 867fabff
+}
+testmap_terrain_8: {
+	color: 19d92dff
+}
+testmap_terrain_9: {
+	color: 8c3828ff
+}
+testmap_terrain_10: {
+	color: 467bd8ff
+}
+testmap_terrain_11: {
+	color: 2204a0ff
+}
+}

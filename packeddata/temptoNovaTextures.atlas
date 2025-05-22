@@ -1,0 +1,75 @@
+
+temptoNovaTextures.png
+size: 1024,512
+format: RGBA8888
+filter: Nearest,Nearest
+repeat: none
+maps/bricksv2
+  rotate: false
+  xy: 726, 301
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: -1
+maps/collisionTexture
+  rotate: false
+  xy: 2, 5
+  size: 256, 128
+  orig: 256, 128
+  offset: 0, 0
+  index: -1
+maps/collisionTexture_depth
+  rotate: false
+  xy: 726, 367
+  size: 256, 128
+  orig: 256, 128
+  offset: 0, 0
+  index: -1
+maps/collisionTexture_depthOld
+  rotate: false
+  xy: 260, 5
+  size: 256, 128
+  orig: 256, 128
+  offset: 0, 0
+  index: -1
+maps/default_depth
+  rotate: false
+  xy: 2, 2
+  size: 1, 1
+  orig: 1, 1
+  offset: 0, 0
+  index: -1
+maps/padded-tiles
+  rotate: false
+  xy: 2, 135
+  size: 360, 360
+  orig: 360, 360
+  offset: 0, 0
+  index: -1
+maps/padded-tiles_depth
+  rotate: false
+  xy: 364, 135
+  size: 360, 360
+  orig: 360, 360
+  offset: 0, 0
+  index: -1
+
+temptoNovaTextures2.png
+size: 512,512
+format: RGBA8888
+filter: Nearest,Nearest
+repeat: none
+misc/badlogic
+  rotate: false
+  xy: 2, 6
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+misc/blank
+  rotate: false
+  xy: 2, 2
+  size: 2, 2
+  orig: 2, 2
+  offset: 0, 0
+  index: -1
