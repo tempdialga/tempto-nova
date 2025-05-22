@@ -90,7 +90,7 @@ public class TileLayer implements Entity, RendersToWorld {
     @Override
     public void addShadowCastersToList(List<ShadowCaster> centralList) {this.addShadowCastersToList(centralList, 1.0f);}
     public void addShadowCastersToList(List<ShadowCaster> centralList, float unitScale) {
-        System.out.println("Layer depth: " + this.getBaseDepth());
+//        System.out.println("Layer depth: " + this.getBaseDepth());
 //        RendersToWorld.super.addShadowCastersToList(centralList);
 
         TiledMapTileLayer layer = this.mapLayer;

@@ -8,7 +8,7 @@ attribute vec3 a_ab;
 attribute vec3 a_ac;
 attribute vec3 a_S;
 attribute float a_lightBodyRadius; //Radius of the body casting the light
-attribute vec4 a_positionChannel; //Where on the shadow map (column, row, column width, row width) this shadow is to be drawn
+attribute vec2 a_positionChannel; //Where on the shadow map (column, row, column width, row width) this shadow is to be drawn
 
 uniform mat4 u_projTrans;
 
@@ -21,6 +21,8 @@ varying vec3 v_ab; //Vector from point a to b, corresponding to width on the sha
 varying vec3 v_ac; //Vector from point a to c, corresponding to height on the shadow texture region
 varying vec3 v_S; //Location of light source S, in depth map coordinates (x = screen[0-1], y = screen[0-1], z is pixels away from camera)
 varying float v_R; //Radius of the body casting the light (world coordinates)
+
+uniform vec2 u_positionChannelDimensions; //Dimensions of a position channel, relative to the size of the screen
 
 void main()
 {
@@ -36,8 +38,8 @@ void main()
     v_S = a_S;
     v_R = a_lightBodyRadius;
 
-    gl_Position.xy += vec2(1)+2*a_positionChannel.xy;
-    gl_Position.xy *= a_positionChannel.zw;
+    gl_Position.xy += vec2(1)+2*a_positionChannel;
+    gl_Position.xy *= u_positionChannelDimensions;
     gl_Position.xy -= vec2(1);
 //    gl_Position.xy += a_positionChannel.xy*a_positionChannel.zw;
 }

@@ -9,12 +9,13 @@ varying vec2 v_depCoords;//Corresponds to the location on the depth map I think 
 //varying vec3 v_lightCoords;//Location of the light source, in depth map coordinates (x = screen[0-1], y = screen[0-1], z is pixels away from camera)
 varying vec3 v_lightCoords; //Location of light source S, in depth map coordinates (x = screen[0-1], y = screen[0-1], z is pixels away from camera)
 flat varying float v_colChannel; //Which color channel of the shadowmap this light uses (red, greeen, blue, or alpha)
-flat varying vec4 v_posChannel; //Which position on the shadowmap this uses (column, row, column width, column height)
+flat varying vec2 v_posChannel; //Which position on the shadowmap this uses (column, row, column width, column height)
 varying LOWP vec4 v_color; //Color of the light source
 
 uniform sampler2D u_dMapTex; //The depth map
 uniform sampler2D u_shadMapTex; //The map of existing shadows, not to be confused with the texture used to draw shadows in the first place
 uniform vec2 u_viewDims; //Dimensions of the screen in world coordinates
+uniform vec2 u_positionChannelDimensions; //Dimensions of each channel on the shadow map
 
 void main()
 {
@@ -46,8 +47,8 @@ void main()
     vec3 final_color = /*(1-exp(-2**/base_intensity*base_color/*))*/*((1-k)*perfect_rough_diffuse + k*specular);
 
     vec2 shadMapCoords = v_depCoords;
-    shadMapCoords.xy += /*vec2(1)+*/v_posChannel.xy;
-    shadMapCoords.xy *= v_posChannel.zw;
+    shadMapCoords.xy += /*vec2(1)+*/v_posChannel;
+    shadMapCoords.xy *= u_positionChannelDimensions;
 //    shadMapCoords.xy -= vec2(1);
     vec4 shadMask = texture2D(u_shadMapTex, shadMapCoords);
     int ch_idx = int(floor(v_colChannel));

@@ -40,6 +40,8 @@ public class AltShadeBatch extends AltBatch {
     protected final static String DMAPTEX_UNIFORM = "u_dMapTex";
     protected final static String SHADTEX_UNIFORM = "u_shadTex";
     protected final static String SHADPXDIM_UNIFORM = "u_shadPxDims";
+    protected final static String POSDIMS_UNIFORM = "u_positionChannelDimensions";
+
 
     protected final static String   A_ATTRIBUTE = "a_a",
                                     AB_ATTRIBUTE = "a_ab",
@@ -47,9 +49,9 @@ public class AltShadeBatch extends AltBatch {
                                     S_ATTRIBUTE = "a_S";
 
     private static int i=0;
-    public static final int X1 = i++, Y1 = i++, D1 = i++, E1 = i++, ShU1 = i++, ShV1 = i++, ShW1 = i++, ShH1 = i++, ShD1 = i++, ShE1 = i++, AX1 = i++, AY1 = i++, AZ1 = i++, ABX1 = i++, ABY1 = i++, ABZ1 = i++, ACX1 = i++, ACY1 = i++, ACZ1 = i++, SX1 = i++, SY1 = i++, SZ1 = i++, R1 = i++, ChC1 = i++, ChR1 = i++, ChW1 = i++, ChH1 = i++,
-                            X2 = i++, Y2 = i++, D2 = i++, E2 = i++, ShU2 = i++, ShV2 = i++, ShW2 = i++, ShH2 = i++, ShD2 = i++, ShE2 = i++, AX2 = i++, AY2 = i++, AZ2 = i++, ABX2 = i++, ABY2 = i++, ABZ2 = i++, ACX2 = i++, ACY2 = i++, ACZ2 = i++, SX2 = i++, SY2 = i++, SZ2 = i++, R2 = i++, ChC2 = i++, ChR2 = i++, ChW2 = i++, ChH2 = i++,
-                            X3 = i++, Y3 = i++, D3 = i++, E3 = i++, ShU3 = i++, ShV3 = i++, ShW3 = i++, ShH3 = i++, ShD3 = i++, ShE3 = i++, AX3 = i++, AY3 = i++, AZ3 = i++, ABX3 = i++, ABY3 = i++, ABZ3 = i++, ACX3 = i++, ACY3 = i++, ACZ3 = i++, SX3 = i++, SY3 = i++, SZ3 = i++, R3 = i++, ChC3 = i++, ChR3 = i++, ChW3 = i++, ChH3 = i++;
+    public static final int X1 = i++, Y1 = i++, D1 = i++, E1 = i++, ShU1 = i++, ShV1 = i++, ShW1 = i++, ShH1 = i++, ShD1 = i++, ShE1 = i++, AX1 = i++, AY1 = i++, AZ1 = i++, ABX1 = i++, ABY1 = i++, ABZ1 = i++, ACX1 = i++, ACY1 = i++, ACZ1 = i++, SX1 = i++, SY1 = i++, SZ1 = i++, R1 = i++, ChC1 = i++, ChR1 = i++, /*ChW1 = i++, ChH1 = i++,*/
+                            X2 = i++, Y2 = i++, D2 = i++, E2 = i++, ShU2 = i++, ShV2 = i++, ShW2 = i++, ShH2 = i++, ShD2 = i++, ShE2 = i++, AX2 = i++, AY2 = i++, AZ2 = i++, ABX2 = i++, ABY2 = i++, ABZ2 = i++, ACX2 = i++, ACY2 = i++, ACZ2 = i++, SX2 = i++, SY2 = i++, SZ2 = i++, R2 = i++, ChC2 = i++, ChR2 = i++, /*ChW2 = i++, ChH2 = i++,*/
+                            X3 = i++, Y3 = i++, D3 = i++, E3 = i++, ShU3 = i++, ShV3 = i++, ShW3 = i++, ShH3 = i++, ShD3 = i++, ShE3 = i++, AX3 = i++, AY3 = i++, AZ3 = i++, ABX3 = i++, ABY3 = i++, ABZ3 = i++, ACX3 = i++, ACY3 = i++, ACZ3 = i++, SX3 = i++, SY3 = i++, SZ3 = i++, R3 = i++, ChC3 = i++, ChR3 = i++/*, ChW3 = i++, ChH3 = i++*/;
     protected final static int SHADOW_SPRITE_SIZE = i;
 
 
@@ -58,6 +60,7 @@ public class AltShadeBatch extends AltBatch {
     protected Texture lastShadowTexture;
     protected float invShadTexWidth = 0, invShadTexHeight = 0;
     private int loc_u_viewDims = -10;
+    private float[] posChannelDims = new float[]{1f,1f};
 
     public AltShadeBatch() {this(1000, null);}
 
@@ -80,7 +83,7 @@ public class AltShadeBatch extends AltBatch {
                 new VertexAttribute(VertexAttributes.Usage.Generic, 3, AC_ATTRIBUTE),
                 new VertexAttribute(VertexAttributes.Usage.Generic, 3, S_ATTRIBUTE),
                 new VertexAttribute(VertexAttributes.Usage.Generic, 1, LIGHTBODYRADIUS_ATTRIBUTE),
-                new VertexAttribute(VertexAttributes.Usage.Generic, 4, POSCHANNEL_ATTRIBUTE));
+                new VertexAttribute(VertexAttributes.Usage.Generic, 2, POSCHANNEL_ATTRIBUTE));
     }
 
     @Override
@@ -112,14 +115,6 @@ public class AltShadeBatch extends AltBatch {
         vertices[ChR2] = vertical_idx;
         vertices[ChC3] = horizontal_idx;
         vertices[ChR3] = vertical_idx;
-
-        float cw = 1f/((float) horizontal_total), ch = 1f/((float) vertical_total);
-        vertices[ChW1] = cw;
-        vertices[ChH1] = ch;
-        vertices[ChW2] = cw;
-        vertices[ChH2] = ch;
-        vertices[ChW3] = cw;
-        vertices[ChH3] = ch;
 
 
         //Light Radius
@@ -395,6 +390,11 @@ public class AltShadeBatch extends AltBatch {
         super.end();
     }
 
+    public void adjustChannelDims(int numColumns, int numRows) {
+        this.posChannelDims[0] = 1f/((float) 4);
+        this.posChannelDims[1] = 1f/((float) 4);
+    }
+
     @Override
     protected void setupMatrices () {
         combinedMatrix.set(projectionMatrix).mul(transformMatrix);
@@ -407,6 +407,7 @@ public class AltShadeBatch extends AltBatch {
         shaderToSet.setUniformMatrix("u_projTrans", combinedMatrix);
         shaderToSet.setUniformi(DMAPTEX_UNIFORM, 0);
         shaderToSet.setUniformi(SHADTEX_UNIFORM, 1);
+        shaderToSet.setUniform2fv(POSDIMS_UNIFORM, this.posChannelDims, 0, 2);
 
     }
 

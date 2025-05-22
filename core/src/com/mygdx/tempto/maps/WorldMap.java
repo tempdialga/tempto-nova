@@ -380,7 +380,7 @@ public class WorldMap implements RendersToScreen {
         //Define light at the mouse coordinates for simplicity
         Vector3 mouseCoords = camera.unproject(new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0));
         mouseCoords.z=-9 + 10*(float) Math.sin(3* elapsedTime);
-        System.out.println("Mouse depth: " +mouseCoords.z);
+//        System.out.println("Mouse depth: " +mouseCoords.z);
         this.lightSources.get(0).pos().set(mouseCoords);
         this.lightSources.get(1).pos().set(mouseCoords).add(-40, -40, -10);
         this.lightSources.get(2).pos().set(mouseCoords).add(40, -20, -1);
@@ -447,19 +447,21 @@ public class WorldMap implements RendersToScreen {
 //        this.shadeBatch.setProjectionMatrix(this.camera.combined);
 //        this.shadeBatch.enableBlending();
 
+        int shadMapCol = 0;
+        int shadMapHTotal = this.shadowBuffer.getWidth() / TemptoNova.PIXEL_GAME_WIDTH;
+        int shadMapRow = 0;
+        int shadMapVTotal = this.shadowBuffer.getHeight() / TemptoNova.PIXEL_GAME_HEIGHT;
         ScreenUtils.clear(1, 1, 1, 1);
         this.shadeBatch.setBlendFunctionSeparate(GL20.GL_DST_COLOR, GL20.GL_ZERO, GL20.GL_ONE, GL20.GL_ZERO);//Mult
 //        this.shadeBatch.setBlendFunctionSeparate(GL20.GL_ONE, GL20.GL_ONE, GL20.GL_SRC_ALPHA, GL20.GL_DST_ALPHA);//Add
         this.shadeBatch.setBlendFunction(GL20.GL_ONE, GL20.GL_ONE);
+        this.shadeBatch.adjustChannelDims(shadMapHTotal, shadMapVTotal);
         Gdx.gl.glBlendEquation(GL20.GL_FUNC_REVERSE_SUBTRACT); //naturally switch to subtracting actually
         this.shadeBatch.begin();
         this.shadeBatch.setViewport(this.worldViewport);
 
 
-        int shadMapCol = 0;
-        int shadMapHTotal = this.shadowBuffer.getWidth() / TemptoNova.PIXEL_GAME_WIDTH;
-        int shadMapRow = 0;
-        int shadMapVTotal = this.shadowBuffer.getHeight() / TemptoNova.PIXEL_GAME_HEIGHT;
+
         Collections.sort(casters);
         for (int i = 0; i < this.lightSources.size(); i++) {
             int color_channel = i % 4;
@@ -498,6 +500,7 @@ public class WorldMap implements RendersToScreen {
         Gdx.gl.glColorMask(true, true, true, false);
 //        this.lightBatch.setBlendFunctionSeparate(GL20.GL_DST_COLOR, GL20.GL_ZERO, GL20.GL_ONE, GL20.GL_ZERO);
         Gdx.gl.glBlendEquation(GL20.GL_FUNC_ADD);
+        this.lightBatch.adjustChannelDims(shadMapHTotal, shadMapVTotal);
         this.lightBatch.setBlendFunction(GL20.GL_ONE, GL20.GL_ONE);
         this.lightBatch.enableBlending();
         this.lightBatch.begin();
@@ -506,7 +509,7 @@ public class WorldMap implements RendersToScreen {
         shadMapCol = 0;
         for (int i = 0; i < this.lightSources.size(); i++) {
             float color_channel = i % 4 + 0.01f;
-            this.lightBatch.drawLight(this.lightSources.get(i), this.depthMap, this.shadowMap, this.camera, viewBounds, color_channel, shadMapCol, shadMapHTotal, shadMapRow, shadMapVTotal);
+            this.lightBatch.drawLight(this.lightSources.get(i), this.depthMap, this.shadowMap, this.camera, viewBounds, color_channel, shadMapCol, shadMapRow);
             int ALPHA = 3;
             if (color_channel == ALPHA) {//Iterate position
                 shadMapCol++;

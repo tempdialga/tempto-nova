@@ -11,6 +11,7 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.math.Affine2;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.mygdx.tempto.TemptoNova;
@@ -28,20 +29,22 @@ public class AltLightBatch extends AltBatch{
 
     protected final static String DMAPTEX_UNIFORM = "u_dMapTex";
     protected final static String SHADMAP_UNIFORM = "u_shadMapTex";
+    protected final static String POSDIMS_UNIFORM = "u_positionChannelDimensions";
 
     public static final String LIGHT_VERT_PATH_INTERNAL = "shaders/lightVert.glsl", LIGHT_FRAG_PATH_INTERNAL = "shaders/lightFrag.glsl";
 
     private static int i=0;
-    public static final int X1 = i++, Y1 = i++, /*U1 = i++, V1 = i++,*/ A1 = i++, B1 = i++, C1 = i++, Ch1 = i++, Col1 = i++, ChC1 = i++, ChR1 = i++, ChW1 = i++, ChH1 = i++,
-                            X2 = i++, Y2 = i++, /*U2 = i++, V2 = i++,*/ A2 = i++, B2 = i++, C2 = i++, Ch2 = i++, Col2 = i++, ChC2 = i++, ChR2 = i++, ChW2 = i++, ChH2 = i++,
-                            X3 = i++, Y3 = i++, /*U3 = i++, V3 = i++,*/ A3 = i++, B3 = i++, C3 = i++, Ch3 = i++, Col3 = i++, ChC3 = i++, ChR3 = i++, ChW3 = i++, ChH3 = i++,
-                            X4 = i++, Y4 = i++, /*U4 = i++, V4 = i++,*/ A4 = i++, B4 = i++, C4 = i++, Ch4 = i++, Col4 = i++, ChC4 = i++, ChR4 = i++, ChW4 = i++, ChH4 = i++;
+    public static final int X1 = i++, Y1 = i++, /*U1 = i++, V1 = i++,*/ A1 = i++, B1 = i++, C1 = i++, Ch1 = i++, Col1 = i++, ChC1 = i++, ChR1 = i++,/* ChW1 = i++, ChH1 = i++,*/
+                            X2 = i++, Y2 = i++, /*U2 = i++, V2 = i++,*/ A2 = i++, B2 = i++, C2 = i++, Ch2 = i++, Col2 = i++, ChC2 = i++, ChR2 = i++,/* ChW2 = i++, ChH2 = i++,*/
+                            X3 = i++, Y3 = i++, /*U3 = i++, V3 = i++,*/ A3 = i++, B3 = i++, C3 = i++, Ch3 = i++, Col3 = i++, ChC3 = i++, ChR3 = i++,/* ChW3 = i++, ChH3 = i++,*/
+                            X4 = i++, Y4 = i++, /*U4 = i++, V4 = i++,*/ A4 = i++, B4 = i++, C4 = i++, Ch4 = i++, Col4 = i++, ChC4 = i++, ChR4 = i++/*, ChW4 = i++, ChH4 = i++*/;
 
     public static final int LIGHT_SPRITE_SIZE = i;
 
     protected int loc_u_S;//Location of the uniform for u_S (light source)
     protected int loc_u_viewDims = -10;//Location of the uniform for u_viewDims (dimensions of the view window)
     protected Texture lastShadowTexture;
+    protected float[] posChannelDims = new float[]{1.0f, 1.0f};//Dimensions of each channel in the shadow map
 
     public AltLightBatch() {
         this(1000, null);
@@ -53,9 +56,14 @@ public class AltLightBatch extends AltBatch{
                 new VertexAttribute(VertexAttributes.Usage.Position, 3, LIGHTCOORD_ATTRIBUTE+"0"),
                 new VertexAttribute(VertexAttributes.Usage.Generic, 1, SHADOWCHANNEL_ATTRIBUTE),
                 new VertexAttribute(VertexAttributes.Usage.ColorPacked, 4, LIGHTCOLOR_ATTRIBUTE),
-                new VertexAttribute(VertexAttributes.Usage.Generic, 4, POSCHANNEL_ATTRIBUTE)), LIGHT_SPRITE_SIZE);
+                new VertexAttribute(VertexAttributes.Usage.Generic, 2, POSCHANNEL_ATTRIBUTE)), LIGHT_SPRITE_SIZE);
 
 
+    }
+
+    public void adjustChannelDims(int numColumns, int numRows) {
+        this.posChannelDims[0] = 1f/((float) numColumns);
+        this.posChannelDims[1] = 1f/((float) numRows);
     }
 
     public void setViewport(Viewport viewport) {
@@ -78,6 +86,7 @@ public class AltLightBatch extends AltBatch{
             shaderToSet = shader;
         }
         shaderToSet.setUniformMatrix("u_projTrans", combinedMatrix);
+        shaderToSet.setUniform2fv(POSDIMS_UNIFORM, this.posChannelDims, 0, 2);
         shaderToSet.setUniformi(DMAPTEX_UNIFORM, 0);
         shaderToSet.setUniformi(SHADMAP_UNIFORM, 1);
 
@@ -124,7 +133,7 @@ public class AltLightBatch extends AltBatch{
 //        invTexHeight = 1.0f / texture.getHeight();
     }
 
-    public void drawLight(LightSource source, Texture depthMap, Texture shadowMap, OrthographicCamera camera, Rectangle viewBounds, float shadowColorChannel, int horizontal_idx, int horizontal_total, int vertical_idx, int vertical_total) {
+    public void drawLight(LightSource source, Texture depthMap, Texture shadowMap, OrthographicCamera camera, Rectangle viewBounds, float shadowColorChannel, int horizontal_idx, int vertical_idx) {
 
         if (shadowMap != lastShadowTexture)
             switchShadowTexture(shadowMap);
@@ -187,16 +196,6 @@ public class AltLightBatch extends AltBatch{
         verts[ChC4] = horizontal_idx;
         verts[ChR4] = vertical_idx;
 
-
-        float cw = 1f/((float) horizontal_total), ch = 1f/((float) vertical_total);
-        verts[ChW1] = cw;
-        verts[ChH1] = ch;
-        verts[ChW2] = cw;
-        verts[ChH2] = ch;
-        verts[ChW3] = cw;
-        verts[ChH3] = ch;
-        verts[ChW4] = cw;
-        verts[ChH4] = ch;
 
         this.draw(depthMap, verts, 0, verts.length);
     }
