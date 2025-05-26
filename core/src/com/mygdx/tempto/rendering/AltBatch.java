@@ -8,6 +8,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.math.Matrix4;
+import com.mygdx.tempto.TemptoNova;
 
 import java.nio.Buffer;
 
@@ -67,7 +68,7 @@ public abstract class AltBatch implements Batch {
         // 32767 is max vertex index, so 32767 / 4 vertices per sprite = 8191 sprites max.
         if (size > 8191) throw new IllegalArgumentException("Can't have more than 8191 sprites per batch: " + size);
 
-        projectionMatrix.setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        projectionMatrix.setToOrtho2D(0, 0, TemptoNova.PIXEL_GAME_WIDTH, TemptoNova.PIXEL_GAME_HEIGHT);
 
         this.spriteSize = spriteSize;
 
@@ -105,6 +106,25 @@ public abstract class AltBatch implements Batch {
     }
 
     protected abstract ShaderProgram createDefaultShader();
+
+    protected static String defaultVertexShader() {
+        return "attribute vec4 " + ShaderProgram.POSITION_ATTRIBUTE + ";\n" //
+                + "attribute vec4 " + ShaderProgram.COLOR_ATTRIBUTE + ";\n" //
+                + "attribute vec2 " + ShaderProgram.TEXCOORD_ATTRIBUTE + "0;\n" //
+                + "uniform mat4 u_projTrans;\n" //
+                + "varying vec4 v_color;\n" //
+                + "varying vec2 v_texCoords;\n" //
+//                + "varying vec2 v_screenCoords" //
+                + "\n" //
+                + "void main()\n" //
+                + "{\n" //
+                + "   v_color = " + ShaderProgram.COLOR_ATTRIBUTE + ";\n" //
+                + "   v_color.a = v_color.a * (255.0/254.0);\n" //
+                + "   v_texCoords = " + ShaderProgram.TEXCOORD_ATTRIBUTE + "0;\n" //
+                + "   gl_Position =  u_projTrans * " + ShaderProgram.POSITION_ATTRIBUTE + ";\n" //
+//                + "   v_screenCoords = gl_Position.xy" //
+                + "}\n";
+    }
 
     @Override
     public void begin () {

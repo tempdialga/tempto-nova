@@ -16,6 +16,7 @@ uniform sampler2D u_dMapTex; //The depth map
 uniform sampler2D u_shadMapTex; //The map of existing shadows, not to be confused with the texture used to draw shadows in the first place
 uniform vec2 u_viewDims; //Dimensions of the screen in world coordinates
 uniform vec2 u_positionChannelDimensions; //Dimensions of each channel on the shadow map
+uniform float u_lightEncodeFactor; //All intensities multiplied by this, to allow light to exceed 1 effectively and wash out
 
 void main()
 {
@@ -62,6 +63,6 @@ void main()
 //                ch_idx == 1 ? shadMask.g :
 //                ch_idx == 2 ? shadMask.b : shadMask.a;
 
-    gl_FragColor = vec4(final_color*shadValue,1);
+    gl_FragColor = vec4(final_color*shadValue*u_lightEncodeFactor,1);
 //    gl_FragColor = vec4(channelMask)*0.5;
 }

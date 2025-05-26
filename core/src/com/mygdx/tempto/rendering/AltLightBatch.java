@@ -20,6 +20,8 @@ import java.nio.Buffer;
 
 public class AltLightBatch extends AltBatch{
 
+    public static final float BASE_LIGHT_ENCODING_FACTOR = 0.0625f;//All intensities multiplied by this going into the light map, and then divided coming out, to allow light to exceed 1 effectively and wash out
+
 
 
     public static final String LIGHTCOORD_ATTRIBUTE = "a_lightCoord";
@@ -30,6 +32,7 @@ public class AltLightBatch extends AltBatch{
     protected final static String DMAPTEX_UNIFORM = "u_dMapTex";
     protected final static String SHADMAP_UNIFORM = "u_shadMapTex";
     protected final static String POSDIMS_UNIFORM = "u_positionChannelDimensions";
+    protected final static String LIGHTENCODEFACTOR_UNIFORM = "u_lightEncodeFactor";
 
     public static final String LIGHT_VERT_PATH_INTERNAL = "shaders/lightVert.glsl", LIGHT_FRAG_PATH_INTERNAL = "shaders/lightFrag.glsl";
 
@@ -87,6 +90,7 @@ public class AltLightBatch extends AltBatch{
         }
         shaderToSet.setUniformMatrix("u_projTrans", combinedMatrix);
         shaderToSet.setUniform2fv(POSDIMS_UNIFORM, this.posChannelDims, 0, 2);
+        shaderToSet.setUniformf(LIGHTENCODEFACTOR_UNIFORM, BASE_LIGHT_ENCODING_FACTOR);
         shaderToSet.setUniformi(DMAPTEX_UNIFORM, 0);
         shaderToSet.setUniformi(SHADMAP_UNIFORM, 1);
 

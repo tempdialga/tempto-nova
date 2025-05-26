@@ -126,7 +126,7 @@ public class WorldMap implements RendersToScreen {
     SpriteBatch miscWorldBatch;
     AltDepthBatch depthMapBatch;
     ArrayList<LightSource> lightSources;
-    final int debugLightCount = 40;
+    final int debugLightCount = 10;
     AltLightBatch lightBatch;
     AltShadeBatch shadeBatch;
     AltFinalBatch finalPassBatch;
@@ -299,7 +299,9 @@ public class WorldMap implements RendersToScreen {
         this.shadowBuffer = new FrameBuffer(Pixmap.Format.RGBA4444,TemptoNova.PIXEL_GAME_WIDTH*SHADMAP_ROWS, TemptoNova.PIXEL_GAME_HEIGHT*SHADMAP_COLS, false);
 
         //Initialize the light map
-        this.lightBuffer = new FrameBuffer(Pixmap.Format.RGBA8888, TemptoNova.PIXEL_GAME_WIDTH, TemptoNova.PIXEL_GAME_HEIGHT, false);
+//        this.lightBuffer = new FrameBuffer(Pixmap.Format.RGBA8888, TemptoNova.PIXEL_GAME_WIDTH, TemptoNova.PIXEL_GAME_HEIGHT, false);
+        this.lightBuffer = new FrameBuffer(Pixmap.Format.RGBA8888, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), false);
+
         this.lightSources = new ArrayList<>();
         this.lightSources.add(new LightSource(new Vector3(), new Color(1,0.9f, 0.5f, 1), 250, LightSource.SPHERE_APPROX, 1));
         this.lightSources.add(new LightSource(new Vector3(), Color.CYAN, 250, LightSource.SPHERE_APPROX, 1));
@@ -389,7 +391,7 @@ public class WorldMap implements RendersToScreen {
         this.lightSources.get(1).pos().set(mouseCoords).add(-40, -40, -10);
         this.lightSources.get(2).pos().set(mouseCoords).add(40, -20, -1);
         for (int i = 3; i < debugLightCount; i++) {
-            this.lightSources.get(i).pos().set(mouseCoords).add(30-10*i, 50+10*(float)Math.sin(0.5f*i+2*elapsedTime), -20);
+            this.lightSources.get(i).pos().set(mouseCoords).add(190-10*i, 50+10*(float)Math.sin(0.5f*i+2*elapsedTime), -20);
         }
 //        LightSource mouseLight = new LightSource(mouseCoords, Color.YELLOW, 250, LightSource.SPHERE_APPROX, 0.9f);
 
@@ -400,6 +402,8 @@ public class WorldMap implements RendersToScreen {
         ScreenUtils.clear(1/bgDepth,0.5f,0.5f,0.5f, true);
         Gdx.gl.glEnable(GL20.GL_DEPTH_TEST);
         Gdx.gl.glDepthFunc(GL20.GL_GREATER);
+        Gdx.gl.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_MAG_FILTER, GL20.GL_NEAREST);
+        Gdx.gl.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_MIN_FILTER, GL20.GL_NEAREST);
 
         this.depthMapBatch.setProjectionMatrix(this.camera.combined);
         this.depthMapBatch.disableBlending();
@@ -417,6 +421,7 @@ public class WorldMap implements RendersToScreen {
         this.depthMapBatch.end();
         this.depthBuffer.end();
         this.depthMap = depthBuffer.getColorBufferTexture();
+        this.depthMap.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
         Gdx.gl.glDisable(GL20.GL_DEPTH_TEST);
 
         //Render lights ! :D
@@ -510,13 +515,16 @@ public class WorldMap implements RendersToScreen {
 
         this.shadowBuffer.end();
         this.shadowMap = this.shadowBuffer.getColorBufferTexture();
+        this.shadowMap.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
 
 
         this.lightBuffer.begin();
 
         this.lightBatch.setProjectionMatrix(this.camera.combined);
         Gdx.gl.glColorMask(true, true, true, true);
-        ScreenUtils.clear(0,0,0,1f);
+        Color amb = new Color(Color.NAVY).mul(0.3f);
+
+        ScreenUtils.clear(amb.r,amb.g,amb.b,1f);
         Gdx.gl.glColorMask(true, true, true, false);
 //        this.lightBatch.setBlendFunctionSeparate(GL20.GL_DST_COLOR, GL20.GL_ZERO, GL20.GL_ONE, GL20.GL_ZERO);
         Gdx.gl.glBlendEquation(GL20.GL_FUNC_ADD);
@@ -547,6 +555,8 @@ public class WorldMap implements RendersToScreen {
 
         this.lightBuffer.end();
         this.lightMap = this.lightBuffer.getColorBufferTexture();
+        this.lightMap.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+
         Gdx.gl.glColorMask(true, true, true, true);
 
 
@@ -569,6 +579,8 @@ public class WorldMap implements RendersToScreen {
         this.debugRenderer.end();
 
         Gdx.gl.glBlendEquation(GL20.GL_FUNC_ADD);
+        Gdx.gl.glDisable(GL20.GL_DEPTH_TEST);
+        this.finalPassBatch.switchLightTexture(this.lightMap);
         this.finalPassBatch.setProjectionMatrix(this.camera.combined);
         this.finalPassBatch.setBlendFunction(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
 //        this.finalPassBatch.setBlendFunction(GL20.GL_ONE, GL20.GL_ONE);
@@ -576,24 +588,31 @@ public class WorldMap implements RendersToScreen {
 //        Gdx.gl.glColorMask(true, false, false, false);
 //        this.finalPassBatch.disableBlending();
         this.finalPassBatch.begin();
+        float hw = TemptoNova.PIXEL_GAME_WIDTH / 2f, hh = TemptoNova.PIXEL_GAME_HEIGHT / 2f;
+        float x = this.camera.position.x - hw, y = this.camera.position.y;
+        this.finalPassBatch.flush();
+        this.finalPassBatch.draw(blankTexture, x, y+hh, hw*2, -hh*2);
 
         for (Entity entity : this.entities) {
             if (entity instanceof RendersToWorld renderable) {
                 renderable.renderToWorld(this.finalPassBatch, this.camera);
             }
         }
-        float hw = TemptoNova.PIXEL_GAME_WIDTH/2f, hh = TemptoNova.PIXEL_GAME_HEIGHT/2f;
-        float x = this.camera.position.x-hw, y = this.camera.position.y;
-//        for (int i = 0; i < 100; i++)
-            this.finalPassBatch.draw(this.depthMap, x, y, hw, -hh);
-        this.finalPassBatch.draw(this.shadowMap, x, y+hh, hw, -hh);
-        this.finalPassBatch.draw(this.lightMap, x+hw, y, hw, -hh);
+
+
         this.finalPassBatch.end();
 
-        this.miscWorldBatch.setProjectionMatrix(this.camera.combined);
-        this.miscWorldBatch.begin();
-        this.editor.renderToWorld(this.miscWorldBatch, camera);
-        this.miscWorldBatch.end();
+        boolean debugRender = false;
+        if (debugRender) {
+            this.miscWorldBatch.setProjectionMatrix(this.camera.combined);
+            this.miscWorldBatch.begin();
+            this.editor.renderToWorld(this.miscWorldBatch, camera);
+
+            this.miscWorldBatch.draw(this.depthMap, x, y, hw, -hh);
+            this.miscWorldBatch.draw(this.shadowMap, x, y + hh, hw, -hh);
+            this.miscWorldBatch.draw(this.lightMap, x + hw, y, hw, -hh);
+            this.miscWorldBatch.end();
+        }
 //        Gdx.gl.glColorMask(true, true, true,  true);
     }
 
