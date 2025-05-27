@@ -39,9 +39,10 @@ void main()
     float specular = pow(max(0,-R.z), alpha);
 
     float diffuse = dot(TS_nor, N);
-    float perfect_rough_diffuse = 0.5;
+    float perfect_rough_diffuse = 0.5*max(0, sign(diffuse));
 
     float base_intensity = (250*5)/(r*r);
+//    float base_intensity = (50)w211w/(r);
 //    base_intensity = 1-exp(-2*base_intensity);
     vec3 base_color = v_color.rgb*v_color.a;
 

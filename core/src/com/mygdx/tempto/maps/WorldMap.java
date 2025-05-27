@@ -61,6 +61,8 @@ import com.mygdx.tempto.rendering.RendersToWorld;
 import com.mygdx.tempto.util.MiscFunctions;
 import com.mygdx.tempto.view.GameScreen;
 
+import org.eclipse.collections.api.map.primitive.ShortIntMap;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -235,22 +237,37 @@ public class WorldMap implements RendersToScreen {
                 if (!layer.isVisible()) continue;
                 //Tile layers, only for rendering I think
                 String name = layer.getName();
-                TileLayer temptoLayer;
-                if (name.endsWith("px")) { //Confirms that it's a rendering layer, named [#]px from the screen
-                    float depth = Float.parseFloat(name.substring(0,name.length()-2));
-                    temptoLayer = (new TileLayer(this, tileLayer, this.mapLoader.layerElements.get(layer), depth));
-                } else if (name.endsWith("px_rot")) { //Same but it's one testing rotated elements
-                    float depth = Float.parseFloat(name.substring(0,name.length()-6));
-                    temptoLayer = (new TileLayer(this, tileLayer, this.mapLoader.layerElements.get(layer), depth, true));
-                } else if (name.endsWith("px_wav")) {
-                    float depth = Float.parseFloat(name.substring(0,name.length()-6));
-                    temptoLayer = (new TileLayer(this, tileLayer, this.mapLoader.layerElements.get(layer), depth));
-                    temptoLayer.setWaver(true);
-                } else {
-                    if (name.equals("flats")) {
+                float depth = 0;
+                Vector2 rotation = new Vector2();
+                int rotationOrder = TileLayer.SIMULTANEOUS;
+                String[] components = name.split("_");
+                boolean isntALayer = false;
+                boolean rotated = false;
+                for (String component : components) {
+                    if (component.endsWith("px")) {
+                        depth = Float.parseFloat(component.substring(0,component.length()-2));
+                    } else if (component.startsWith("xrot")) {
+                        rotation.x = Float.parseFloat(component.substring(4));
+                        rotated = true;
+                    } else if (component.startsWith("yrot")) {
+                        rotation.y = Float.parseFloat(component.substring(4));
+                        rotated = true;
+                    } else if (name.equals("flats")) {
                         TileLayer.setFlatTiles(tileLayer);
+                        isntALayer = true;
+                        break;
                     }
+                }
+                if (isntALayer) {
                     continue;
+                }
+
+
+                TileLayer temptoLayer = new TileLayer(this, tileLayer, this.mapLoader.layerElements.get(layer), depth, rotated);
+                System.out.println("Layer at " + depth + " rotated? " + rotated + ", by " + rotation);
+                if (rotated) {
+                    temptoLayer.rotationOrder = rotationOrder;
+                    temptoLayer.setRotations(rotation);
                 }
                 entities.add(temptoLayer);
             }
@@ -385,7 +402,7 @@ public class WorldMap implements RendersToScreen {
 
         //Define light at the mouse coordinates for simplicity
         Vector3 mouseCoords = camera.unproject(new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0));
-        mouseCoords.z=-9 + 10*(float) Math.sin(3* elapsedTime);
+//        mouseCoords.z=-9 + 10*(float) Math.sin(3* elapsedTime);
 //        System.out.println("Mouse depth: " +mouseCoords.z);
         this.lightSources.get(0).pos().set(mouseCoords);
         this.lightSources.get(1).pos().set(mouseCoords).add(-40, -40, -10);
@@ -522,7 +539,7 @@ public class WorldMap implements RendersToScreen {
 
         this.lightBatch.setProjectionMatrix(this.camera.combined);
         Gdx.gl.glColorMask(true, true, true, true);
-        Color amb = new Color(Color.NAVY).mul(0.3f);
+        Color amb = new Color(Color.NAVY).mul(0.1f);
 
         ScreenUtils.clear(amb.r,amb.g,amb.b,1f);
         Gdx.gl.glColorMask(true, true, true, false);
@@ -581,7 +598,9 @@ public class WorldMap implements RendersToScreen {
         Gdx.gl.glBlendEquation(GL20.GL_FUNC_ADD);
         Gdx.gl.glDisable(GL20.GL_DEPTH_TEST);
         this.finalPassBatch.switchLightTexture(this.lightMap);
+        this.finalPassBatch.switchDepthTexture(this.depthMap);
         this.finalPassBatch.setProjectionMatrix(this.camera.combined);
+        this.finalPassBatch.setSensitivity(0.5f);
         this.finalPassBatch.setBlendFunction(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
 //        this.finalPassBatch.setBlendFunction(GL20.GL_ONE, GL20.GL_ONE);
 //        ScreenUtils.clear(0,0,0,1);

@@ -28,10 +28,21 @@ public class TileLayer implements Entity, RendersToWorld {
     TiledMapTileLayer mapLayer;
     XmlReader.Element originalElement;
     float baseDepth; //In pixel space, e.g. 10 pixels
-    Vector2 baseNormVec; //Only includes x and y, since z can be inferred
+    Vector3 baseU = new Vector3(1,0,0);//Base U vector, as a normal vector. Scale to final tile width.
+    Vector3 baseV = new Vector3(0,1,0); //Likewise, scale by actual tile height
+    Vector3 baseNormVec; //Only includes x and y, since z can be inferred
     WorldMap parent;
     boolean rotate; //Whether this layer's tiles are rotated, for now just flipped back along the left side, goes -z instead of +x
     boolean waver; //Debug test: If true, varies depth by a sine wave of 10 px
+
+    public static final int SIMULTANEOUS = 0, X_THEN_Y = 1, Y_THEN_X = 2;
+    /**How to order the rotations. Simultaneous is typically fine, but would stretch it diagonally instead of a consistent rotation*/
+    public int rotationOrder = SIMULTANEOUS;
+    /**Rotation around x and y axes. Currently only around left or bottom edges, but in the future would allow an axis to be set by pixel.*/
+    public Vector2 rotations = new Vector2();
+    /**CURRENTLY UNUSED: Describes the offsets (x, right from the left edge, and y up from the bottom) around which the rotations of {@link #rotations} are applied*/
+    public Vector2 rotationAxes = new Vector2();
+
     public TileLayer(WorldMap parent, TiledMapTileLayer mapLayer, XmlReader.Element originalElement, float baseDepth) {
         this(parent, mapLayer, originalElement, baseDepth, false);
     }
@@ -42,10 +53,31 @@ public class TileLayer implements Entity, RendersToWorld {
         this.baseDepth = baseDepth;
         this.ID = originalElement.getName();
         this.rotate = rotate;
-        this.baseNormVec = new Vector2();
+        this.baseNormVec = new Vector3();
         if (rotate) {
             this.baseNormVec.x = (float) Math.cos(Math.toRadians(45));
         }
+    }
+
+    public void setRotations(Vector2 rotations) {
+        this.rotations = rotations;
+        this.rotate = true;
+        Vector3 u = this.baseU.set(1,0,0);
+        Vector3 v = this.baseV.set(0,1,0);
+
+        double x_rad = Math.toRadians(this.rotations.x);
+        double y_rad = Math.toRadians(this.rotations.y);
+
+        if (this.rotationOrder == SIMULTANEOUS){
+            u.z += (float) Math.sin(x_rad);
+            u.x *= (float) Math.cos(x_rad);
+
+            v.z += (float) Math.sin(y_rad);
+            v.y *= (float) Math.cos(y_rad);
+        }
+        this.baseU = u;
+        this.baseV = v;
+        this.baseNormVec = new Vector3(u).crs(v).nor();
     }
 
     public void setWaver(boolean waver) {
@@ -144,18 +176,19 @@ public class TileLayer implements Entity, RendersToWorld {
                 float y1 = y + tile.getOffsetY() * unitScale;
                 TextureRegion tileRegion = tile.getTextureRegion();
 
-                Vector3 u = new Vector3(tileRegion.getRegionWidth(), 0, 0);
 
-                if (this.rotate) { //Test: rotate back along left side
-//                    u.z = u.x*(float) Math.cos(Math.toRadians(45));
-                    u.z = 16 *(float) Math.cos(Math.toRadians(45));
-                    u.x = u.x*(float) Math.cos(Math.toRadians(45));
-                }
+                float w = tile.getTextureRegion().getRegionWidth();
+                float h = tile.getTextureRegion().getRegionHeight();
 
+                Vector3 origin = new Vector3(x1, y1, this.getBaseDepth());
+                Vector3 u = new Vector3(this.getBaseU()).scl(w);
+                Vector3 v = new Vector3(this.getBaseV()).scl(h);
                 ShadowCaster cellCaster = new ShadowCaster(tileRegion,
-                        new Vector3(x1, y1, this.getBaseDepth()),
+
+                        origin,
                         u,
-                        new Vector3(0, tileRegion.getRegionHeight(), 0), isTileFlat(tile.getId()));
+                        v,
+                        isTileFlat(tile.getId()));
                 centralList.add(cellCaster);
                 x+=layer.getTileWidth();
             }
@@ -181,8 +214,16 @@ public class TileLayer implements Entity, RendersToWorld {
         this.baseDepth = baseDepth;
     }
 
-    public Vector2 getBaseNormVec() {
+    public Vector3 getBaseNormVec() {
         return baseNormVec;
+    }
+
+    public Vector3 getBaseU() {
+        return baseU;
+    }
+
+    public Vector3 getBaseV() {
+        return baseV;
     }
 
     public boolean isRotate() {

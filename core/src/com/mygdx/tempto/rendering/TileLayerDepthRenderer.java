@@ -1,12 +1,10 @@
 package com.mygdx.tempto.rendering;
 
-import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapTile;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.maps.tiled.renderers.BatchTiledMapRenderer;
-import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.mygdx.tempto.data.CentralTextureData;
 import com.mygdx.tempto.entity.decoration.TileLayer;
@@ -25,35 +23,33 @@ public class TileLayerDepthRenderer extends TileLayerRenderer{
      * a: reflectivity, scale TBD*/
     @Override
     float packedColorForLayer(TileLayer layer) {
-        return packedColor(layer.getBaseDepth(), layer.getBaseNormVec(), 0.01f/8f);
+        return packedDepthColor(layer.getBaseDepth(), layer.getBaseNormVec(), 0.01f/8f);
 //        return Color.toFloatBits(1/(layer.getBaseDepth()), layer.getBaseNormVec().x*0.5f+0.5f, layer.getBaseNormVec().y*0.5f+0.5f, 0.01f/8f);
     }
 
-    float packedColor(float depth, Vector2 normalVector, float reflectivity) {
-        return Color.toFloatBits(1 - depth/256f, normalVector.x*0.5f+0.5f, normalVector.y*0.5f+0.5f, reflectivity);
-    }
+
 
     @Override
-    void drawTile(TileLayer originalLayer, TiledMapTileLayer.Cell cell, float x, float y, float w, float h, float[] vertices, float color) {
-        float refl_coeff = 0.99f/8f;
-        float flatColor = packedColorForLayer(originalLayer);
-        float colorPackedA, colorPackedB, colorPackedC, colorPackedD;
-        if (originalLayer.isRotate()) {
-            Vector2 altNormVec = new Vector2(0.707f*16, -w).nor(); //TEMPORARY: This uses y to represent z since y of the normal vec for debugging is 0
-            altNormVec.y = 0;
-
-            float frontColor = packedColor(originalLayer.getBaseDepth(), altNormVec, refl_coeff);
-            colorPackedA = frontColor;
-            colorPackedB = frontColor;
-            float backColor = packedColor(originalLayer.getBaseDepth()+0.707f*16, altNormVec, refl_coeff);
-            colorPackedC = backColor;
-            colorPackedD = backColor;
-        } else {
-            colorPackedA = flatColor;
-            colorPackedB = flatColor;
-            colorPackedC = flatColor;
-            colorPackedD = flatColor;
-        }
+    void drawTile(TileLayer originalLayer, TiledMapTileLayer.Cell cell, float x, float y, float w, float h, float[] vertices, float[] depthColors) {
+//        float refl_coeff = 0.99f/8f;
+//        float flatColor = packedColorForLayer(originalLayer);
+        float colorPackedA = depthColors[0], colorPackedB = depthColors[1], colorPackedC = depthColors[2], colorPackedD = depthColors[3];
+//        if (originalLayer.isRotate()) {
+//            Vector3 altNormVec = new Vector3(0.707f*16, -w, 0).nor(); //TEMPORARY: This uses y to represent z since y of the normal vec for debugging is 0
+//            altNormVec.y = 0;
+//
+//            float frontColor = packedDepthColor(originalLayer.getBaseDepth(), altNormVec, refl_coeff);
+//            colorPackedA = frontColor;
+//            colorPackedB = frontColor;
+//            float backColor = packedDepthColor(originalLayer.getBaseDepth()+0.707f*16, altNormVec, refl_coeff);
+//            colorPackedC = backColor;
+//            colorPackedD = backColor;
+//        } else {
+//            colorPackedA = flatColor;
+//            colorPackedB = flatColor;
+//            colorPackedC = flatColor;
+//            colorPackedD = flatColor;
+//        }
 
 
         TiledMapTile tile = cell.getTile();

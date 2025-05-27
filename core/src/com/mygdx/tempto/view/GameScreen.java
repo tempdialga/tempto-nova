@@ -66,9 +66,10 @@ public class GameScreen extends TemptoScreen {
 
             // What map to load (typically, this will be what the save file said the player was last at) //
         String testMap = "testmap";
+        String demo = "hallway";
 
         // Load the world, with context of global save data //
-        this.world = new WorldMap(testMap, this);
+        this.world = new WorldMap(demo, this);
         elapsedTime = 0;
     }
     @Override

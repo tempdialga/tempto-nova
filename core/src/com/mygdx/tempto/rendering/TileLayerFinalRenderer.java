@@ -46,7 +46,7 @@ public class TileLayerFinalRenderer extends TileLayerRenderer{
     }
 
     @Override
-    void drawTile(TileLayer originalLayer, TiledMapTileLayer.Cell cell, float x, float y, float w, float h, float[] vertices, float color) {
+    void drawTile(TileLayer originalLayer, TiledMapTileLayer.Cell cell, float x, float y, float w, float h, float[] vertices, float[] depthColors) {
         TiledMapTile tile = cell.getTile();
 
         final boolean flipX = cell.getFlipHorizontally();
@@ -74,25 +74,25 @@ public class TileLayerFinalRenderer extends TileLayerRenderer{
 
         vertices[iX1] = x1;
         vertices[iY1] = y1;
-        vertices[iC1] = color;
+        vertices[iC1] = depthColors[0];
         vertices[iU1] = u1;
         vertices[iV1] = v1;
 
         vertices[iX2] = x1;
         vertices[iY2] = y2;
-        vertices[iC2] = color;
+        vertices[iC2] = depthColors[1];
         vertices[iU2] = u1;
         vertices[iV2] = v2;
 
         vertices[iX3] = x2;
         vertices[iY3] = y2;
-        vertices[iC3] = color;
+        vertices[iC3] = depthColors[2];
         vertices[iU3] = u2;
         vertices[iV3] = v2;
 
         vertices[iX4] = x2;
         vertices[iY4] = y1;
-        vertices[iC4] = color;
+        vertices[iC4] = depthColors[3];
         vertices[iU4] = u2;
         vertices[iV4] = v1;
 
@@ -162,4 +162,6 @@ public class TileLayerFinalRenderer extends TileLayerRenderer{
         }
         batch.draw(region.getTexture(), vertices, 0, NUM_VERTICES);
     }
+
+
 }
