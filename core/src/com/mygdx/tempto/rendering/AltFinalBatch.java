@@ -31,7 +31,7 @@ public class AltFinalBatch extends AltBatch{
     protected Texture lastLightTexture;
     protected Texture lastDepthTexture;
 
-    protected float sensitivity = 0.25f;
+    protected float sensitivity = 0.5f;
 
     public AltFinalBatch(int size, ShaderProgram defaultShader) {
         super(size, defaultShader, new Mesh((Gdx.gl30 != null) ? Mesh.VertexDataType.VertexBufferObjectWithVAO : defaultVertexDataType, false, size * 4, size * 6,

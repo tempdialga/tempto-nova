@@ -20,7 +20,7 @@ import java.nio.Buffer;
 
 public class AltLightBatch extends AltBatch{
 
-    public static final float BASE_LIGHT_ENCODING_FACTOR = 0.0625f;//All intensities multiplied by this going into the light map, and then divided coming out, to allow light to exceed 1 effectively and wash out
+    public static final float BASE_LIGHT_ENCODING_FACTOR = 0.125f;//All intensities multiplied by this going into the light map, and then divided coming out, to allow light to exceed 1 effectively and wash out
 
 
 

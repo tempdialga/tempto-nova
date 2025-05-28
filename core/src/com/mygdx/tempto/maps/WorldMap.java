@@ -400,6 +400,11 @@ public class WorldMap implements RendersToScreen {
 
         this.worldViewport.apply();
 
+        //Lock camera to pixels
+        Vector3 freeCamCoords = new Vector3(camera.position);
+//        camera.position.x = ((int) ((camera.position.x+0.5)*2))*0.5f;
+//        camera.position.y = ((int) ((camera.position.y+0.5)*2))*0.5f;
+
         //Define light at the mouse coordinates for simplicity
         Vector3 mouseCoords = camera.unproject(new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0));
 //        mouseCoords.z=-9 + 10*(float) Math.sin(3* elapsedTime);
@@ -572,7 +577,7 @@ public class WorldMap implements RendersToScreen {
 
         this.lightBuffer.end();
         this.lightMap = this.lightBuffer.getColorBufferTexture();
-        this.lightMap.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        this.lightMap.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Nearest);
 
         Gdx.gl.glColorMask(true, true, true, true);
 
@@ -633,6 +638,8 @@ public class WorldMap implements RendersToScreen {
             this.miscWorldBatch.end();
         }
 //        Gdx.gl.glColorMask(true, true, true,  true);
+        //Release camera back to free coordinates
+        camera.position.set(freeCamCoords);
     }
 
     /**Renders anything of the world that should be rendered using the screen camera*/

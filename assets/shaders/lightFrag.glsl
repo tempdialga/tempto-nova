@@ -21,7 +21,7 @@ uniform float u_lightEncodeFactor; //All intensities multiplied by this, to allo
 void main()
 {
     vec4 dMap = texture2D(u_dMapTex, v_depCoords);
-    float depth = 1/dMap.r;
+    float depth = (1-dMap.r)*256.0-1;
     float n_x = dMap.g*2-1;
     float n_y = dMap.b*2-1;
     float n_z = -sqrt(1 - n_x*n_x - n_y*n_y); //Always assume normal vector faces towards the camera
@@ -45,8 +45,10 @@ void main()
 //    float base_intensity = (50)w211w/(r);
 //    base_intensity = 1-exp(-2*base_intensity);
     vec3 base_color = v_color.rgb*v_color.a;
+    k = 0;
 
-    vec3 final_color = /*(1-exp(-2**/base_intensity*base_color/*))*/*((1-k)*perfect_rough_diffuse + k*specular);
+
+    vec3 final_color = /*(1-exp(-2**/base_intensity*base_color/*))*/*((1-k)*diffuse + k*specular);
 
     vec2 shadMapCoords = v_depCoords;
     shadMapCoords.xy += /*vec2(1)+*/v_posChannel;

@@ -26,6 +26,7 @@ public abstract class TileLayerRenderer extends OrthogonalTiledMapRenderer {
     }
 
     public void renderTileLayer(TileLayer layer) {
+        System.out.println("Layer normal vector: " + layer.getBaseNormVec());
         this.currentLayer = layer;
         final float color = this.packedColorForLayer(layer);
         final float[] vertices = this.vertices;

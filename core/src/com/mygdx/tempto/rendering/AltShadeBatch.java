@@ -231,6 +231,16 @@ public class AltShadeBatch extends AltBatch {
                 cU.y,cV.y,0,
                 0,0,1
         });
+
+        if (false) {
+            this.pushConvexShadowPolygon(new float[]{
+                    S.x - r, S.y - r,
+                    S.x - r, S.y + r,
+                    S.x + r, S.y + r,
+                    S.x + r, S.y - r,
+            }, vertices, caster.shadowTexture().getTexture(), depthMap, viewBounds);
+            return;
+        }
         if (toRegCoords.det() != 0) { //If the shadow surface is fully orthogonal to the screen, there isn't a way for the light to be "inside" it
             Vector3 regCoords = new Vector3(S).sub(cPos).mul(toRegCoords.inv());
 
@@ -252,45 +262,84 @@ public class AltShadeBatch extends AltBatch {
         Vector2 c = new Vector2(b).add(cU.x, cU.y);
         Vector2 d = new Vector2(c).sub(cV.x, cV.y);
 
+
+        //Don't try to render too far away
+        Vector2 zero = new Vector2();
+        float r2 = source.spread()*source.spread();
+        if (!(
+                Intersector.intersectSegmentCircle(a, b, zero, r2) ||
+                        Intersector.intersectSegmentCircle(b, c, zero, r2) ||
+                        Intersector.intersectSegmentCircle(c, d, zero, r2) ||
+                        Intersector.intersectSegmentCircle(d, a, zero, r2)
+        )) return;
+
         //Expand out
         float expand = 5.5f;
-        Vector2 u_exp = new Vector2(cU.x, cU.y).nor().scl(expand);
-        Vector2 v_exp = new Vector2(cV.x, cV.y).nor().scl(expand);
+//        expand = 0;
+        Vector2 u_exp = new Vector2(cU.x, cU.y);
+        boolean u_flat = u_exp.isZero(0.1f);
+        Vector2 v_exp = new Vector2(cV.x, cV.y);
+        boolean v_flat = v_exp.isZero(0.1f);
+
+        //If for some reason it's just an infinitesimal point, ignore it?
+        if (u_flat && v_flat) return;
+
+        if (!u_flat) u_exp.nor().scl(expand);
+        if (!v_flat) v_exp.nor().scl(expand);
+
         Vector2 a_exp = new Vector2(a).sub(u_exp).sub(v_exp);
         Vector2 b_exp = new Vector2(b).sub(u_exp).add(v_exp);
         Vector2 c_exp = new Vector2(c).add(u_exp).add(v_exp);
         Vector2 d_exp = new Vector2(d).add(u_exp).sub(v_exp);
 
-        Vector2 zero = new Vector2();
-        float r2 = source.spread()*source.spread();
-        if (!(
-            Intersector.intersectSegmentCircle(a, b, zero, r2) ||
-            Intersector.intersectSegmentCircle(b, c, zero, r2) ||
-            Intersector.intersectSegmentCircle(c, d, zero, r2) ||
-            Intersector.intersectSegmentCircle(d, a, zero, r2)
-        )) return; //Don't try to render too far away
+
 
         Vector2 farthestLeft = a;
         Vector2 farthestRight = a;
         Vector2 afterFR = b; //Vector after farthest right
 
+        if (u_flat) { // b==c and a==d
+            if (cross2D(farthestLeft, b) > 0) {
+                farthestLeft = b;
+            }
+            if (cross2D(farthestRight, b) < 0) {
+                farthestRight = b;
+                afterFR = a;
+            }
+        } else if (v_flat) { //a==b and c==d
+            if (cross2D(farthestLeft, c) > 0) {
+                farthestLeft = c;
+            }
+            if (cross2D(farthestRight, c) < 0) {
+                farthestRight = c;
+                afterFR = a;
+            }
+        } else {
+            if (cross2D(farthestLeft, b) > 0) {
+                farthestLeft = b;
+            }
+            if (cross2D(farthestLeft, c) > 0) {
+                farthestLeft = c;
+            }
+            if (cross2D(farthestLeft, d) > 0) {
+                farthestLeft = d;
+            }
 
-        if (cross2D(farthestLeft, b) > 0) farthestLeft = b;
-        if (cross2D(farthestLeft, c) > 0) farthestLeft = c;
-        if (cross2D(farthestLeft, d) > 0) farthestLeft = d;
+            if (cross2D(farthestRight, b) < 0) {
+                farthestRight = b;
+                afterFR = c;
+            }
+            if (cross2D(farthestRight, c) < 0) {
+                farthestRight = c;
+                afterFR = d;
+            }
+            if (cross2D(farthestRight, d) < 0) {
+                farthestRight = d;
+                afterFR = a;
+            }
+        }
 
-        if (cross2D(farthestRight, b) < 0) {
-            farthestRight = b;
-            afterFR = c;
-        }
-        if (cross2D(farthestRight, c) < 0) {
-            farthestRight = c;
-            afterFR = d;
-        }
-        if (cross2D(farthestRight, d) < 0) {
-            farthestRight = d;
-            afterFR = a;
-        }
+
 
 
 
@@ -300,12 +349,19 @@ public class AltShadeBatch extends AltBatch {
         Vector2 maxFR_Adj = new Vector2(maxFR).rotate90(+1).add(maxFR);
         Vector2 maxFLR = new Vector2();
         boolean rightLeftAcute = Intersector.intersectLines(maxFL, maxFL_Adj, maxFR, maxFR_Adj, maxFLR);
+
         Polygon shadowRange;
 
         a.set(a_exp);
         b.set(b_exp);
         c.set(c_exp);
         d.set(d_exp);
+
+//        maxFL = new Vector2(farthestLeftExp).nor().scl(source.spread());
+//        maxFR = new Vector2(farthestRightExp).nor().scl(source.spread());
+//        farthestRight.set(farthestRightExp);
+//        farthestLeft.set(farthestLeftExp);
+//        afterFR.set(afterFRExp);
 
         if (afterFR != farthestLeft) {
             if (!rightLeftAcute) {//Angle > 90⁰, use two tangents to describe max shadow range instead of parallelogram
@@ -479,6 +535,7 @@ public class AltShadeBatch extends AltBatch {
         if (spritesInBatch > maxSpritesInBatch) maxSpritesInBatch = spritesInBatch;
         int count = spritesInBatch * this.indicesPerSprite;
 
+        lastShadowTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
         lastShadowTexture.bind(1);
         lastTexture.bind(0);
 
@@ -506,5 +563,7 @@ public class AltShadeBatch extends AltBatch {
         mesh.render(shaderToUse, GL20.GL_TRIANGLES, 0, count);
 
         idx = 0;
+        lastShadowTexture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+
     }
 }

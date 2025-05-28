@@ -77,7 +77,7 @@ public class TileLayer implements Entity, RendersToWorld {
         }
         this.baseU = u;
         this.baseV = v;
-        this.baseNormVec = new Vector3(u).crs(v).nor();
+        this.baseNormVec = new Vector3(v).crs(u).nor();
     }
 
     public void setWaver(boolean waver) {
