@@ -26,6 +26,7 @@ import com.badlogic.gdx.maps.objects.PolygonMapObject;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
+import com.badlogic.gdx.maps.tiled.tiles.AnimatedTiledMapTile;
 import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
@@ -396,6 +397,10 @@ public class WorldMap implements RendersToScreen {
     /**Renders contents of the map to the screen*/
     public void render(){
         ScreenUtils.clear(0.2f,0,0.2f,1);
+
+        //Update tile animations
+        AnimatedTiledMapTile.updateAnimationBaseTime();
+
         // Apply the viewport to the camera
 
         this.worldViewport.apply();
