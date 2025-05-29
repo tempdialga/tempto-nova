@@ -352,4 +352,47 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 		</data>
 	</layer>
+	<objectgroup id="15" name="Terrain">
+		<object id="0" x="300.667" y="122.0">
+			<properties>
+				<property name="height" value="0.0"/>
+				<property name="id" value="test_eeh"/>
+				<property name="width" value="0.0"/>
+			</properties>
+			<polygon points="0.0,0.0 48.0,-44.6667 88.0,-17.3333 61.3333,30.0"/>
+			<polygon points="0.0,0.0 48.0,-44.6667 88.0,-17.3333 61.3333,30.0"/>
+		</object>
+		<object id="1" x="426.0" y="129.333">
+			<properties>
+				<property name="height" value="0.0"/>
+				<property name="id" value="hapy"/>
+				<property name="width" value="0.0"/>
+			</properties>
+			<polygon points="0.0,0.0 60.6667,-17.3333 66.0,30.0 10.6667,33.3333"/>
+			<polygon points="0.0,0.0 60.6667,-17.3333 66.0,30.0 10.6667,33.3333"/>
+		</object>
+	</objectgroup>
+	<objectgroup id="16" name="Lights">
+		<object id="0" x="329.333" y="257.333">
+			<properties>
+				<property name="height" value="0.0"/>
+				<property name="id" value="3"/>
+				<property name="width" value="0.0"/>
+			</properties>
+		</object>
+		<object id="1" x="604.0" y="304.0">
+			<properties>
+				<property name="height" value="22.0"/>
+				<property name="id" value="3"/>
+				<property name="width" value="16.6667"/>
+			</properties>
+		</object>
+		<object id="2" x="288.0" y="283.333">
+			<properties>
+				<property name="height" value="44.0"/>
+				<property name="id" value="3"/>
+				<property name="width" value="36.6667"/>
+			</properties>
+		</object>
+	</objectgroup>
 </map>

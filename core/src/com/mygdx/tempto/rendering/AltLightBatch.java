@@ -146,10 +146,12 @@ public class AltLightBatch extends AltBatch{
 
         Vector3 p = source.pos();
         Vector3 p_screen = camera.project(new Vector3(p));
-        p_screen.x /= (float) TemptoNova.PIXEL_GAME_WIDTH;
-        p_screen.y /= (float) TemptoNova.PIXEL_GAME_HEIGHT;
+//        p_screen.x /= (float) TemptoNova.PIXEL_GAME_WIDTH;
+//        p_screen.y /= (float) TemptoNova.PIXEL_GAME_HEIGHT;
+        p_screen.x /= (float) Gdx.graphics.getWidth();
+        p_screen.y /= (float) Gdx.graphics.getHeight();
         p_screen.z = p.z;
-        p_screen.scl(0.5f,0.5f,1);
+//        p_screen.scl(0.5f,0.5f,1);
 
         float s = source.spread();
         float[] verts = new float[LIGHT_SPRITE_SIZE];

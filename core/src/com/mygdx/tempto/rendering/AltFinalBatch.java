@@ -190,9 +190,9 @@ public class AltFinalBatch extends AltBatch{
         ShaderProgram shaderToSet = customShader != null? customShader : shader;
 
         shaderToSet.setUniformMatrix("u_projTrans", combinedMatrix);
-//        shaderToSet.setUniformf("u_invScreenDims", 0.5f/(float) this.renderTargetDims.x, 0.5f/(float) this.renderTargetDims.y);
+        shaderToSet.setUniformf("u_invScreenDims", 1f/(float) this.renderTargetDims.x, 1f/(float) this.renderTargetDims.y);
 //        shaderToSet.setUniformf("u_invScreenDims", 1f/(float) Gdx.graphics.getWidth(), 0.5f/(float) Gdx.graphics.getHeight());
-        shaderToSet.setUniformf("u_invScreenDims", 1f/(float) TemptoNova.PIXEL_GAME_WIDTH, 1f/(float) TemptoNova.PIXEL_GAME_HEIGHT);
+//        shaderToSet.setUniformf("u_invScreenDims", 1f/(float) TemptoNova.PIXEL_GAME_WIDTH, 1f/(float) TemptoNova.PIXEL_GAME_HEIGHT);
         shaderToSet.setUniformf("u_lightDecodeFactor", 1f/AltLightBatch.BASE_LIGHT_ENCODING_FACTOR);
         shaderToSet.setUniformf(SENSITIVITY_UNIFORM, this.sensitivity);
         shaderToSet.setUniformi("u_texture", 0);

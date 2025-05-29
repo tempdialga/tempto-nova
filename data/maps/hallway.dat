@@ -1,1 +1,8 @@
-{}
+{
+test_eeh: {
+	color: 000000ff
+}
+hapy: {
+	color: 000000ff
+}
+}
