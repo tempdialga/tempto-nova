@@ -171,9 +171,8 @@ public class TileLayer implements Entity, RendersToWorld {
                     continue;
                 }
                 TiledMapTile tile = cell.getTile();
-
                 float x1 = x + tile.getOffsetX() * unitScale + layer.getOffsetX();
-                float y1 = y + tile.getOffsetY() * unitScale + layer.getOffsetY();
+                float y1 = y + tile.getOffsetY() * unitScale - layer.getOffsetY();
                 TextureRegion tileRegion = tile.getTextureRegion();
 
 

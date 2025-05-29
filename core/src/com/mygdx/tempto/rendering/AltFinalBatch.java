@@ -10,6 +10,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.math.Affine2;
+import com.badlogic.gdx.math.Vector2;
 import com.mygdx.tempto.TemptoNova;
 
 import org.w3c.dom.Text;
@@ -31,7 +32,9 @@ public class AltFinalBatch extends AltBatch{
     protected Texture lastLightTexture;
     protected Texture lastDepthTexture;
 
-    protected float sensitivity = 0.5f;
+    protected Vector2 renderTargetDims = new Vector2(TemptoNova.PIXEL_GAME_WIDTH, TemptoNova.PIXEL_GAME_HEIGHT);
+
+    protected float sensitivity = 2f;
 
     public AltFinalBatch(int size, ShaderProgram defaultShader) {
         super(size, defaultShader, new Mesh((Gdx.gl30 != null) ? Mesh.VertexDataType.VertexBufferObjectWithVAO : defaultVertexDataType, false, size * 4, size * 6,
@@ -47,6 +50,21 @@ public class AltFinalBatch extends AltBatch{
         this(size, null);
     }
 
+    public void setRenderToWorldDims() {
+        this.renderTargetDims.set(TemptoNova.PIXEL_GAME_WIDTH, TemptoNova.PIXEL_GAME_HEIGHT);
+    }
+
+    public void setRenderToScreenDims() {
+        this.renderTargetDims.set(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+    }
+
+    public void setRenderTargetDims(Vector2 renderTargetDims) {
+        this.renderTargetDims.set( renderTargetDims);
+    }
+
+    public void setRenderTargetDims(float width, float height) {
+        this.renderTargetDims.set(width, height);
+    }
 
     @Override
     protected ShaderProgram createDefaultShader() {
@@ -172,6 +190,8 @@ public class AltFinalBatch extends AltBatch{
         ShaderProgram shaderToSet = customShader != null? customShader : shader;
 
         shaderToSet.setUniformMatrix("u_projTrans", combinedMatrix);
+//        shaderToSet.setUniformf("u_invScreenDims", 0.5f/(float) this.renderTargetDims.x, 0.5f/(float) this.renderTargetDims.y);
+//        shaderToSet.setUniformf("u_invScreenDims", 1f/(float) Gdx.graphics.getWidth(), 0.5f/(float) Gdx.graphics.getHeight());
         shaderToSet.setUniformf("u_invScreenDims", 1f/(float) TemptoNova.PIXEL_GAME_WIDTH, 1f/(float) TemptoNova.PIXEL_GAME_HEIGHT);
         shaderToSet.setUniformf("u_lightDecodeFactor", 1f/AltLightBatch.BASE_LIGHT_ENCODING_FACTOR);
         shaderToSet.setUniformf(SENSITIVITY_UNIFORM, this.sensitivity);

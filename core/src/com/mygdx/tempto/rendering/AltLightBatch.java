@@ -28,6 +28,7 @@ public class AltLightBatch extends AltBatch{
     public static final String SHADOWCHANNEL_ATTRIBUTE = "a_shadowChannel";
     public static final String LIGHTCOLOR_ATTRIBUTE = "a_lightColor";
     public static final String POSCHANNEL_ATTRIBUTE = "a_positionChannel";
+    public static final String LIGHTSPREAD_ATTRIBUTE = "a_lightSpread";
 
     protected final static String DMAPTEX_UNIFORM = "u_dMapTex";
     protected final static String SHADMAP_UNIFORM = "u_shadMapTex";
@@ -37,10 +38,10 @@ public class AltLightBatch extends AltBatch{
     public static final String LIGHT_VERT_PATH_INTERNAL = "shaders/lightVert.glsl", LIGHT_FRAG_PATH_INTERNAL = "shaders/lightFrag.glsl";
 
     private static int i=0;
-    public static final int X1 = i++, Y1 = i++, /*U1 = i++, V1 = i++,*/ A1 = i++, B1 = i++, C1 = i++, Ch1 = i++, Col1 = i++, ChC1 = i++, ChR1 = i++,/* ChW1 = i++, ChH1 = i++,*/
-                            X2 = i++, Y2 = i++, /*U2 = i++, V2 = i++,*/ A2 = i++, B2 = i++, C2 = i++, Ch2 = i++, Col2 = i++, ChC2 = i++, ChR2 = i++,/* ChW2 = i++, ChH2 = i++,*/
-                            X3 = i++, Y3 = i++, /*U3 = i++, V3 = i++,*/ A3 = i++, B3 = i++, C3 = i++, Ch3 = i++, Col3 = i++, ChC3 = i++, ChR3 = i++,/* ChW3 = i++, ChH3 = i++,*/
-                            X4 = i++, Y4 = i++, /*U4 = i++, V4 = i++,*/ A4 = i++, B4 = i++, C4 = i++, Ch4 = i++, Col4 = i++, ChC4 = i++, ChR4 = i++/*, ChW4 = i++, ChH4 = i++*/;
+    public static final int X1 = i++, Y1 = i++, /*U1 = i++, V1 = i++,*/ A1 = i++, B1 = i++, C1 = i++, Ch1 = i++, Col1 = i++, ChC1 = i++, ChR1 = i++, Spr1 = i++,/* ChW1 = i++, ChH1 = i++,*/
+                            X2 = i++, Y2 = i++, /*U2 = i++, V2 = i++,*/ A2 = i++, B2 = i++, C2 = i++, Ch2 = i++, Col2 = i++, ChC2 = i++, ChR2 = i++, Spr2 = i++,/* ChW2 = i++, ChH2 = i++,*/
+                            X3 = i++, Y3 = i++, /*U3 = i++, V3 = i++,*/ A3 = i++, B3 = i++, C3 = i++, Ch3 = i++, Col3 = i++, ChC3 = i++, ChR3 = i++, Spr3 = i++,/* ChW3 = i++, ChH3 = i++,*/
+                            X4 = i++, Y4 = i++, /*U4 = i++, V4 = i++,*/ A4 = i++, B4 = i++, C4 = i++, Ch4 = i++, Col4 = i++, ChC4 = i++, ChR4 = i++, Spr4 = i++/*, ChW4 = i++, ChH4 = i++*/;
 
     public static final int LIGHT_SPRITE_SIZE = i;
 
@@ -59,7 +60,8 @@ public class AltLightBatch extends AltBatch{
                 new VertexAttribute(VertexAttributes.Usage.Position, 3, LIGHTCOORD_ATTRIBUTE+"0"),
                 new VertexAttribute(VertexAttributes.Usage.Generic, 1, SHADOWCHANNEL_ATTRIBUTE),
                 new VertexAttribute(VertexAttributes.Usage.ColorPacked, 4, LIGHTCOLOR_ATTRIBUTE),
-                new VertexAttribute(VertexAttributes.Usage.Generic, 2, POSCHANNEL_ATTRIBUTE)), LIGHT_SPRITE_SIZE);
+                new VertexAttribute(VertexAttributes.Usage.Generic, 2, POSCHANNEL_ATTRIBUTE),
+                new VertexAttribute(VertexAttributes.Usage.Generic, 1, LIGHTSPREAD_ATTRIBUTE)), LIGHT_SPRITE_SIZE);
 
 
     }
@@ -149,10 +151,20 @@ public class AltLightBatch extends AltBatch{
         p_screen.z = p.z;
         p_screen.scl(0.5f,0.5f,1);
 
-//        float l = p.x-radius, r=p.x+radius, u=p.y+radius, d=p.y-radius;
-        float l = viewBounds.x, r=viewBounds.x+viewBounds.width, u=viewBounds.y+viewBounds.height, d=viewBounds.y;
-//        float u1 = 0, v1 = 0, u2 = 1, v2 = 1; //Uh wait actually do we need these
+        float s = source.spread();
         float[] verts = new float[LIGHT_SPRITE_SIZE];
+        verts[Spr1] = s;
+        verts[Spr2] = s;
+        verts[Spr3] = s;
+        verts[Spr4] = s;
+
+        float l = p.x-s, r=p.x+s, u=p.y+s, d=p.y-s;
+//        float l = Math.max(viewBounds.x, p.x-s),
+//                r=Math.min(viewBounds.x+viewBounds.width, p.x+s),
+//                u=Math.min(viewBounds.y+viewBounds.height, p.y+s),
+//                d=Math.max(viewBounds.y, p.x-s);
+//        float u1 = 0, v1 = 0, u2 = 1, v2 = 1; //Uh wait actually do we need these
+
         p = p_screen;
 
         verts[X1] = l;

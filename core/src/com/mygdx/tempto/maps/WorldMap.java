@@ -129,7 +129,7 @@ public class WorldMap implements RendersToScreen {
     SpriteBatch miscWorldBatch;
     AltDepthBatch depthMapBatch;
     ArrayList<LightSource> lightSources;
-    final int debugLightCount = 10;
+    final int debugLightCount = 54;
     AltLightBatch lightBatch;
     AltShadeBatch shadeBatch;
     AltFinalBatch finalPassBatch;
@@ -144,8 +144,12 @@ public class WorldMap implements RendersToScreen {
     Texture shadowMap;
     FrameBuffer lightBuffer;
     Texture lightMap;
+    FrameBuffer finalPassBuffer;
+    Texture finalPass;
     public TileLayerFinalRenderer tileFinalRenderer;
     public TileLayerDepthRenderer tileDepthRenderer;
+
+    boolean debugRender;//
 
     //Debugging utilities:
 
@@ -317,16 +321,20 @@ public class WorldMap implements RendersToScreen {
         this.shadowBuffer = new FrameBuffer(Pixmap.Format.RGBA4444,TemptoNova.PIXEL_GAME_WIDTH*SHADMAP_ROWS, TemptoNova.PIXEL_GAME_HEIGHT*SHADMAP_COLS, false);
 
         //Initialize the light map
-//        this.lightBuffer = new FrameBuffer(Pixmap.Format.RGBA8888, TemptoNova.PIXEL_GAME_WIDTH, TemptoNova.PIXEL_GAME_HEIGHT, false);
-        this.lightBuffer = new FrameBuffer(Pixmap.Format.RGBA8888, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), false);
+        this.lightBuffer = new FrameBuffer(Pixmap.Format.RGBA8888, TemptoNova.PIXEL_GAME_WIDTH, TemptoNova.PIXEL_GAME_HEIGHT, false);
+//        this.lightBuffer = new FrameBuffer(Pixmap.Format.RGBA8888, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), false);
 
         this.lightSources = new ArrayList<>();
         this.lightSources.add(new LightSource(new Vector3(), new Color(1,0.9f, 0.5f, 1), 250, LightSource.SPHERE_APPROX, 1));
-        this.lightSources.add(new LightSource(new Vector3(), Color.CYAN, 250, LightSource.SPHERE_APPROX, 1));
-        this.lightSources.add(new LightSource(new Vector3(), Color.CHARTREUSE, 250, LightSource.SPHERE_APPROX, 1));
+        this.lightSources.add(new LightSource(new Vector3(), Color.CYAN, 125, LightSource.SPHERE_APPROX, 1));
+        this.lightSources.add(new LightSource(new Vector3(), Color.CHARTREUSE, 125, LightSource.SPHERE_APPROX, 1));
         for (int i = 3; i < this.debugLightCount; i++) {
-            this.lightSources.add(new LightSource(new Vector3(), new Color(Color.CORAL).mul(0.5f), 550, LightSource.SPHERE_APPROX, 0));
+            this.lightSources.add(new LightSource(new Vector3(), new Color(Color.CORAL).mul(1), 100, LightSource.SPHERE_APPROX, 0));
         }
+
+        //Buffer for capturing the final pass
+        this.finalPassBuffer = new FrameBuffer(Pixmap.Format.RGBA8888, TemptoNova.PIXEL_GAME_WIDTH, TemptoNova.PIXEL_GAME_HEIGHT, false);
+//        this.finalPassBuffer = new FrameBuffer(Pixmap.Format.RGBA8888, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), false);
 
         //Initialize tilemap renderer
         this.tileFinalRenderer = new TileLayerFinalRenderer(this.tiledMap, this.finalPassBatch);
@@ -363,6 +371,10 @@ public class WorldMap implements RendersToScreen {
             entity.update(deltaTime, this);
         }
 
+        // If certain button pressed, toggle debug mode
+        if (Gdx.input.isKeyJustPressed(Input.Keys.D) && Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT)) this.debugRender = !this.debugRender;
+
+        // Update Camera
         Vector2 cameraMovement = new Vector2(15,15).scl(deltaTime).scl(InputTranslator.GameInputs.inputDirection);
         this.camera.position.add(cameraMovement.x, cameraMovement.y, 0); //Quick debug to move camera with user input
     }
@@ -407,8 +419,8 @@ public class WorldMap implements RendersToScreen {
 
         //Lock camera to pixels
         Vector3 freeCamCoords = new Vector3(camera.position);
-//        camera.position.x = ((int) ((camera.position.x+0.5)*2))*0.5f;
-//        camera.position.y = ((int) ((camera.position.y+0.5)*2))*0.5f;
+        camera.position.x = ((int) ((camera.position.x)*2))*0.5f;
+        camera.position.y = ((int) ((camera.position.y)*2))*0.5f;
 
         //Define light at the mouse coordinates for simplicity
         Vector3 mouseCoords = camera.unproject(new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0));
@@ -549,7 +561,7 @@ public class WorldMap implements RendersToScreen {
 
         this.lightBatch.setProjectionMatrix(this.camera.combined);
         Gdx.gl.glColorMask(true, true, true, true);
-        Color amb = new Color(Color.NAVY).mul(0.1f);
+        Color amb = new Color(Color.NAVY).mul(1f*AltLightBatch.BASE_LIGHT_ENCODING_FACTOR);
 
         ScreenUtils.clear(amb.r,amb.g,amb.b,1f);
         Gdx.gl.glColorMask(true, true, true, false);
@@ -589,24 +601,27 @@ public class WorldMap implements RendersToScreen {
 
 
 
-        this.debugRenderer.setProjectionMatrix(this.camera.combined);
-        this.debugRenderer.setColor(Color.BLACK);
-        this.debugRenderer.begin(ShapeRenderer.ShapeType.Line);
-        for (Entity entity : this.entities){
-            if (entity instanceof StaticTerrainElement) {
-                Polygon polygon = ((StaticTerrainElement) entity).polygon;
-                Color color = ((StaticTerrainElement) entity).color;
-                this.debugRenderer.setColor(color);
-                int numPoints = polygon.getVertexCount();
-                if (numPoints >= 3)  this.debugRenderer.polygon(polygon.getTransformedVertices());
-            }
-        }
-        this.debugRenderer.setColor(Color.BLACK);
-        this.debugRenderer.circle(this.camera.position.x, this.camera.position.y, 1);
-        this.debugRenderer.end();
+//        this.debugRenderer.setProjectionMatrix(this.camera.combined);
+//        this.debugRenderer.setColor(Color.BLACK);
+//        this.debugRenderer.begin(ShapeRenderer.ShapeType.Line);
+//        for (Entity entity : this.entities){
+//            if (entity instanceof StaticTerrainElement) {
+//                Polygon polygon = ((StaticTerrainElement) entity).polygon;
+//                Color color = ((StaticTerrainElement) entity).color;
+//                this.debugRenderer.setColor(color);
+//                int numPoints = polygon.getVertexCount();
+//                if (numPoints >= 3)  this.debugRenderer.polygon(polygon.getTransformedVertices());
+//            }
+//        }
+//        this.debugRenderer.setColor(Color.BLACK);
+//        this.debugRenderer.circle(this.camera.position.x, this.camera.position.y, 1);
+//        this.debugRenderer.end();
 
+        this.finalPassBuffer.begin();
         Gdx.gl.glBlendEquation(GL20.GL_FUNC_ADD);
         Gdx.gl.glDisable(GL20.GL_DEPTH_TEST);
+//        this.finalPassBatch.setRenderTargetDims(this.finalPassBuffer.getWidth(), this.finalPassBuffer.getHeight());
+//        this.finalPassBatch.setRenderToScreenDims();
         this.finalPassBatch.switchLightTexture(this.lightMap);
         this.finalPassBatch.switchDepthTexture(this.depthMap);
         this.finalPassBatch.setProjectionMatrix(this.camera.combined);
@@ -616,6 +631,7 @@ public class WorldMap implements RendersToScreen {
 //        ScreenUtils.clear(0,0,0,1);
 //        Gdx.gl.glColorMask(true, false, false, false);
 //        this.finalPassBatch.disableBlending();
+
         this.finalPassBatch.begin();
         float hw = TemptoNova.PIXEL_GAME_WIDTH / 2f, hh = TemptoNova.PIXEL_GAME_HEIGHT / 2f;
         float x = this.camera.position.x - hw, y = this.camera.position.y;
@@ -631,8 +647,12 @@ public class WorldMap implements RendersToScreen {
 
         this.finalPassBatch.end();
 
-        boolean debugRender = false;
-        if (debugRender) {
+        this.finalPassBuffer.end();
+
+        this.finalPass = this.finalPassBuffer.getColorBufferTexture();
+
+
+        if (this.debugRender) {
             this.miscWorldBatch.setProjectionMatrix(this.camera.combined);
             this.miscWorldBatch.begin();
             this.editor.renderToWorld(this.miscWorldBatch, camera);
@@ -640,6 +660,13 @@ public class WorldMap implements RendersToScreen {
             this.miscWorldBatch.draw(this.depthMap, x, y, hw, -hh);
             this.miscWorldBatch.draw(this.shadowMap, x, y + hh, hw, -hh);
             this.miscWorldBatch.draw(this.lightMap, x + hw, y, hw, -hh);
+            this.miscWorldBatch.draw(this.finalPass, x + hw, y + hh, hw, -hh);
+//            this.miscWorldBatch.draw(this.lightMap, x, y+hh, hw*2, -hh*2);
+            this.miscWorldBatch.end();
+        } else {
+            this.miscWorldBatch.setProjectionMatrix(this.camera.combined);
+            this.miscWorldBatch.begin();
+            this.miscWorldBatch.draw(this.finalPass, x, y+hh, hw*2, -hh*2);
             this.miscWorldBatch.end();
         }
 //        Gdx.gl.glColorMask(true, true, true,  true);
@@ -705,6 +732,8 @@ public class WorldMap implements RendersToScreen {
         this.depthMap.dispose();
         this.shadowBuffer.dispose();
         this.shadowMap.dispose();
+        this.finalPassBuffer.dispose();
+        if (this.finalPass != null) this.finalPass.dispose();
 
 
         this.debugRenderer.dispose();

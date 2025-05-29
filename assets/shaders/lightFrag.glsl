@@ -11,6 +11,7 @@ varying vec3 v_lightCoords; //Location of light source S, in depth map coordinat
 flat varying float v_colChannel; //Which color channel of the shadowmap this light uses (red, greeen, blue, or alpha)
 flat varying vec2 v_posChannel; //Which position on the shadowmap this uses (column, row, column width, column height)
 varying LOWP vec4 v_color; //Color of the light source
+flat varying float v_spread; //How far in pixels the light can spread from the source
 
 uniform sampler2D u_dMapTex; //The depth map
 uniform sampler2D u_shadMapTex; //The map of existing shadows, not to be confused with the texture used to draw shadows in the first place
@@ -32,6 +33,7 @@ void main()
     vec3 N = vec3(n_x, n_y, n_z);
     vec3 TS = vec3((v_lightCoords.xy-v_depCoords)*u_viewDims, v_lightCoords.z-depth); //From the target to the light source
     float r = length(TS);
+    if (r > v_spread) discard;
     vec3 TS_nor = TS/r;
     vec3 R = 2*dot(TS_nor, N)*N - TS_nor; //Reflection direction
 
@@ -41,14 +43,21 @@ void main()
     float diffuse = dot(TS_nor, N);
     float perfect_rough_diffuse = 0.5*max(0, sign(diffuse));
 
-    float base_intensity = (250*5)/(r*r);
+
+
+    float min_intensity = 0.2;//Intensity at the edge of the light bounds
+    float falloff_power = 1.25;
+    float max_intensity = min_intensity *(pow(v_spread, falloff_power)); //Intensity at the center such that at the given spread, the intensity reaches min_intensity
+
+    float intensity = max_intensity/(pow(r, falloff_power));
+
 //    float base_intensity = (50)w211w/(r);
 //    base_intensity = 1-exp(-2*base_intensity);
     vec3 base_color = v_color.rgb*v_color.a;
-    k = 0;
+//    k = 0;
 
 
-    vec3 final_color = /*(1-exp(-2**/base_intensity*base_color/*))*/*((1-k)*diffuse + k*specular);
+    vec3 final_color = /*(1-exp(-2**/intensity*base_color/*))*/*((1-k)*diffuse + k*specular);
 
     vec2 shadMapCoords = v_depCoords;
     shadMapCoords.xy += /*vec2(1)+*/v_posChannel;

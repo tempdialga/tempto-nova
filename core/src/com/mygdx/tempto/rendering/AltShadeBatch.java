@@ -357,8 +357,8 @@ public class AltShadeBatch extends AltBatch {
         c.set(c_exp);
         d.set(d_exp);
 
-//        maxFL = new Vector2(farthestLeftExp).nor().scl(source.spread());
-//        maxFR = new Vector2(farthestRightExp).nor().scl(source.spread());
+        maxFL = new Vector2(farthestLeft).nor().scl(source.spread());
+        maxFR = new Vector2(farthestRight).nor().scl(source.spread());
 //        farthestRight.set(farthestRightExp);
 //        farthestLeft.set(farthestLeftExp);
 //        afterFR.set(afterFRExp);

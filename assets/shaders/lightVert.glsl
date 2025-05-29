@@ -4,11 +4,13 @@ attribute vec3 a_lightCoord0;
 attribute float a_shadowChannel;
 attribute vec4 a_lightColor;
 attribute vec2 a_positionChannel;
+attribute float a_lightSpread;
 uniform mat4 u_projTrans;
 varying vec2 v_depCoords;
 varying vec3 v_lightCoords;
 flat varying float v_colChannel;
 flat varying vec2 v_posChannel;
+flat varying float v_spread;
 varying vec4 v_color;
 
 void main()
@@ -21,4 +23,5 @@ void main()
     v_colChannel = a_shadowChannel;
     v_posChannel = a_positionChannel;
     v_color = a_lightColor;
+    v_spread = a_lightSpread;
 }
