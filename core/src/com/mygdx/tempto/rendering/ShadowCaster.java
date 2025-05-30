@@ -16,12 +16,16 @@ import java.util.HashMap;
  * @param flat          Whether the tile is "flat" or not. If true, the game won't sample any textures for the shadow caster, and will just draw shadows of a basic quad.
  */
 public record ShadowCaster (TextureRegion shadowTexture, Vector3 origin, Vector3 u, Vector3 v,
-                            boolean flat) implements Comparable<ShadowCaster> {
+                            boolean flat, boolean triangle) implements Comparable<ShadowCaster> {
 
     /**Some public static details for debugging / record keeping*/
 
     public static final HashMap<ShadowCaster, Polygon> CASTER_RANGES = new HashMap<>();
     public static int numRangesVisible = 0;
+
+    public ShadowCaster(TextureRegion shadowTexture, Vector3 origin, Vector3 u, Vector3 v, boolean flat) {
+        this(shadowTexture, origin, u, v, flat, false);
+    }
 
     @Override
     public int compareTo(ShadowCaster o) {
@@ -29,7 +33,7 @@ public record ShadowCaster (TextureRegion shadowTexture, Vector3 origin, Vector3
     }
 
     public int shadowShader(LightSource light) {
-//        if (true) return AltShadeBatch.NINE_SAMPLE_TRI;
+        if (this.triangle()) return AltShadeBatch.NINE_SAMPLE_TRI;
         if (light.bodyRadius() > 0) {
             if (this.flat) {
                 return AltShadeBatch.NINE_FLAT;

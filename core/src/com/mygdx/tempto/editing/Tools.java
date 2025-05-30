@@ -241,7 +241,7 @@ public enum Tools {
                 // Restore the vertices of the ones that were only modified
                 for (StaticTerrainElement toRestoreVertices : this.removeJustVertices) {
                     float[] ogVerts = this.beforeRemovingVerts.get(toRestoreVertices);
-                    toRestoreVertices.polygon.setVertices(ogVerts);
+                    toRestoreVertices.setPolygonVertices(ogVerts);
                 }
             }
 
@@ -255,7 +255,7 @@ public enum Tools {
                 // Remove the vertices of the ones that were only modified
                 for (StaticTerrainElement toRemoveVerts : this.removeJustVertices) {
                     float[] newVerts = this.afterRemovingVerts.get(toRemoveVerts);
-                    toRemoveVerts.polygon.setVertices(newVerts);
+                    toRemoveVerts.setPolygonVertices(newVerts);
                 }
             }
         }
@@ -547,7 +547,7 @@ public enum Tools {
                             verts[i*2]+= toCam.x;
                             verts[i*2+1]+= toCam.y;
                         }
-                        terrainElement.polygon.setVertices(verts);
+                        terrainElement.setPolygonVertices(verts);
                         System.out.println("Snapping to camera!");
                         System.out.println("New vertices: " + Arrays.toString(verts));
                     }
@@ -639,7 +639,7 @@ public enum Tools {
                 // For each terrain element, get the previous vertices it held before the edit, and then set it to those
                 for (StaticTerrainElement terrainElement : this.terrainElements) {
                     float[] prevVerts = this.beforeVerts.get(terrainElement);
-                    terrainElement.polygon.setVertices(prevVerts);
+                    terrainElement.setPolygonVertices(prevVerts);
                 }
             }
 
@@ -648,7 +648,7 @@ public enum Tools {
                 // For each terrain element, get the future vertices it holds after the edit, and then set it to those
                 for (StaticTerrainElement terrainElement : this.terrainElements) {
                     float[] nextVerts = this.afterVerts.get(terrainElement);
-                    terrainElement.polygon.setVertices(nextVerts);
+                    terrainElement.setPolygonVertices(nextVerts);
                 }
             }
         }
@@ -671,7 +671,7 @@ public enum Tools {
                 for (Entity entity : this.selected) {
                     if (entity instanceof StaticTerrainElement terrain) {
                         // Ensure its vertices are based around the origin
-                        terrain.polygon.setVertices(terrain.polygon.getTransformedVertices());
+                        terrain.setPolygonVertices(terrain.polygon.getTransformedVertices());
                         terrain.polygon.setPosition(0,0);
                         // Register to change that terrain
                         toChange.add(terrain);
@@ -854,7 +854,7 @@ public enum Tools {
 //                //Replace the first terrain's vertices with the union of all of them
 //
 //                //Ensure the terrain is vertexed in absolute coordinates
-//                firstTerrain.polygon.setVertices(firstTerrain.polygon.getTransformedVertices());
+//                firstTerrain.setPolygonVertices(firstTerrain.polygon.getTransformedVertices());
 //                firstTerrain.polygon.setPosition(0,0);
 //
 //                SetTerrainVertices mergeIntoFirst = new SetTerrainVertices(firstTerrain,
@@ -1249,12 +1249,12 @@ public enum Tools {
 
         @Override
         public void undoEdit(WorldMap map) {
-            this.terrainElement.polygon.setVertices(this.before);
+            this.terrainElement.setPolygonVertices(this.before);
         }
 
         @Override
         public void redoEdit(WorldMap map) {
-            this.terrainElement.polygon.setVertices(this.after);
+            this.terrainElement.setPolygonVertices(this.after);
         }
     }
 

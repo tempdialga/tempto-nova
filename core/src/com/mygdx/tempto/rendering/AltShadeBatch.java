@@ -21,6 +21,8 @@ import com.mygdx.tempto.data.CentralTextureData;
 import com.mygdx.tempto.util.MiscFunctions;
 import com.mygdx.tempto.view.GameScreen;
 
+import org.lwjgl.util.vector.Matrix2f;
+
 import java.nio.Buffer;
 
 public class AltShadeBatch extends AltBatch {
@@ -249,12 +251,12 @@ public class AltShadeBatch extends AltBatch {
         vertices[ShE3] = sh_e;
 
         Matrix3 toRegCoords = new Matrix3(new float[]{
-                cU.x,cV.x,0,
-                cU.y,cV.y,0,
+                cU.x,cU.y,0,
+                cV.x,cV.y,0,
                 0,0,1
         });
 
-        if (false) {
+        if (caster.triangle() && false) {
             this.pushConvexShadowPolygon(new float[]{
                     S.x - r, S.y - r,
                     S.x - r, S.y + r,

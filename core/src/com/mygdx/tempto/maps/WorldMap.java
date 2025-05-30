@@ -142,6 +142,7 @@ public class WorldMap implements RendersToScreen {
     AltShadeBatch shadeBatch;
     AltFinalBatch finalPassBatch;
     public ShapeDrawer editorShapeDrawer;
+    public ShapeDrawer tempDepthShapeDrawer;
     public ShapeDrawer tempFinalPassShapeDrawer;
     public Texture blankTexture = new Texture("blank.png");
     public TextureRegion blank = CentralTextureData.getRegion("misc/blank");
@@ -327,7 +328,9 @@ public class WorldMap implements RendersToScreen {
         this.editorShapeDrawer.setTextureRegion(this.blank);
         // TODO: Figure out our own shapedrawer situation, since this wont work with the custom shaders and whatnot
         this.tempFinalPassShapeDrawer = new ShapeDrawer(this.finalPassBatch);
+        this.tempDepthShapeDrawer = new ShapeDrawer(this.depthMapBatch);
         this.tempFinalPassShapeDrawer.setTextureRegion(this.blank);
+        this.tempDepthShapeDrawer.setTextureRegion(this.blank);
 
         //Create a debug texture for testing things
         this.debugTexture = new Texture("badlogic.jpg");
@@ -654,22 +657,6 @@ public class WorldMap implements RendersToScreen {
 
 
 
-//        this.worldViewport.apply();
-//        this.debugRenderer.setProjectionMatrix(cam.combined);
-//        this.debugRenderer.setColor(Color.BLACK);
-//        this.debugRenderer.begin(ShapeRenderer.ShapeType.Line);
-//        for (Entity entity : this.entities){
-//            if (entity instanceof StaticTerrainElement) {
-//                Polygon polygon = ((StaticTerrainElement) entity).polygon;
-//                Color color = ((StaticTerrainElement) entity).color;
-//                this.debugRenderer.setColor(color);
-//                int numPoints = polygon.getVertexCount();
-//                if (numPoints >= 3)  this.debugRenderer.polygon(polygon.getTransformedVertices());
-//            }
-//        }
-//        this.debugRenderer.setColor(Color.BLACK);
-//        this.debugRenderer.circle(cam.position.x, cam.position.y, 1);
-//        this.debugRenderer.end();
 
         this.finalPassBuffer.begin();
         Gdx.gl.glBlendEquation(GL20.GL_FUNC_ADD);
@@ -724,6 +711,34 @@ public class WorldMap implements RendersToScreen {
             this.miscWorldBatch.end();
         }
         Gdx.gl.glColorMask(true, true, true,  true);
+
+
+
+        this.worldViewport.apply();
+        this.debugRenderer.setProjectionMatrix(this.worldViewport.getCamera().combined);
+        this.debugRenderer.setColor(Color.BLACK);
+        this.debugRenderer.begin(ShapeRenderer.ShapeType.Line);
+        for (Entity entity : this.entities){
+            if (entity instanceof StaticTerrainElement) {
+                Polygon polygon = ((StaticTerrainElement) entity).polygon;
+                Color color = ((StaticTerrainElement) entity).color;
+                this.debugRenderer.setColor(color);
+                int numPoints = polygon.getVertexCount();
+                if (numPoints >= 3) {
+//                    this.debugRenderer.polygon(polygon.getTransformedVertices());
+                    float[] verts = ((StaticTerrainElement) entity).triangles;
+                    for (int i = 0; i < verts.length-4; i+=2) {
+                        this.debugRenderer.triangle(
+                                verts[i], verts[i+1], verts[i+2], verts[i+3], verts[i+4], verts[i+5]
+                        );
+                    }
+                }
+            }
+        }
+        this.debugRenderer.setColor(Color.BLACK);
+        this.debugRenderer.circle(this.worldViewport.getCamera().position.x, this.worldViewport.getCamera().position.y, 1);
+        this.debugRenderer.end();
+
         //Release camera back to free coordinates
         camera.position.set(freeCamCoords);
     }

@@ -353,23 +353,23 @@
 		</data>
 	</layer>
 	<objectgroup id="15" name="Terrain">
-		<object id="0" x="300.667" y="122.0">
+		<object id="0" x="-99.0" y="415.0">
 			<properties>
 				<property name="height" value="0.0"/>
-				<property name="id" value="test_eeh"/>
+				<property name="id" value="heeper"/>
 				<property name="width" value="0.0"/>
 			</properties>
-			<polygon points="0.0,0.0 48.0,-44.6667 88.0,-17.3333 61.3333,30.0"/>
-			<polygon points="0.0,0.0 48.0,-44.6667 88.0,-17.3333 61.3333,30.0"/>
+			<polygon points="355.0,-333.5 386.5,-375.5 640.0,-343.5 619.0,-286.5 508.0,-167.0 456.5,-173.5 307.0,-283.5"/>
+			<polygon points="355.0,-333.5 386.5,-375.5 640.0,-343.5 619.0,-286.5 508.0,-167.0 456.5,-173.5 307.0,-283.5"/>
 		</object>
-		<object id="1" x="426.0" y="129.333">
+		<object id="1" x="576.0" y="80.0">
 			<properties>
 				<property name="height" value="0.0"/>
-				<property name="id" value="hapy"/>
+				<property name="id" value="gabagool"/>
 				<property name="width" value="0.0"/>
 			</properties>
-			<polygon points="0.0,0.0 60.6667,-17.3333 66.0,30.0 10.6667,33.3333"/>
-			<polygon points="0.0,0.0 60.6667,-17.3333 66.0,30.0 10.6667,33.3333"/>
+			<polygon points="0.0,-0.0 0.0,-48.0 48.0,-0.0"/>
+			<polygon points="0.0,-0.0 0.0,-48.0 48.0,-0.0"/>
 		</object>
 	</objectgroup>
 	<objectgroup id="16" name="Lights">
