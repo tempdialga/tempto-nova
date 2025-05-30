@@ -33,16 +33,30 @@ public class AltShadeBatch extends AltBatch {
     protected final static String   FRAGPATH_1F = "shaders/shadeFrag_1flat_direct.glsl",
                                     FRAGPATH_1S = "shaders/shadeFrag_1samp_direct.glsl",
                                     FRAGPATH_9F = "shaders/shadeFrag_9flat_direct.glsl",
-                                    FRAGPATH_9S = "shaders/shadeFrag_9samp_direct.glsl";
+                                    FRAGPATH_9S = "shaders/shadeFrag_9samp_direct.glsl",
+                                    FRAGPATH_9S_T = "shaders/shadeFrag_9samp_direct_triangle.glsl";
 
-    public final static int ONE_FLAT = 0, ONE_SAMPLE = 1, NINE_FLAT = 2, NINE_SAMPLE = 3;
-    protected final static ShaderProgram[] shadowShaders = {
+    private static int numShadowShaders = 0;
+    public final static int ONE_FLAT = numShadowShaders++,
+                            ONE_SAMPLE = numShadowShaders++,
+                            NINE_FLAT = numShadowShaders++,
+//                            UNUSED = numShadowShaders++,
+                            NINE_SAMPLE = numShadowShaders++,
+                            NINE_SAMPLE_TRI = numShadowShaders++,
+
+                            NUM_SHADOW_SHADERS = numShadowShaders;
+
+
+    protected final static ShaderProgram[] shadowShaders = new ShaderProgram[]{
             new ShaderProgram(Gdx.files.internal(SHADOWVERT_PATH_INTERNAL), Gdx.files.internal(FRAGPATH_1F)),
             new ShaderProgram(Gdx.files.internal(SHADOWVERT_PATH_INTERNAL), Gdx.files.internal(FRAGPATH_1S)),
             new ShaderProgram(Gdx.files.internal(SHADOWVERT_PATH_INTERNAL), Gdx.files.internal(FRAGPATH_9F)),
-            new ShaderProgram(Gdx.files.internal(SHADOWVERT_PATH_INTERNAL), Gdx.files.internal(FRAGPATH_9S))
+//            new ShaderProgram(Gdx.files.internal(SHADOWVERT_PATH_INTERNAL), Gdx.files.internal(FRAGPATH_1F)),
+            new ShaderProgram(Gdx.files.internal(SHADOWVERT_PATH_INTERNAL), Gdx.files.internal(FRAGPATH_9S)),
+            new ShaderProgram(Gdx.files.internal(SHADOWVERT_PATH_INTERNAL), Gdx.files.internal(FRAGPATH_9S_T)),
+//            null,
     };
-    public static final int NUM_SHADOW_SHADERS = shadowShaders.length;
+//    public static final int NUM_SHADOW_SHADERS = shadowShaders.length;
 
     protected final static String DEPTHMAPCOORD_ATTRIBUTE = AltDepthBatch.DEPCOORD_ATTRIBUTE;
     protected final static String SHADOWTEXCOORD_ATTRIBUTE = "a_shadTexCoord";
@@ -102,12 +116,20 @@ public class AltShadeBatch extends AltBatch {
 
     public void switchShadowShader(int shadowShader) {
         this.currentShadowShader = shadowShader;
-        this.setShader(shadowShaders[shadowShader]);
+//        this.setShader(shadowShaders[shadowShader]);
+    }
+
+
+
+    @Override
+    protected ShaderProgram currentShader() {
+        return shadowShaders[this.currentShadowShader];
     }
 
     @Override
     protected ShaderProgram createDefaultShader() {
-        return new ShaderProgram(Gdx.files.internal(SHADOWVERT_PATH_INTERNAL), Gdx.files.internal(SHADOWFRAG_PATH_INTERNAL));
+//        return new ShaderProgram(Gdx.files.internal(SHADOWVERT_PATH_INTERNAL), Gdx.files.internal(SHADOWFRAG_PATH_INTERNAL));
+        return null;
     }
 
     private float cross2D(Vector2 lineEnd, Vector2 point) {
@@ -473,26 +495,28 @@ public class AltShadeBatch extends AltBatch {
     @Override
     protected void setupMatrices () {
         combinedMatrix.set(projectionMatrix).mul(transformMatrix);
-        ShaderProgram shaderToSet;
+        /*ShaderProgram shaderToSet;
         if (customShader != null) {
             shaderToSet = customShader;
         } else {
             shaderToSet = shader;
-        }
-        shaderToSet.setUniformMatrix("u_projTrans", combinedMatrix);
+        }*/
+        currentShader().setUniformMatrix("u_projTrans", combinedMatrix);
 
-        shaderToSet.setUniformi(DMAPTEX_UNIFORM, 0);
+        currentShader().setUniformi(DMAPTEX_UNIFORM, 0);
         ShaderProgram.pedantic = false;//Just for this one variable since some shaders might not use it
-        shaderToSet.setUniformi(SHADTEX_UNIFORM, 1);
+        currentShader().setUniformi(SHADTEX_UNIFORM, 1);
         ShaderProgram.pedantic = true;
-        shaderToSet.setUniform2fv(POSDIMS_UNIFORM, this.posChannelDims, 0, 2);
+        currentShader().setUniform2fv(POSDIMS_UNIFORM, this.posChannelDims, 0, 2);
 
 
     }
 
     public void setViewport(Viewport viewport) {
-        if (this.loc_u_viewDims == -10) this.loc_u_viewDims = this.shader.fetchUniformLocation("u_viewDims", true);
-        this.shader.setUniform2fv(this.loc_u_viewDims, new float[]{viewport.getWorldWidth(), viewport.getWorldHeight()}, 0, 2);
+
+
+        if (this.loc_u_viewDims == -10) this.loc_u_viewDims = this.currentShader().fetchUniformLocation("u_viewDims", true);
+        this.currentShader().setUniform2fv(this.loc_u_viewDims, new float[]{viewport.getWorldWidth(), viewport.getWorldHeight()}, 0, 2);
     }
 
     @Override
@@ -520,10 +544,10 @@ public class AltShadeBatch extends AltBatch {
 
     }
 
-    @Override
-    public void begin() {
-        super.begin();
-    }
+//    @Override
+//    public void begin() {
+//        super.begin();
+//    }
 
     @Override
     public void flush() {
@@ -539,11 +563,11 @@ public class AltShadeBatch extends AltBatch {
         lastShadowTexture.bind(1);
         lastTexture.bind(0);
 
-        ShaderProgram shaderToUse = customShader != null ? customShader : shader;
-        shaderToUse.setUniform2fv(SHADPXDIM_UNIFORM, new float[]{
+//        ShaderProgram shaderToUse = customShader != null ? customShader : shader;
+        /*shaderToUse.setUniform2fv(SHADPXDIM_UNIFORM, new float[]{
                 invShadTexWidth, invShadTexHeight
-        }, 0, 2);
-        shaderToUse.setUniformf("u_elapsedTime", GameScreen.elapsedTime);
+        }, 0, 2);*/
+        currentShader().setUniformf("u_elapsedTime", GameScreen.elapsedTime);
 
         Mesh mesh = this.mesh;
         mesh.setVertices(vertices, 0, idx);
@@ -560,7 +584,7 @@ public class AltShadeBatch extends AltBatch {
             }
         }
 
-        mesh.render(shaderToUse, GL20.GL_TRIANGLES, 0, count);
+        mesh.render(currentShader(), GL20.GL_TRIANGLES, 0, count);
 
         idx = 0;
         lastShadowTexture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);

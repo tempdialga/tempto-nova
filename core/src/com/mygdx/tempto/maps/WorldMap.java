@@ -356,7 +356,7 @@ public class WorldMap implements RendersToScreen {
 
         Vector3 sunRelPos = new Vector3(0,1,-2).nor().scl(SUN_DIST);
         Color sunColor = new Color(1, 0.95f, 0.88f, 1);
-        this.sun = new LightSource(sunRelPos, sunColor, SUN_DIST *6, LightSource.SPHERE_APPROX, SUN_RADIUS);
+        this.sun = new LightSource(sunRelPos, sunColor, SUN_DIST *8, LightSource.SPHERE_APPROX, SUN_RADIUS);
         this.lightSources.add(this.sun);
 
         //Buffer for capturing the final pass
@@ -460,10 +460,12 @@ public class WorldMap implements RendersToScreen {
         for (int i = 3; i < debugLightCount; i++) {
             this.lightSources.get(i).pos().set(mouseCoords).add(190-10*i, 50+10*(float)Math.sin(0.5f*i+2*elapsedTime), -20);
         }
-        float sunTime = elapsedTime*0.2f;
+        float sunTime = elapsedTime*0.5f;
         float sin = (float) Math.sin(sunTime);
         float cos = (float) Math.cos(sunTime);
         this.sun.pos().set(cos,sin*sin,-0.5f).nor().scl(SUN_DIST);
+        this.sun.color().g = 0.95f*(0.5f + 0.5f*sin*sin);
+        this.sun.color().b = 0.88f*(0.3f + 0.7f*sin*sin);
 //        LightSource mouseLight = new LightSource(mouseCoords, Color.YELLOW, 250, LightSource.SPHERE_APPROX, 0.9f);
 
         // Render depth buffer
@@ -511,7 +513,7 @@ public class WorldMap implements RendersToScreen {
         float blockRadius = 50;
         float groundY = 150;
         casters.add(new ShadowCaster(CentralTextureData.getRegion("maps/collisionTexture"), new Vector3(this.camera.position.x-blockRadius,groundY,-440), new Vector3(blockRadius*2,0,0), new Vector3(0,blockRadius*7,0), true));
-        casters.add(new ShadowCaster(CentralTextureData.getRegion("maps/collisionTexture"), new Vector3(0, groundY-440, -440), new Vector3(1640,0, 0), new Vector3(0, 450, 0), false));
+        casters.add(new ShadowCaster(CentralTextureData.getRegion("maps/collisionTexture"), new Vector3(-1000, groundY-440, -440), new Vector3(2640,0, 0), new Vector3(0, 450, 0), false));
 
         float width = camera.viewportWidth * camera.zoom;
         float height = camera.viewportHeight * camera.zoom;
@@ -552,7 +554,7 @@ public class WorldMap implements RendersToScreen {
         this.shadeBatch.setBlendFunction(GL20.GL_ONE, GL20.GL_ONE);
         this.shadeBatch.adjustChannelDims(shadMapHTotal, shadMapVTotal);
         Gdx.gl.glBlendEquation(GL20.GL_FUNC_REVERSE_SUBTRACT); //naturally switch to subtracting actually
-        this.shadeBatch.begin();
+//        this.shadeBatch.begin();
         this.shadeBatch.setViewport(this.worldViewport);
 
 
@@ -561,6 +563,9 @@ public class WorldMap implements RendersToScreen {
 
         for (int shadowShader = 0; shadowShader < AltShadeBatch.NUM_SHADOW_SHADERS; shadowShader++) {
             this.shadeBatch.switchShadowShader(shadowShader);
+            this.shadeBatch.begin();
+            this.shadeBatch.setViewport(this.worldViewport);
+//            System.out.println(this.shadeBatch.getShader().getFragmentShaderSource());
             color_channel = RED;
             shadMapCol = 0;
             shadMapRow = 0;
@@ -572,9 +577,14 @@ public class WorldMap implements RendersToScreen {
 
                 ShadowCaster.numRangesVisible = 0;
 
+                int num_shads_this_shader = 0;
                 for (ShadowCaster caster : casters) {
-                    if (caster.shadowShader(source) == shadowShader) this.shadeBatch.drawShadow(caster, source, this.depthMap, this.camera, viewBounds, viewPoly, shadMapCol, shadMapHTotal, shadMapRow, shadMapVTotal);
+                    if (caster.shadowShader(source) == shadowShader) {
+                        this.shadeBatch.drawShadow(caster, source, this.depthMap, this.camera, viewBounds, viewPoly, shadMapCol, shadMapHTotal, shadMapRow, shadMapVTotal);
+                        num_shads_this_shader++;
+                    }
                 }
+                System.out.println("Number of shadows for shader " + shadowShader + ": " + num_shads_this_shader);
 
 
                 shadMapCol++; //Iterate position
@@ -591,8 +601,10 @@ public class WorldMap implements RendersToScreen {
                     this.shadeBatch.flush();
                 }
             }
+            this.shadeBatch.flush();
+            this.shadeBatch.end();
         }
-        this.shadeBatch.end();
+//        this.shadeBatch.end();
 
         this.shadowBuffer.end();
         this.shadowMap = this.shadowBuffer.getColorBufferTexture();

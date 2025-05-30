@@ -107,6 +107,14 @@ public abstract class AltBatch implements Batch {
 
     protected abstract ShaderProgram createDefaultShader();
 
+    protected ShaderProgram currentShader() {
+        if (this.customShader != null) {
+            return this.customShader;
+        } else {
+            return this.shader;
+        }
+    }
+
     protected static String defaultVertexShader() {
         return "attribute vec4 " + ShaderProgram.POSITION_ATTRIBUTE + ";\n" //
                 + "attribute vec4 " + ShaderProgram.COLOR_ATTRIBUTE + ";\n" //
@@ -132,10 +140,11 @@ public abstract class AltBatch implements Batch {
         renderCalls = 0;
 
         Gdx.gl.glDepthMask(this.depthEnabled);
-        if (customShader != null)
-            customShader.bind();
-        else
-            shader.bind();
+//        if (customShader != null)
+//            customShader.bind();
+//        else
+//            shader.bind();
+        this.currentShader().bind();
         setupMatrices();
 
         drawing = true;

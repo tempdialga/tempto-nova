@@ -29,6 +29,7 @@ public record ShadowCaster (TextureRegion shadowTexture, Vector3 origin, Vector3
     }
 
     public int shadowShader(LightSource light) {
+//        if (true) return AltShadeBatch.NINE_SAMPLE_TRI;
         if (light.bodyRadius() > 0) {
             if (this.flat) {
                 return AltShadeBatch.NINE_FLAT;
