@@ -4,6 +4,7 @@ import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.Batch;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapProperties;
 import com.badlogic.gdx.maps.objects.PolygonMapObject;
@@ -26,6 +27,7 @@ import com.mygdx.tempto.entity.physics.SegmentProcedure;
 import com.mygdx.tempto.input.InputTranslator;
 import com.mygdx.tempto.maps.WorldMap;
 import com.mygdx.tempto.rendering.AltDepthBatch;
+import com.mygdx.tempto.rendering.RendersToDebug;
 import com.mygdx.tempto.rendering.RendersToWorld;
 import com.mygdx.tempto.rendering.ShadowCaster;
 import com.mygdx.tempto.rendering.TileLayerDepthRenderer;
@@ -41,7 +43,7 @@ import java.util.List;
 
 import space.earlygrey.shapedrawer.ShapeDrawer;
 
-public class StaticTerrainElement implements Entity, SavesToFile, Collidable, RendersToWorld {
+public class StaticTerrainElement implements Entity, SavesToFile, Collidable, RendersToWorld, RendersToDebug {
 
     public float depth; //z coordinate in pixels, 0 at the camera and increasing into the screen
     public Polygon polygon;//TODO: generalize, this is only a temporary thing to make sure map loading works
@@ -67,7 +69,6 @@ public class StaticTerrainElement implements Entity, SavesToFile, Collidable, Re
 
     private StaticTerrainElement(Polygon shape, MapProperties properties, JsonValue persistentMapData) {
         this.polygon = shape;
-//        this.polygon = new Polygon(shape.getTransformedVertices());
         this.id = properties.get("id", String.class);//ID of the object as denoted in base map file; dictates how
 
         if (persistentMapData != null && persistentMapData.has(id)) {
@@ -77,9 +78,6 @@ public class StaticTerrainElement implements Entity, SavesToFile, Collidable, Re
         } else {
             this.setColor(Color.BLACK);
         }
-
-
-        float[] points = this.polygon.getTransformedVertices();
 
         // Add a testing input adapter that, when the player confirms, will change color.
         this.debugInput = new InputAdapter(){
@@ -96,25 +94,26 @@ public class StaticTerrainElement implements Entity, SavesToFile, Collidable, Re
             }
         };
 
-//        this.updateTriangles();
+        // Formally set polygon vertices
         this.setPolygonVertices(shape.getTransformedVertices());
-        this.depth = 8;
+
+        // The depth being -8 is a magic number, and TODO: should be figured out
+        this.depth = -8;
         this.baseDepthColor = TileLayerDepthRenderer.unpackedDepthColor(this.depth, new Vector3(0,0,-1), 0f);
     }
 
+    /**Sets the polygon's transformed world vertices to the given array, and sets its position to (0,0).
+     * */
     public void setPolygonVertices(float[] newWorldVertices) {
         float[] vertsCopy = new float[newWorldVertices.length];
         System.arraycopy(newWorldVertices, 0, vertsCopy, 0, newWorldVertices.length);
-        for (int i = 0; i < vertsCopy.length; i+=2) {
-            int j = i+1;
-            vertsCopy[i] -= this.polygon.getX();
-            vertsCopy[j] -= this.polygon.getY();
-        }
+
+        this.polygon.setPosition(0,0);
         this.polygon.setVertices(vertsCopy);
+
         this.updateTriangles();
-        System.out.println("Polygon raw vertices: "+ Arrays.toString(this.polygon.getVertices()));
-        System.out.println("Polygon transformed vertices: " + Arrays.toString(this.polygon.getTransformedVertices()));
-        System.out.println("Polygon coordinates: " + this.polygon.getX() + ", " + this.polygon.getY());
+
+        System.out.println("Polygon vertices set to: " + Arrays.toString(this.polygon.getTransformedVertices()));
     }
 
 
@@ -145,10 +144,6 @@ public class StaticTerrainElement implements Entity, SavesToFile, Collidable, Re
         return this.id;
     }
 
-//    @Override
-//    public boolean needToEditBaseFile() {
-//        return this.edited;
-//    }
 
     //@Override
     public void updateBaseFile(TiledMap baseMap, @Null MapLayer specifiedEntityLayer) {
@@ -314,39 +309,6 @@ public class StaticTerrainElement implements Entity, SavesToFile, Collidable, Re
                     }
                 }
 
-                /*float f_ax, f_ay, f_cx, f_cy;//a & c, but fudged a teensy bit so the line from a to c won't inherently intersect segments running ending on a or c
-                int numUlps = 10;//Number of ulps a & b should be adjusted
-
-                Vector2 adjustA = new Vector2(aToB).nor().scl(numUlps);//Find a vector of the total number's length in that direction, to get an estimate of how many ulp's to go in x & y directions
-                float ulp_A = Math.max(Math.ulp(ax), Math.ulp(ay));//This way they're being pushed by the same scale
-                f_ax = ax + ((int) (adjustA.x + 0.5f)) * ulp_A;//Push a & c a set distance in the direction of B
-                f_ay = ay + ((int) (adjustA.y + 0.5f)) * ulp_A;
-
-                Vector2 adjustC = new Vector2(bToC).nor().scl(-1*numUlps);//This one is flipped because the vector was from b to c not from c to b
-                float ulp_C = Math.max(Math.ulp(cx), Math.ulp(cy));
-                f_cx = cx + ((int) (adjustC.x + 0.5f)) * ulp_C;
-                f_cy = cy + ((int) (adjustC.y + 0.5f)) * ulp_C;
-
-                for (int l = 0; l < dynPoints.size() - 4; l++) {//For each remaining pair of points
-                    float px, py, qx, qy;
-                    px = dynPoints.get(endA);
-                    py = dynPoints.get(endA+1);
-                    qx = dynPoints.get(endB);
-                    qy = dynPoints.get(endB+1);
-                    Vector2 intersection = new Vector2();
-                    if (Intersector.intersectSegments(f_ax, f_ay, f_cx, f_cy, px, py, qx, qy, intersection)) {
-                        if (!(intersection.epsilonEquals(ax, ay) || intersection.epsilonEquals(cx, cy))) {//Assuming that intersection wasn't the endpoints themselves
-                            triangleCanBeCut = false;
-                            break;//Stop checking other segments, this triangle can't be cut
-                        }
-                    }
-
-                    endA += 2;
-                    if (endA >= dynPoints.size()) {endA = 0;}
-                    endB += 2;
-                    if (endB >= dynPoints.size()) {endB = 0;}
-                }*/
-
                 if (triangleCanBeCut) {//If no other segments intersected A & C, cut the triangle out
                     float[] newTriangle = new float[]{ax, ay, bx, by, cx, cy};//Create a float array representing the triangle to be cut
                     System.arraycopy(newTriangle, 0, this.triangles, nextTriIdx, 6);
@@ -397,7 +359,22 @@ public class StaticTerrainElement implements Entity, SavesToFile, Collidable, Re
     }
 
     @Override
+    public void debugRender(ShapeRenderer drawer) {
+        System.out.println("Debug rendering polygon");
+        drawer.setColor(this.color);
+        float[] tris = this.triangles;
+        for (int i = 0; i < tris.length-4; i += 2) {
+            float x1 = tris[i], y1 = tris[i+1],
+                    x2 = tris[i+2], y2 = tris[i+3],
+                    x3 = tris[i+4], y3 = tris[i+5];
+
+            drawer.triangle(x1, y1, x2, y2, x3, y3);
+        }
+    }
+
+    @Override
     public void addShadowCastersToList(List<ShadowCaster> centralList) {
+        //Front face
         float[] tris = this.triangles;
         for (int i = 0; i < tris.length-4; i+= 2) {
             float x1 = tris[i], y1 = tris[i+1],
@@ -407,5 +384,18 @@ public class StaticTerrainElement implements Entity, SavesToFile, Collidable, Re
             ShadowCaster caster = new ShadowCaster(CentralTextureData.getRegion("maps/collisionTexture"), new Vector3(x1, y1, this.depth), new Vector3(x3-x1, y3-y1, 0), new Vector3(x2-x1,y2-y1,0), true, true);
             centralList.add(caster);
         }
+        //Sides along edges extending back into the background
+        int numSides = 0;
+        float[] verts = this.polygon.getTransformedVertices();
+        for (int i = 0; i < verts.length; i+=2) {
+            int j = i+2;
+            if (j >= verts.length) j = 0;
+            float x1 = verts[i], y1 = verts[i+1],
+                    x2 = verts[j], y2 = verts[j+1];
+            ShadowCaster caster = new ShadowCaster(CentralTextureData.getRegion("maps/collisionTexture"), new Vector3(x1, y1, this.depth), new Vector3(x2-x1,y2-y1,0), new Vector3(0,0, 16), true, false);
+            centralList.add(caster);
+            numSides++;
+        }
+//        System.out.println("Added " + numSides + " casters on the sides");
     }
 }

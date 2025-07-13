@@ -60,6 +60,7 @@ import com.mygdx.tempto.rendering.AltFinalBatch;
 import com.mygdx.tempto.rendering.AltLightBatch;
 import com.mygdx.tempto.rendering.AltShadeBatch;
 import com.mygdx.tempto.rendering.LightSource;
+import com.mygdx.tempto.rendering.RendersToDebug;
 import com.mygdx.tempto.rendering.ShadowCaster;
 import com.mygdx.tempto.rendering.TileLayerDepthRenderer;
 import com.mygdx.tempto.rendering.TileLayerFinalRenderer;
@@ -515,8 +516,8 @@ public class WorldMap implements RendersToScreen {
         }
         float blockRadius = 50;
         float groundY = 150;
-        casters.add(new ShadowCaster(CentralTextureData.getRegion("maps/collisionTexture"), new Vector3(this.camera.position.x-blockRadius,groundY,-440), new Vector3(blockRadius*2,0,0), new Vector3(0,blockRadius*7,0), true));
-        casters.add(new ShadowCaster(CentralTextureData.getRegion("maps/collisionTexture"), new Vector3(-1000, groundY-440, -440), new Vector3(2640,0, 0), new Vector3(0, 450, 0), false));
+//        casters.add(new ShadowCaster(CentralTextureData.getRegion("maps/collisionTexture"), new Vector3(this.camera.position.x-blockRadius,groundY,-440), new Vector3(blockRadius*2,0,0), new Vector3(0,blockRadius*7,0), true));
+//        casters.add(new ShadowCaster(CentralTextureData.getRegion("maps/collisionTexture"), new Vector3(-1000, groundY-440, -440), new Vector3(2640,0, 0), new Vector3(0, 450, 0), false));
 
         float width = camera.viewportWidth * camera.zoom;
         float height = camera.viewportHeight * camera.zoom;
@@ -587,7 +588,7 @@ public class WorldMap implements RendersToScreen {
                         num_shads_this_shader++;
                     }
                 }
-                System.out.println("Number of shadows for shader " + shadowShader + ": " + num_shads_this_shader);
+//                System.out.println("Number of shadows for shader " + shadowShader + ": " + num_shads_this_shader);
 
 
                 shadMapCol++; //Iterate position
@@ -719,20 +720,8 @@ public class WorldMap implements RendersToScreen {
         this.debugRenderer.setColor(Color.BLACK);
         this.debugRenderer.begin(ShapeRenderer.ShapeType.Line);
         for (Entity entity : this.entities){
-            if (entity instanceof StaticTerrainElement) {
-                Polygon polygon = ((StaticTerrainElement) entity).polygon;
-                Color color = ((StaticTerrainElement) entity).color;
-                this.debugRenderer.setColor(color);
-                int numPoints = polygon.getVertexCount();
-                if (numPoints >= 3) {
-//                    this.debugRenderer.polygon(polygon.getTransformedVertices());
-                    float[] verts = ((StaticTerrainElement) entity).triangles;
-                    for (int i = 0; i < verts.length-4; i+=2) {
-                        this.debugRenderer.triangle(
-                                verts[i], verts[i+1], verts[i+2], verts[i+3], verts[i+4], verts[i+5]
-                        );
-                    }
-                }
+            if (entity instanceof RendersToDebug debug) {
+                debug.debugRender(this.debugRenderer);
             }
         }
         this.debugRenderer.setColor(Color.BLACK);

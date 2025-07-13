@@ -123,8 +123,13 @@ public class TmxMapWriter {
                     int objID = layerObjects.getIndex(object);//Like before, doesn't necessarily correspond but ensures they maintain unique ids
                     this.writer.attribute("id", objID);
                     MapProperties objProps = object.getProperties();//For some reason x and y are loaded as if they were custom properties but saved as original properties
-                    this.writer.attribute("x", objProps.get("x"));
-                    this.writer.attribute("y", mapHeight - (float)objProps.get("y"));
+                    if (object instanceof PolygonMapObject) {
+                        this.writer.attribute("x", 0);
+                        this.writer.attribute("y", mapHeight);
+                    } else {
+                        this.writer.attribute("x", objProps.get("x"));
+                        this.writer.attribute("y", mapHeight - (float) objProps.get("y"));
+                    }
 
                     //Encode custom properties of the object
                     this.writer.element("properties");
@@ -145,7 +150,7 @@ public class TmxMapWriter {
                         this.writer.element("polygon");
 
                         //Write the contents of the polygon to a string in the same format as a tiled map
-                        float[] verts = polObj.getPolygon().getVertices();
+                        float[] verts = polObj.getPolygon().getTransformedVertices();
                         StringBuilder vertexString = new StringBuilder();
                         vertexString.append(String.valueOf(verts[0])).append(",").append(String.valueOf(-verts[1]));
                         for (int i = 2; i < verts.length; i += 2) {
@@ -164,8 +169,15 @@ public class TmxMapWriter {
                         this.writer.element("polygon");
                         //Write the contents of the polygon to a string in the same format as a tiled map
                         float[] verts = polObj.getPolygon().getVertices();
+
+                        // Account for their original position denoted in the map file
+                        float base_x = objProps.get("x", float.class);
+                        float base_y = objProps.get("y", float.class);
+
                         StringBuilder vertexString = new StringBuilder();
                         vertexString.append(String.valueOf(verts[0])).append(",").append(String.valueOf(-verts[1]));
+
+
                         for (int i = 2; i < verts.length; i += 2) {
                             float x = verts[i];
                             float y = -verts[i+1];
