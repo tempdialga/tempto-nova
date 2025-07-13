@@ -19,6 +19,9 @@ import com.mygdx.tempto.rendering.RendersToDebug;
 import com.mygdx.tempto.rendering.RendersToWorld;
 import com.mygdx.tempto.util.MiscFunctions;
 
+import org.eclipse.collections.impl.list.fixed.ArrayAdapter;
+
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -35,13 +38,22 @@ public class Player extends InputAdapter implements Entity, RendersToWorld, Rend
 
     ///// Bodily attributes
     static final float FOOT_RADIUS = 2.0f;
-    static final float LEG_LENGTH = 7f;
+    static final float LEG_LENGTH = 15f;
+
+    ///// Other constants / notes
+    static final int LEFT_FOOT = -1;
+    static final int RIGHT_FOOT = 1;
+    static final int NEITHER = 0;
+
 
     /**These are values that are set by design (leg height, walk stride distance, etc.) but that might need to be tinkered with on the fly, for development*/
     HashMap<String, Float> attributes;
 
     /**Arbitrary pieces of information that a pose might need to save, but might not justify storing a whole explicit variable just for that one pose*/
     HashMap<String, Object> poseData;
+
+    /**Which foot is "actively" being used. This interpretation might depend pose to pose.*/
+    int activeFoot;
 
     /**The position and velocity of the center of mass. These are controlled first, and then the specific movements of body parts follow.*/
     BodyPoint massCenter;
@@ -68,36 +80,63 @@ public class Player extends InputAdapter implements Entity, RendersToWorld, Rend
 
     public Player(Vector2 centerPos, WorldMap parent) {
         this.massCenter = new BodyPoint(BodyPoint.POINT, 0, centerPos);
-        this.primaryContact = new BodyPoint(BodyPoint.CIRCLE, FOOT_RADIUS, new Vector2(centerPos).sub(0, LEG_LENGTH));
+
+        Vector2 footStartPos = new Vector2(centerPos).sub(0, LEG_LENGTH);
+        Vector2 backFootPos = new Vector2(centerPos).sub(0, LEG_LENGTH*0.8f);
+        this.leftFoot = new BodyPoint(BodyPoint.CIRCLE, FOOT_RADIUS, footStartPos);
+        this.rightFoot = new BodyPoint(BodyPoint.CIRCLE, FOOT_RADIUS, backFootPos);
+
+//        this.primaryContact = new BodyPoint(BodyPoint.CIRCLE, FOOT_RADIUS, new Vector2(centerPos).sub(0, LEG_LENGTH));
         this.overallVel = new Vector2();
         this.setParentWorld(parent);
         this.attributes = new HashMap<>();
         this.poseData = new HashMap<>();
+        this.activeFoot = LEFT_FOOT;
+        this.poseData.put("stepRadii", new Vector2(25, 15));
+
         PoseCatalog.PLAYER_STAND.loadFileData();
         PoseCatalog.PLAYER_STAND.writeToFile();
+
+        this.currentState = MovementState.WALK;
+        this.currentState.switchToState(null, this);
     }
 
     /***/
     @Override
     public void update(float deltaTime, WorldMap world) {
         this.overallVel.sub(0, world.getGravity()*deltaTime);
-        this.primaryContact.applyVelocity(this.overallVel, deltaTime);
+        this.leftFoot.applyVelocity(this.overallVel, deltaTime);
+        this.rightFoot.applyVelocity(this.overallVel, deltaTime);
         this.massCenter.applyVelocity(this.overallVel, deltaTime);
 
-        this.currentState = MovementState.WALK;
+        // State based movement
+        MovementState newState = this.currentState.nextMoveState(this);
+        if (newState != null) {
+            MovementState lastState = this.currentState;
+            this.currentState = newState;
+            this.currentState.switchToState(lastState, this);
+        }
         this.currentState.movePlayer(deltaTime, this);
 
+
+
+        BodyPoint activeFoot = this.getActiveFoot();
+        System.out.println("Active foot at: "+activeFoot.getPos()+", vs hip at "+this.massCenter.getPos());
+        BodyPoint otherFoot = this.getOtherFoot(activeFoot);
+
         //See if the foot collided with anything, for now (2025-1-17) no slipping
-        BodyPoint.PointCollision collision = this.primaryContact.findCollision(world.getCollidables());
+        BodyPoint.PointCollision collision = activeFoot.findCollision(world.getCollidables());
         if (collision != null) {
-            Vector2 obstruction = new Vector2(collision.pointPos()).sub(this.primaryContact.getPos());
+            Vector2 obstruction = new Vector2(collision.pointPos()).sub(activeFoot.getPos());
             Vector2 newVel = collision.contactVel();
             this.overallVel.set(newVel);
             this.massCenter.getPos().add(obstruction);
-            this.primaryContact.getPos().add(obstruction);
+            activeFoot.getPos().add(obstruction);
+            otherFoot.getPos().add(obstruction);
         }
         this.massCenter.endFrame();
-        this.primaryContact.endFrame();
+        activeFoot.endFrame();
+        otherFoot.endFrame();
     }
 
     @Override
@@ -109,8 +148,21 @@ public class Player extends InputAdapter implements Entity, RendersToWorld, Rend
                 if (Gdx.input.isKeyPressed(Input.Keys.ALT_LEFT)) {
                     Player.this.overallVel.set(0,0);
                     Vector2 centerPos = parent.screenToWorldCoords(screenX, screenY);
-                    Player.this.massCenter = new BodyPoint(BodyPoint.POINT, 0, centerPos);
-                    Player.this.primaryContact = new BodyPoint(BodyPoint.CIRCLE, FOOT_RADIUS, new Vector2(centerPos).sub(0, LEG_LENGTH));
+
+                    Player.this.massCenter.getPos().set(centerPos);
+                    Player.this.massCenter.endFrame();
+
+                    BodyPoint activeFoot, otherFoot;
+                    activeFoot = Player.this.getActiveFoot();
+                    otherFoot = Player.this.getOtherFoot(activeFoot);
+                    activeFoot.getPos().set(centerPos).sub(0, LEG_LENGTH);
+                    otherFoot.getPos().set(centerPos).sub(0, LEG_LENGTH*0.8f);
+                    activeFoot.endFrame();
+                    otherFoot.endFrame();
+
+
+//                    Player.this.massCenter = new BodyPoint(BodyPoint.POINT, 0, centerPos);
+//                    Player.this.primaryContact = new BodyPoint(BodyPoint.CIRCLE, FOOT_RADIUS, new Vector2(centerPos).sub(0, LEG_LENGTH));
                     return true;
                 }
                 return false;
@@ -131,7 +183,8 @@ public class Player extends InputAdapter implements Entity, RendersToWorld, Rend
         drawer.setColor(Color.YELLOW);
         drawer.filledCircle(this.massCenter.getPos(), 1.0f);
         drawer.setColor(Color.CYAN);
-        drawer.filledCircle(this.primaryContact.getPos(), this.primaryContact.getRadius());
+        BodyPoint activeFoot = this.getActiveFoot();
+        drawer.filledCircle(activeFoot.getPos(), activeFoot.getRadius());
     }
 
     @Override
@@ -140,6 +193,13 @@ public class Player extends InputAdapter implements Entity, RendersToWorld, Rend
         Vector2 mc = this.massCenter.getPos();
         drawer.circle(mc.x, mc.y, 2.0f);
 //        drawer.filledCircle(this.massCenter.getPos(), 2.0f);
+        drawer.setColor(Color.CYAN);
+        Vector2 left = this.leftFoot.getPos();
+        drawer.circle(left.x, left.y, 1.5f);
+        drawer.setColor(Color.CORAL);
+        Vector2 right = this.rightFoot.getPos();
+        drawer.circle(right.x, right.y, 1.5f);
+
 
         drawer.setColor(Color.GOLD);
         ArrayList<Vector2> points = (ArrayList<Vector2>) this.poseData.get("steps");
@@ -152,6 +212,27 @@ public class Player extends InputAdapter implements Entity, RendersToWorld, Rend
     @Override
     public float getAttribute(String attrName) {
         return this.attributes.get(attrName);
+    }
+
+
+    /**Returns whichever of the two feet are currently "in front", i.e. the one that's currently swinging forward, or the one being held out in front in the air.*/
+    public BodyPoint getActiveFoot() {
+        int activeFoot = this.activeFoot;
+        if (activeFoot == RIGHT_FOOT) {
+            return this.rightFoot;
+        } else if (activeFoot == LEFT_FOOT || activeFoot == NEITHER) {
+            return this.leftFoot;
+        } else {
+            throw new IllegalArgumentException("Flag activeFoot had value of "+activeFoot+", but only meaningful values are "+LEFT_FOOT+" (left), "+RIGHT_FOOT+" (right), or "+NEITHER+" (neither)");
+        }
+    }
+
+    public BodyPoint getOtherFoot() {
+        return this.getOtherFoot(this.getActiveFoot());
+    }
+
+    public BodyPoint getOtherFoot(BodyPoint activeFoot) {
+        return (activeFoot == this.rightFoot) ? this.leftFoot : this.rightFoot;
     }
 
 
@@ -178,8 +259,8 @@ public class Player extends InputAdapter implements Entity, RendersToWorld, Rend
                 ArrayList<Collidable> colls = player.parent.getCollidables();
                 ArrayList<Vector2> points = new ArrayList<>();
 
-                float[] stepRadius = {40};
-                Vector2 stepOrigin = player.primaryContact.getPos();
+                Vector2 stepRadii = (Vector2) player.poseData.get("stepRadii");
+                Vector2 stepOrigin = player.getActiveFoot().getPos();
 
                 for (Collidable coll : colls) {
                     coll.forEachSegment(new SegmentProcedure() {
@@ -194,7 +275,7 @@ public class Player extends InputAdapter implements Entity, RendersToWorld, Rend
                                     ax, ay,
                                     bx, by,
                                     stepOrigin.x, stepOrigin.y,
-                                    rad, rad*0.5f,
+                                    stepRadii.x, stepRadii.y,
                                     inters
                             );
                             for (int i = 0; i < numInters; i++) {
@@ -205,15 +286,78 @@ public class Player extends InputAdapter implements Entity, RendersToWorld, Rend
                 }
                 return points;
             }
+
+            public static float walkStepDifficulty(Vector2 step, BodyPoint plantedFoot, BodyPoint footToMove, Player player) {
+                Vector2 rad = (Vector2) player.poseData.get("stepRadii");
+                float idealXRad2 = rad.x*rad.x;
+                float m = rad.x / rad.y;
+                float equivRadius2 = new Vector2(step).sub(plantedFoot.getPos()).scl(1, m).len2();
+                return Math.abs(equivRadius2-idealXRad2);
+            }
+
+            public static Vector2 bestWalkStep(ArrayList<Vector2> possibleSteps, BodyPoint plantedFoot, BodyPoint footToMove, Player player) {
+                float minStepDifficulty = Float.MAX_VALUE;
+                Vector2 easiestStep = new Vector2(footToMove.getPos());
+                for (Vector2 step : possibleSteps) {
+                    float diff = walkStepDifficulty(step, plantedFoot, footToMove, player);
+                    if (diff < minStepDifficulty) {
+                        easiestStep = step;
+                        minStepDifficulty = diff;
+                    }
+                }
+                return easiestStep;
+            }
+
+            public static Vector2 bestHipPos(BodyPoint frontFoot, BodyPoint backFoot) {
+                return new Vector2(frontFoot.getPos()).add(backFoot.getPos()).scl(0.5f).add(0, LEG_LENGTH*0.6f);
+            }
+
+            @Override
+            public MovementState nextMoveState(Player player) {
+                // If calling for a new step, reset by switching to this state again
+                if (Gdx.input.isKeyJustPressed(Input.Keys.RIGHT)) {
+                    return this;
+                }
+                return null;
+            }
+
+            @Override
+            public void switchToState(MovementState previousState, Player player) {
+                // Find viable steps from the last active foot
+                player.poseData.put("steps", calcWalkSteps(player));
+                // Switch active foot to the other one
+                player.activeFoot *= -1;
+                player.poseData.put("alrMoved", false);
+            }
+
             @Override
             public void movePlayer(float deltaTime, Player player) {
-                player.poseData.put("steps", calcWalkSteps(player));
+                HashMap<String, Object> data = player.poseData;
+                if (data.containsKey("alrMoved") && (boolean) data.get("alrMoved")) {
+                    // Already moved
+                    // Do nothing?
+                } else {
+                    // Teleport foot directly to desired position, if able
+                    BodyPoint moving = player.getActiveFoot();
+                    BodyPoint planted = player.getOtherFoot(moving);
+                    Vector2 newPos = bestWalkStep((ArrayList<Vector2>) data.get("steps"), planted, moving, player);
+                    if (new Vector2(newPos).sub(planted.getPos()).len() < LEG_LENGTH || true) {
+                        moving.getPos().set(newPos).add(0, FOOT_RADIUS*2.25f);
+                        moving.endFrame();
+                        Vector2 hipPos = bestHipPos(moving, planted);
+                        player.massCenter.getPos().set(hipPos);
+                    }
+                    data.put("alrMoved", true);
+                }
             }
+
         }
 
         ;
         public void movePlayer(float deltaTime, Player player){}
-        public MovementState nextMoveState(Player player){return this;}
+
+        /**Returns the next movement state to switch to, if any. Returns null if the player should stay on this movement state without switching*/
+        public MovementState nextMoveState(Player player){return null;}
         public void switchToState(MovementState previousState, Player player){}
 
 
