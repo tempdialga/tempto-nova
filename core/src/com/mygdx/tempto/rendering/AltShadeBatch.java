@@ -430,7 +430,15 @@ public class AltShadeBatch extends AltBatch {
         }
         shadowRange.translate(source.pos().x, source.pos().y);
         Polygon visRange = new Polygon();
-        boolean rangeVisible = Intersector.intersectPolygons(shadowRange, viewPolygonClockwise, visRange);
+        boolean rangeVisible;
+        try {
+            rangeVisible = Intersector.intersectPolygons(shadowRange, viewPolygonClockwise, visRange);
+        } catch (IllegalArgumentException e) {
+            // Something is causing the intersector to think there is an overlap, but set the overlap polygon to nothing
+            // Which causes an Arg exception because you can't make a polygon with no vertices
+            System.out.println("Visible range: "+visRange+", shadowRange: "+shadowRange);
+            throw e;
+        }
 
         if (rangeVisible) {
             float[] rangeVerts = visRange.getTransformedVertices();
