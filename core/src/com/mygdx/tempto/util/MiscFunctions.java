@@ -4,14 +4,12 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.FloatArray;
-import com.badlogic.gdx.utils.IntArray;
+import com.badlogic.gdx.utils.Null;
 
 import org.ejml.simple.SimpleMatrix;
 
 import java.util.ArrayList;
-import java.util.Vector;
 
 /**A class with miscellaneous utility functions*/
 public class MiscFunctions {
@@ -525,7 +523,7 @@ public class MiscFunctions {
         return concatVector2sColumn(vectors, false);
     }
 
-    public void expandClockwiseConvexPolygon(Polygon target, float dist) {
+    public static void expandClockwiseConvexPolygon(Polygon target, float dist) {
         float[] oldVerts = target.getTransformedVertices();
         float[] newVerts = new float[oldVerts.length];
         System.arraycopy(oldVerts, 0, newVerts, 0, oldVerts.length);
@@ -539,6 +537,81 @@ public class MiscFunctions {
 
             Vector2 x;
         }
+    }
+
+    /**
+     * @param xRad The radius along x coordinates of the ellipse.
+     * @param yRad The radius along y coordinates of the ellipse.
+     * @param intersections An array in which to store resulting intersections, if any are found. Returned as is if none are found,
+     *                      a Vector2 at idx 0 if one is found, and a Vector2 at both indices if two are found.
+     *
+     * @return The number of intersection points of the circle with the given
+     * Demonstration: https://www.desmos.com/calculator/fcdbphe3sy
+     * */
+    public static int segmentIntersectsEllipse(
+            float ax, float ay,
+            float bx, float by,
+            float ex, float ey,
+            float xRad, float yRad,
+            @Null Vector2[] intersections
+    ) {
+        // Should not be called on a segment with no dx or dy
+        assert ax != bx || ay != by;
+        // If a return array is given, should be exactly 2 long (This could be changed if a use case presents itself)
+        assert intersections == null || intersections.length == 2;
+
+        float m = xRad/yRad;
+        float m2 = m*m;
+
+        // Shift coordinates so ellipse is centered at origin
+        ax -= ex;
+        ay -= ey;
+        bx -= ex;
+        by -= ey;
+
+        float ama = ax*ax + m2*ay*ay;
+        float abmab = 2*(ax*bx + m2*ay*by);
+        float bmb = bx*bx + m2*by*by;
+
+        float a = ama - abmab + bmb;
+        float b = -2*ama + abmab;
+        float c = ama - xRad*xRad;
+
+        float discrim = b*b - 4*a*c;
+
+        // No intersections
+        if (discrim < 0) {
+            return 0;
+        }
+
+        // Exactly 1 intersection on the line, test if its within the segment
+        if (discrim == 0) {
+            float t = -0.5f * b / a;
+            if (t >= 0 && t <= 1) {
+                if (intersections != null) intersections[0] = new Vector2((1-t)*ax + t*bx, (1-t)*ay + t*by).add(ex, ey);
+                return 1;
+            } else {
+                return 0;
+            }
+        }
+
+        // 2 intersections, test each to see if it's within the segment
+        int numIntersects = 0;
+
+        float sqrtDiscrim = (float) Math.sqrt(discrim);
+        float tPlus = (0.5f/a) * (-b-sqrtDiscrim);
+        if (tPlus >= 0 && tPlus <= 1) {
+            if (intersections != null) intersections[numIntersects] = new Vector2((1-tPlus)*ax + tPlus*bx, (1-tPlus)*ay + tPlus*by).add(ex, ey);
+            numIntersects++;
+        }
+
+        float tMinus = (0.5f/a) * (-b+sqrtDiscrim);
+        if (tMinus >= 0 && tMinus <= 1) {
+            if (intersections != null) intersections[numIntersects] = new Vector2((1-tMinus)*ax + tMinus*bx, (1-tMinus)*ay + tMinus*by).add(ex, ey);
+            numIntersects++;
+        }
+
+        return numIntersects;
     }
 
 }

@@ -17,12 +17,10 @@ import com.mygdx.tempto.entity.pose.PoseCatalog;
 import com.mygdx.tempto.maps.WorldMap;
 import com.mygdx.tempto.rendering.RendersToDebug;
 import com.mygdx.tempto.rendering.RendersToWorld;
-
-import org.lwjgl.opengl.NVTextureEnvCombine4;
+import com.mygdx.tempto.util.MiscFunctions;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Vector;
 
 import space.earlygrey.shapedrawer.ShapeDrawer;
 
@@ -179,11 +177,29 @@ public class Player extends InputAdapter implements Entity, RendersToWorld, Rend
             public static ArrayList<Vector2> calcWalkSteps(Player player) {
                 ArrayList<Collidable> colls = player.parent.getCollidables();
                 ArrayList<Vector2> points = new ArrayList<>();
+
+                float[] stepRadius = {40};
+                Vector2 stepOrigin = player.primaryContact.getPos();
+
                 for (Collidable coll : colls) {
                     coll.forEachSegment(new SegmentProcedure() {
                         @Override
                         public void actOnSegment(float ax, float ay, float bx, float by, float av_x, float av_y, float bv_x, float bv_y, int indexA, int indexB, int normalDirection) {
                             points.add(new Vector2(ax, ay));
+
+                            //Imagine an ellipse around the current foot, and add any intersections between the segment and that ellipse as viable points
+                            float rad = 40;
+                            Vector2[] inters = new Vector2[2];
+                            int numInters = MiscFunctions.segmentIntersectsEllipse(
+                                    ax, ay,
+                                    bx, by,
+                                    stepOrigin.x, stepOrigin.y,
+                                    rad, rad*0.5f,
+                                    inters
+                            );
+                            for (int i = 0; i < numInters; i++) {
+                                points.add(inters[i]);
+                            }
                         }
                     });
                 }
