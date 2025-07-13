@@ -105,9 +105,12 @@ public abstract class TileLayerRenderer extends OrthogonalTiledMapRenderer {
     abstract void drawTile(TileLayer originalLayer, TiledMapTileLayer.Cell cell, float x, float y, float w, float h, float[] vertices, float[] depthColors);
 
     public static float packedDepthColor(float depth, Vector3 normalVector, float reflectivity) {
-        return Color.toFloatBits(1 - depth/256f, normalVector.x*0.5f+0.5f, normalVector.y*0.5f+0.5f, reflectivity);
+        return unpackedDepthColor(depth, normalVector, reflectivity).toFloatBits();
     }
 
+    public static Color unpackedDepthColor(float depth, Vector3 normalVector, float reflectivity) {
+        return new Color(1 - depth/256f, normalVector.x*0.5f+0.5f, normalVector.y*0.5f+0.5f, reflectivity);
+    }
 
     /**Vertex information for rendering to the depth map enabled shader, which includes vertex info of both the original texture region, and the depth map region, which should both be of the same texture (since this uses an atlas)
      *
