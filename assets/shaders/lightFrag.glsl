@@ -69,12 +69,13 @@ void main()
     vec4 channelMask = vec4(float(ch_idx == 0), float(ch_idx == 1), float(ch_idx == 2), float(ch_idx == 3));
 //    channelMask = vec4(0.25);
     float shadValue = dot(shadMask, channelMask);
-
+    vec3 shadHue = vec3(1,0.6,0.48);
+    vec3 shadTint = (1-shadValue)*shadHue+vec3(shadValue);
 
 //    shadValue = ch_idx == 0 ? shadMask.r :
 //                ch_idx == 1 ? shadMask.g :
 //                ch_idx == 2 ? shadMask.b : shadMask.a;
 
-    gl_FragColor = vec4(final_color*shadValue*u_lightEncodeFactor,1);
+    gl_FragColor = vec4(final_color*shadTint*shadValue*u_lightEncodeFactor,1);
 //    gl_FragColor = vec4(channelMask)*0.5;
 }
