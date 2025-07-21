@@ -7,6 +7,7 @@ import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonValue;
 import com.badlogic.gdx.utils.JsonWriter;
 import com.mygdx.tempto.entity.player.Player;
+import com.mygdx.tempto.util.MiscFunctions;
 
 import org.ejml.simple.SimpleMatrix;
 
@@ -22,6 +23,8 @@ public enum PoseCatalog {
 
     PLAYER_STAND("player/stand.json", new String[]{"front_foot"}, new String[]{"hip"}),
     PLAYER_STAND2("player/stand2.json", new String[]{"front_foot"}, new String[]{"hip"}),
+
+    PLAYER_WALK1("player/walk1.json", new String[]{"moving_foot"}/*Relative to planted foot*/, new String[]{"hip", "chest", "mf_hand", "pf_hand"}),
 
     ;
     /**Constants for reading the file*/
@@ -121,10 +124,6 @@ public enum PoseCatalog {
         poseFile.writeString(LinearPoseData.JSON.prettyPrint(this.inputOutputData), false);
     }
 
-    Pose generatePose(Map<String, Vector2> controlPoints) {
-
-        return null;
-    }
 
     /**Converts input and output vectors into the matrices representing the input and output spaces. TODO: refactor to be a little simpler to understand, likely by just generating the matrices here and filling them item by item*/
     public void generateSpaceMatricesFromLinearPoseData() {
@@ -221,6 +220,51 @@ public enum PoseCatalog {
                 );
             }
         }
+    }
+
+    public Pose getPoseForInput(Vector2... inputs) {
+        SimpleMatrix input = MiscFunctions.concatVector2sColumn(inputs, true);
+        SimpleMatrix caseMixVector = this.inputSpace.solve(input);
+        SimpleMatrix correspondingOutput = this.outputSpace.mult(caseMixVector);
+
+        HashMap<String, Vector2> newPosePoints = new HashMap<>();
+        for (int i = 0; i < inputs.length; i++) {
+            newPosePoints.put(this.inputIDs[i], inputs[i]);
+        }
+        for (int i = 0; i < this.outputIDs.length; i++) {
+            newPosePoints.put(this.outputIDs[i], new Vector2((float) correspondingOutput.get(i*2, 0), (float) correspondingOutput.get(i*2+1, 0)));
+        }
+
+        return new Pose(newPosePoints);
+    }
+
+    public Vector2 getPointForInput(String toGet, Vector2... inputs) {
+        int idx = this.getOutputIndex(toGet);
+        System.out.println("Idx found: "+idx);
+        if (idx == -1) throw new IllegalArgumentException("Output point '"+toGet+"' not found. Available output points: "+ Arrays.toString(this.outputIDs));
+
+        SimpleMatrix input = MiscFunctions.concatVector2sColumn(inputs, true);
+//        System.out.println("Input space: "+this.inputSpace);
+//        System.out.println("Input: "+input);
+//        System.out.println("Inverted input: "+this.inputSpace.invert());
+        SimpleMatrix caseMixVector = this.inputSpace.solve(input);
+//        System.out.println("Case mix: "+caseMixVector);
+//        System.out.println("Output space: "+this.outputSpace);
+        SimpleMatrix correspondingOutput = this.outputSpace.mult(caseMixVector);
+        System.out.println("Case mix output: "+correspondingOutput);
+        Vector2 outputPoint = new Vector2((float) correspondingOutput.get(idx*2, 0), (float) correspondingOutput.get(idx*2+1, 0));
+        System.out.println("Output for "+toGet+": "+outputPoint);
+        return outputPoint;
+    }
+
+    /**Returns the index of the given output by name, or -1 if one cannot be found.*/
+    public int getOutputIndex(String output) {
+        for (int i = 0; i < this.outputIDs.length; i++) {
+            if (output.equals(this.outputIDs[i])) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     public int getNumCases() {
