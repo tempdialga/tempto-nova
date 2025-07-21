@@ -6,10 +6,13 @@ import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.FloatArray;
 import com.badlogic.gdx.utils.Null;
+import com.mygdx.tempto.entity.physics.Collidable;
 
 import org.ejml.simple.SimpleMatrix;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Set;
 
 /**A class with miscellaneous utility functions*/
 public class MiscFunctions {
@@ -614,4 +617,21 @@ public class MiscFunctions {
         return numIntersects;
     }
 
+    /**Compares two sets a and b, and returns true if a has elements equal to b's elements. I.e., the sets are equal. Defined to allow string comparisons.*/
+    public static <T> boolean setsHaveEqualElements(Set<T> a, Set<T> b) {
+        if (a.size() != b.size()) return false;
+
+        for (T ai : a) {
+            boolean aiInB = false;
+            for (T bi : b) {
+                if (ai.equals(bi)) {
+                    aiInB = true;
+                    break;
+                }
+            }
+            if (!aiInB) return false;
+        }
+
+        return true;
+    }
 }
