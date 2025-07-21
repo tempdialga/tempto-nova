@@ -171,9 +171,9 @@ public class Player extends InputAdapter implements Entity, RendersToWorld, Rend
 
         // Repeat for other foot if necessary
         BodyPoint otherFoot = this.getOtherFoot(contactFoot);
-        BodyPoint.PointCollision secondaryCollision = contactFoot.findCollision(world.getCollidables());
+        BodyPoint.PointCollision secondaryCollision = otherFoot.findCollision(world.getCollidables());
         if (secondaryCollision != null) {
-            Vector2 obstruction = new Vector2(secondaryCollision.pointPos()).sub(contactFoot.getPos());
+            Vector2 obstruction = new Vector2(secondaryCollision.pointPos()).sub(otherFoot.getPos());
             for (BodyPoint point : this.points) point.getPos().add(obstruction);
 
             Vector2 newVel = secondaryCollision.contactVel();
