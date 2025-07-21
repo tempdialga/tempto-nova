@@ -360,7 +360,6 @@ public class StaticTerrainElement implements Entity, SavesToFile, Collidable, Re
 
     @Override
     public void debugRender(ShapeRenderer drawer) {
-        System.out.println("Debug rendering polygon");
         drawer.setColor(this.color);
         float[] tris = this.triangles;
         for (int i = 0; i < tris.length-4; i += 2) {
