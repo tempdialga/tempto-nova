@@ -34,14 +34,17 @@ public record ShadowCaster (TextureRegion shadowTexture, Vector3 origin, Vector3
 
     public int shadowShader(LightSource light) {
         if (this.triangle()) return AltShadeBatch.NINE_SAMPLE_TRI;
-        if (light.bodyRadius() > 0) {
-            if (this.flat) {
+        boolean useFlat = this.flat;
+//        useFlat = true;
+
+        if (light.bodyRadius() > 0 && false) {
+            if (useFlat) {
                 return AltShadeBatch.NINE_FLAT;
             } else {
                 return AltShadeBatch.NINE_SAMPLE;
             }
         } else {
-            if (this.flat) {
+            if (useFlat) {
                 return AltShadeBatch.ONE_FLAT;
             } else {
                 return AltShadeBatch.ONE_SAMPLE;
