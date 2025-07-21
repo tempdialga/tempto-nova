@@ -1,13 +1,12 @@
 package com.mygdx.tempto.entity.testpoint;
 
 import com.badlogic.gdx.math.Vector2;
-import com.mygdx.tempto.entity.pose.Posable;
-import com.mygdx.tempto.entity.pose.Pose;
+import com.mygdx.tempto.entity.pose.OldPose;
 import com.mygdx.tempto.util.MiscFunctions;
 
 import java.util.Map;
 
-public class GlideToPoint extends Pose {
+public class GlideToPoint extends OldPose {
 
     public static final String MOVING_FOOT_START = "MF_START";
     public static final String MOVING_FOOT_END = "MF_END";

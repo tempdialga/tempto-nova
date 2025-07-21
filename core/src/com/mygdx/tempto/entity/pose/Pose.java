@@ -1,29 +1,65 @@
 package com.mygdx.tempto.entity.pose;
 
 import com.badlogic.gdx.math.Vector2;
+import com.mygdx.tempto.util.MiscFunctions;
 
-import java.util.Map;
+import java.util.HashMap;
+import java.util.Set;
 
-/**A base for classes that can pose {@link Posable} instances*/
-public abstract class Pose {
+/**A wrapper for a set of points with labels that can be quickly interpolated with other poses*/
+public record Pose(HashMap<String, Vector2> points) {
 
-    protected Map<String, Vector2> inputPoints;
-    protected Map<String, Vector2> outputPoints;
-
-    public Pose(Map<String, Vector2> inputPoints) {
-        this.inputPoints = inputPoints;
+    /**Scales all the points in this pose by the given x and y values. DOES NOT CREATE A NEW POSE. Returns self for chaining.*/
+    public Pose scale(float x, float y) {
+        for (Vector2 point : this.points.values()) {
+            point.scl(x, y);
+        }
+        return this;
     }
 
-    public abstract void update(float deltaTime);
+    /**Alias of {@link #scale(float, float)}.*/
+    public Pose scale(Vector2 factors) {
+        return this.scale(factors.x, factors.y);
+    }
 
-    public Vector2 getOutputPoint(String id) {return this.outputPoints.get(id);}
+    /**Alias of {@link #scale(float, float)}, but scales both components by the same factor.*/
+    public Pose scale(float uniformFactor) {
+        return this.scale(uniformFactor, uniformFactor);
+    }
 
-
-    public void assertKeysPresent(String... keys) {
-        for (String key : keys) {
-            if (!this.inputPoints.containsKey(key)) {
-                throw new IllegalArgumentException("Input point with key \""+key+"\" missing from construction of "+this.getClass()+" pose");
-            }
+    /**Shifts the x and y coordinates of every point in this pose by the given values. DOES NOT CREATE A NEW POSE. Returns self for chaining.*/
+    public Pose shift(float x, float y) {
+        for (Vector2 point : this.points.values()) {
+            point.add(x, y);
         }
+        return this;
+    }
+
+    /**Alias of {@link #shift(float, float)}.*/
+    public Pose shift(Vector2 amount) {
+        return this.shift(amount.x, amount.y);
+    }
+
+    public Vector2 get(String pointName) {
+        return this.points.get(pointName);
+    }
+
+    public Pose interpolate(Pose other, float weight) {
+        return Pose.interpolate(this, other, weight);
+    }
+
+    public static Pose interpolate(Pose a, Pose b, float b_weight) {
+        Set<String> aPointIDs = a.points.keySet();
+        Set<String> bPointIDs = b.points.keySet();
+
+        if (!MiscFunctions.setsHaveEqualElements(aPointIDs, bPointIDs)) throw new IllegalArgumentException("Poses a and b must have the same points! a: "+a.points.keySet()+", b: "+b.points.keySet());
+
+        HashMap<String, Vector2> newPoints = new HashMap<>();
+        for (String id : aPointIDs) {
+            Vector2 point = new Vector2(a.points.get(id)).lerp(b.points.get(id), b_weight);
+            newPoints.put(id, point);
+        }
+
+        return new Pose(newPoints);
     }
 }

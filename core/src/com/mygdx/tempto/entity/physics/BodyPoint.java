@@ -1,8 +1,10 @@
 package com.mygdx.tempto.entity.physics;
 
+import com.badlogic.gdx.math.Circle;
 import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Null;
+import com.mygdx.tempto.entity.player.Player;
 import com.mygdx.tempto.util.MiscFunctions;
 
 import java.util.ArrayList;
@@ -32,7 +34,7 @@ public class BodyPoint {
     public BodyPoint(int shape, float radius, Vector2 pos) {
         this.shape = shape;
         this.radius = radius;
-        this.pos = pos;
+        this.pos = new Vector2(pos);
         this.lastFramePos = new Vector2(pos);
     }
 
@@ -145,7 +147,17 @@ public class BodyPoint {
 
                                     firstCollision[0] = new PointCollision(BodyPoint.this, coll, collIndex, T, contactPoint, contactVel, new Vector2(contactPoint.sub(radius)), norm);
                                 }
-                            }
+                            }/* else {
+                                Intersector.MinimumTranslationVector mtv = new Intersector.MinimumTranslationVector();
+                                Vector2 nearestSegPoint =
+                                if (Intersector.intersectSegmentCircle(
+                                        new Vector2(ax, ay),
+                                        new Vector2(bx, by),
+                                        new Circle(clo)
+                                )) {
+
+                                }
+                            }*/
                         }
                     });
                     coll.forEachPoint(new PointProcedure() {
@@ -193,9 +205,10 @@ public class BodyPoint {
      * Intended to be called after modifying the point's pos with {@link #findCollision(ArrayList)}
      *
      * @param collidables The list of collidables to check for overlap with
-     * @param maxIterations The maximum number of iterations to check for overlap (i.e. if it's caught between two surfaces)*/
+     * @param maxIterations The maximum number of iterations to check for overlap (i.e. if it's caught between two surfaces)
+     * @param concurrentPoints Any points which should be moved alongside this one if an overlap is found*/
 
-    public void resolveOverlap(ArrayList<Collidable> collidables, int maxIterations) {
+    public void resolveOverlap(ArrayList<Collidable> collidables, int maxIterations, BodyPoint... concurrentPoints) {
         if (this.shape != CIRCLE) return;
 
         Vector2 pos = this.pos;
@@ -227,6 +240,10 @@ public class BodyPoint {
                         if (dist < rad) {
                             segToPos.nor().scl(rad - dist + DEFAULT_COLLISION_BUFFER);
                             pos.add(segToPos);
+                            for (BodyPoint point : concurrentPoints) {
+                                if (point == BodyPoint.this) continue;
+                                point.pos.add(segToPos);
+                            }
                             foundOverlap[0] = true;
                         }
                     }
@@ -235,15 +252,21 @@ public class BodyPoint {
 
             numIterations++;
             if (numIterations > maxIterations) break;
+//            System.out.print("Overlap resolved, vels: "+this.vel+" (primary)");
+//            for (BodyPoint point : concurrentPoints) {
+//                System.out.print(", "+point.vel);
+//            }
+//            System.out.println();
         }
+
     }
 
     /**Checks for any overlaps between a volumetric point's static position and any collidables, and moves the point to avoid them.
      * Only checks points of shape {@link #CIRCLE} and other volumetric shapes, and only against surfaces with a normal direction.
      * Intended to be called after {@link #findCollision(ArrayList)}*/
 
-    public void resolveOverlap(ArrayList<Collidable> collidables) {
-        this.resolveOverlap(collidables, 100);
+    public void resolveOverlap(ArrayList<Collidable> collidables, BodyPoint... concurrentPoints) {
+        this.resolveOverlap(collidables, 100, concurrentPoints);
     }
 
     /**Ends the frame by resetting {@link #lastFramePos} to the current {@link #pos} value*/
@@ -265,6 +288,15 @@ public class BodyPoint {
 
     public Vector2 getPos() {
         return pos;
+    }
+
+    public Vector2 setPos(Vector2 toCopy) {
+        return this.setPos(toCopy.x, toCopy.y);
+    }
+
+    public Vector2 setPos(float x, float y) {
+        this.pos.set(x, y);
+        return this.pos;
     }
 
     public Vector2 getLastFramePos() {
