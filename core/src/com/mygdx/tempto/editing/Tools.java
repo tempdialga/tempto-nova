@@ -1164,9 +1164,12 @@ public enum Tools {
             Color inputColor = Color.CORAL;
             Color outputColor = Color.TEAL;
             float pointRadius = 1;
+            float zoom = worldCamera.zoom;
             this.sidebarFont.getData().setScale(this.pointFontHeight * this.sidebarFont.getScaleY() / this.sidebarFont.getLineHeight()); //Scale by ratio between desired and actual height
 
             PoseCatalog.LinearPoseData data = this.currentPose.inputOutputData;
+
+            this.pointFont.getData().setScale(zoom * this.pointFontHeight * this.pointFont.getScaleY() / this.pointFont.getLineHeight()); //Likewise scale by ratio between what we want and what we have
             this.pointFont.setColor(inputColor);
             for (String inputID : this.currentPose.inputIDs) {
 //                System.out.println("Rendering input point!");
@@ -1185,7 +1188,23 @@ public enum Tools {
                 this.pointFont.draw(batch, outputID, point.x, point.y);
             }
 
+            // If control button held, preview for input where the mouse is
+            if (Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT)) {
+                Color fadedInput = new Color(inputColor).mul(1,1,1,0.5f);
+                Color fadedOutput = new Color(outputColor).mul(1,1,1,0.5f);
 
+                // Need to figure out how to do this for multiple input points, though
+                Vector2 firstInputPreview = new Vector2(this.currentMouseCoords).sub(camPos);
+                drawer.filledCircle(firstInputPreview, pointRadius, fadedInput);
+
+                // Identify output points (make this non-brute force sometime)
+                for (String outputID : this.currentPose.outputIDs) {
+                    Vector2 outputPreview = this.currentPose.getPointForInput(outputID, firstInputPreview).add(camPos);
+                    drawer.filledCircle(outputPreview, pointRadius, fadedOutput);
+                }
+
+
+            }
 
         }
 
