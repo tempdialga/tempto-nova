@@ -9,7 +9,7 @@ import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.math.Vector2;
 import com.mygdx.tempto.entity.Entity;
 import com.mygdx.tempto.entity.physics.BodyPoint;
-import com.mygdx.tempto.entity.pose.Pose;
+import com.mygdx.tempto.entity.pose.OldPose;
 import com.mygdx.tempto.maps.WorldMap;
 import com.mygdx.tempto.rendering.RendersToWorld;
 import com.mygdx.tempto.util.MiscFunctions;
@@ -24,7 +24,7 @@ public class TestPoint implements Entity, RendersToWorld {
     protected Vector2 vel;
     protected WorldMap parent;
     protected String ID;
-    protected Pose currentPose;
+    protected OldPose currentPose;
 
     public TestPoint(Vector2 pos, WorldMap parent) {
         this.setParentWorld(parent);
@@ -76,6 +76,7 @@ public class TestPoint implements Entity, RendersToWorld {
         }
 
         BodyPoint.PointCollision collision = this.body.findCollision(world.getCollidables());
+
 
         int maxSlipIterations = 20;
         int maxIterations = 1000;
