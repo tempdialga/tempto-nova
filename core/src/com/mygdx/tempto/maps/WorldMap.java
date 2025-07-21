@@ -514,13 +514,10 @@ public class WorldMap implements RendersToScreen {
                 renders.addShadowCastersToList(casters);
             }
         }
-        float blockRadius = 50;
-        float groundY = 150;
-//        casters.add(new ShadowCaster(CentralTextureData.getRegion("maps/collisionTexture"), new Vector3(this.camera.position.x-blockRadius,groundY,-440), new Vector3(blockRadius*2,0,0), new Vector3(0,blockRadius*7,0), true));
-//        casters.add(new ShadowCaster(CentralTextureData.getRegion("maps/collisionTexture"), new Vector3(-1000, groundY-440, -440), new Vector3(2640,0, 0), new Vector3(0, 450, 0), false));
 
-        float width = camera.viewportWidth * camera.zoom;
-        float height = camera.viewportHeight * camera.zoom;
+
+        float width;
+        float height;
         width = TemptoNova.PIXEL_GAME_WIDTH;
         height = TemptoNova.PIXEL_GAME_HEIGHT;
         float w = width * Math.abs(camera.up.y) + height * Math.abs(camera.up.x);
@@ -536,15 +533,6 @@ public class WorldMap implements RendersToScreen {
                 viewBounds.x+w, viewBounds.y+h,
                 viewBounds.x+w, viewBounds.y
         });
-
-//        ShadowCaster screenTestCaster = new ShadowCaster(new TextureRegion(depthMap), new Vector3(viewBounds.x, viewBounds.y, 0), new Vector3(viewBounds.width, 0, 0), new Vector3(0, viewBounds.height, 0));
-//        casters.add(screenTestCaster);
-//        System.out.println(casters.size() + " casters found");
-
-//        this.shadeBatch.dispose();
-//        this.shadeBatch = new AltShadeBatch();
-//        this.shadeBatch.setProjectionMatrix(this.camera.combined);
-//        this.shadeBatch.enableBlending();
 
         final int RED = 0, GREEN = 1, BLUE = 2, ALPHA = 3;
         int color_channel = RED;
@@ -669,13 +657,9 @@ public class WorldMap implements RendersToScreen {
         this.finalPassBatch.setProjectionMatrix(this.camera.combined);
         this.finalPassBatch.setSensitivity(0.5f);
         this.finalPassBatch.setBlendFunction(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
-//        this.finalPassBatch.setBlendFunction(GL20.GL_ONE, GL20.GL_ONE);
-//        ScreenUtils.clear(0,0,0,1);
-//        Gdx.gl.glColorMask(true, false, false, false);
-//        this.finalPassBatch.disableBlending();
 
         this.finalPassBatch.begin();
-        float hw = width / 2f, hh = height / 2f;
+        float hw = this.camera.viewportWidth * this.camera.zoom / 2f, hh = this.camera.viewportHeight * this.camera.zoom / 2f;
         float x = this.camera.position.x - hw, y = this.camera.position.y;
         this.finalPassBatch.flush();
         this.finalPassBatch.draw(blankTexture, x, y+hh, hw*2, -hh*2);
@@ -709,6 +693,7 @@ public class WorldMap implements RendersToScreen {
             this.miscWorldBatch.setProjectionMatrix(this.camera.combined);
             this.miscWorldBatch.begin();
             this.miscWorldBatch.draw(this.finalPass, x, y+hh, hw*2, -hh*2);
+            this.editor.renderToWorld(this.miscWorldBatch, camera);
             this.miscWorldBatch.end();
         }
         Gdx.gl.glColorMask(true, true, true,  true);
