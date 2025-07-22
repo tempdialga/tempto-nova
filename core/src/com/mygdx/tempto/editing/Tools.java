@@ -1229,12 +1229,14 @@ public enum Tools {
             public void undoEdit(WorldMap map) {
                 //Searches by ID from scratch each time for sake of redundancy, in case something reassigns what Vector2 or Vector2[] instances are in the Pose for some reason
                 this.pose.getPoint(this.pointID, this.caseIdx).set(this.before);
+                this.pose.generateSpaceMatricesFromLinearPoseData();
             }
 
             @Override
             public void redoEdit(WorldMap map) {
                 //Searches by ID from scratch each time for sake of redundancy, in case something reassigns what Vector2 or Vector2[] instances are in the Pose for some reason
                 this.pose.getPoint(this.pointID, this.caseIdx).set(this.after);
+                this.pose.generateSpaceMatricesFromLinearPoseData();
             }
         }
     }),
