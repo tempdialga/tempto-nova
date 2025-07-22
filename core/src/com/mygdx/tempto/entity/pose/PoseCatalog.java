@@ -25,6 +25,7 @@ public enum PoseCatalog {
     PLAYER_STAND2("player/stand2.json", new String[]{"front_foot"}, new String[]{"hip"}),
 
     PLAYER_WALK1("player/walk1.json", new String[]{"moving_foot"}/*Relative to planted foot*/, new String[]{"hip", "chest", "mf_hand", "pf_hand"}),
+    PLAYER_STRIDE("player/stride.json", new String[]{"moving_foot"}, new String[]{"hip", "chest", "mf_hand", "pf_hand"})
 
     ;
     /**Constants for reading the file*/
