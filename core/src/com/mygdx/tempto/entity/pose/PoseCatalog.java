@@ -222,10 +222,42 @@ public enum PoseCatalog {
         }
     }
 
+    /**Checks for any input space vectors which are equal, and nudges them a little to try to resolve that.*/
+    private void massageInputSpace() {
+        for (int i = 0; i < this.numCases; i++) {
+            // If some cases haven't been edited yet, then they may have identical inputs. This needs to be resolved.
+            for (int j = i+1; j < this.numCases; j++) {
+                boolean allValsEqual = true;
+                for (int val_idx = 0; val_idx < this.numCases-1; val_idx++) {
+                    double val_i = this.inputSpace.get(val_idx, i);
+                    double val_j = this.inputSpace.get(val_idx, j);
+                    if (val_i != val_j) {
+                        allValsEqual = false;
+                        break;
+                    }
+                }
+                if (allValsEqual) {// Nudge the first value a smidge, if they're equal
+                    double val_j0 = this.inputSpace.get(0, j);
+                    float nudge = 0.1f;
+                    this.inputSpace.set(0, j, val_j0 + nudge * (j + 1));
+                }
+            }
+        }
+    }
+
     public Pose getPoseForInput(Vector2... inputs) {
+        this.massageInputSpace();
+
+
         SimpleMatrix input = MiscFunctions.concatVector2sColumn(inputs, true);
+        System.out.println("Input space: "+this.inputSpace);
+        System.out.println("Input: "+input);
+        System.out.println("Inverted input: "+this.inputSpace.invert());
         SimpleMatrix caseMixVector = this.inputSpace.solve(input);
         SimpleMatrix correspondingOutput = this.outputSpace.mult(caseMixVector);
+
+
+
 
         HashMap<String, Vector2> newPosePoints = new HashMap<>();
         for (int i = 0; i < inputs.length; i++) {
@@ -239,14 +271,16 @@ public enum PoseCatalog {
     }
 
     public Vector2 getPointForInput(String toGet, Vector2... inputs) {
+        this.massageInputSpace();
+
         int idx = this.getOutputIndex(toGet);
         System.out.println("Idx found: "+idx);
         if (idx == -1) throw new IllegalArgumentException("Output point '"+toGet+"' not found. Available output points: "+ Arrays.toString(this.outputIDs));
 
         SimpleMatrix input = MiscFunctions.concatVector2sColumn(inputs, true);
-//        System.out.println("Input space: "+this.inputSpace);
-//        System.out.println("Input: "+input);
-//        System.out.println("Inverted input: "+this.inputSpace.invert());
+        System.out.println("Input space: "+this.inputSpace);
+        System.out.println("Input: "+input);
+        System.out.println("Inverted input: "+this.inputSpace.invert());
         SimpleMatrix caseMixVector = this.inputSpace.solve(input);
 //        System.out.println("Case mix: "+caseMixVector);
 //        System.out.println("Output space: "+this.outputSpace);
@@ -327,6 +361,10 @@ public enum PoseCatalog {
 
 
     public class PoseConstraint {
-
+        public static final int MAX_RAD = 0; // Default, this is what we'd use the most
+        int type;
+        /**E.g. which points are constrained*/
+        String[] args;
+        float radius;
     }
 }
