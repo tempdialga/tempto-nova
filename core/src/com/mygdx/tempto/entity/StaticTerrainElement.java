@@ -286,9 +286,7 @@ public class StaticTerrainElement implements Entity, SavesToFile, Collidable, Re
                 cx = dynPoints.get(k);
                 cy = dynPoints.get(k+1);
 
-                Vector2 aToB = new Vector2(bx, by).sub(ax, ay);
-                Vector2 bToC = new Vector2(cx, cy).sub(bx, by);
-                if (aToB.rotate90(1).dot(bToC) >=0) {//If the angle of abc is convex, skip it. Checked by testing if a vector facing away from surface AB is in the same direction as the direct vector from b to c
+                if (Intersector.pointLineSide(ax, ay, bx, by, cx, cy) >= 0) {//If the angle of abc is convex, skip it.
                     continue;//Convex, so the triangle wouldn't make sense
                 }
 
@@ -362,7 +360,7 @@ public class StaticTerrainElement implements Entity, SavesToFile, Collidable, Re
     public void debugRender(ShapeRenderer drawer) {
         drawer.setColor(this.color);
         float[] tris = this.triangles;
-        for (int i = 0; i < tris.length-4; i += 2) {
+        for (int i = 0; i < tris.length-4; i += 6) {
             float x1 = tris[i], y1 = tris[i+1],
                     x2 = tris[i+2], y2 = tris[i+3],
                     x3 = tris[i+4], y3 = tris[i+5];
@@ -375,7 +373,7 @@ public class StaticTerrainElement implements Entity, SavesToFile, Collidable, Re
     public void addShadowCastersToList(List<ShadowCaster> centralList) {
         //Front face
         float[] tris = this.triangles;
-        for (int i = 0; i < tris.length-4; i+= 2) {
+        for (int i = 0; i < tris.length-4; i+= 6) {
             float x1 = tris[i], y1 = tris[i+1],
                     x2 = tris[i+2], y2 = tris[i+3],
                     x3 = tris[i+4], y3 = tris[i+5];
