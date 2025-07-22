@@ -155,31 +155,41 @@ public class Player extends InputAdapter implements Entity, RendersToWorld, Rend
 
 //        BodyPoint activeFoot = this.getActiveFoot();
         BodyPoint contactFoot = this.getActiveFoot();
+        BodyPoint otherFoot = this.getOtherFoot(contactFoot);
+        System.out.println("Before physics: contact: " + contactFoot.getPos() + ", other: " + otherFoot.getPos());
+
 
         //See if the foot collided with anything, for now (2025-1-17) no slipping
         BodyPoint.PointCollision collision = contactFoot.findCollision(world.getCollidables());
         if (collision != null) {
             Vector2 obstruction = new Vector2(collision.pointPos()).sub(contactFoot.getPos());
-            for (BodyPoint point : this.points) point.getPos().add(obstruction);
+            if (!(Float.isNaN(obstruction.x) || Float.isNaN(obstruction.y))) {
+                for (BodyPoint point : this.points) point.getPos().add(obstruction);
 
-            Vector2 newVel = collision.contactVel();
-            this.overallVel.set(newVel);
+                Vector2 newVel = collision.contactVel();
+                this.overallVel.set(newVel);
+            }
         }
 
         // Resolve any inherent overlaps
         contactFoot.resolveOverlap(world.getCollidables(), this.points);
 
         // Repeat for other foot if necessary
-        BodyPoint otherFoot = this.getOtherFoot(contactFoot);
+
+        System.out.println("After resolving contact foot foot: contact: " + contactFoot.getPos() + ", other: " + otherFoot.getPos());
+
         BodyPoint.PointCollision secondaryCollision = otherFoot.findCollision(world.getCollidables());
         if (secondaryCollision != null) {
             Vector2 obstruction = new Vector2(secondaryCollision.pointPos()).sub(otherFoot.getPos());
-            for (BodyPoint point : this.points) point.getPos().add(obstruction);
+            if (!(Float.isNaN(obstruction.x) || Float.isNaN(obstruction.y))) {
+                for (BodyPoint point : this.points) point.getPos().add(obstruction);
 
-            Vector2 newVel = secondaryCollision.contactVel();
-            this.overallVel.set(newVel);
+                Vector2 newVel = secondaryCollision.contactVel();
+                this.overallVel.set(newVel);
+            }
         }
-        contactFoot.resolveOverlap(world.getCollidables(), this.points);
+        otherFoot.resolveOverlap(world.getCollidables(), this.points);
+        System.out.println("After resolving other foot: contact: " + contactFoot.getPos() + ", other: " + otherFoot.getPos());
 
 
         for (BodyPoint point : this.points) point.endFrame();
@@ -460,22 +470,31 @@ public class Player extends InputAdapter implements Entity, RendersToWorld, Rend
                 BodyPoint moving = player.getActiveFoot();
                 BodyPoint planted = player.getOtherFoot(moving);
                 Vector2 plantedPos = planted.getPos();
+                System.out.println("Right before applying pose; Planted foot: "+plantedPos+", Moving foot: "+moving.getPos());
                 Vector2 movingRelPos = new Vector2(moving.getPos()).sub(plantedPos);
                 int dirMult = movingRelPos.x>=0? 1 : -1;
                 movingRelPos.x *= dirMult;
 
                 Pose walkPoints = walk.getPoseForInput(movingRelPos).scale(dirMult, 1).shift(plantedPos);
 
-                player.hip.setPos(walkPoints.get("hip"));
-                player.chest.setPos(walkPoints.get("chest"));
+                movingRelPos.x *= dirMult;
+                Pose stridePoints = PoseCatalog.PLAYER_STRIDE.getPoseForInput(movingRelPos).shift(plantedPos);
+
+                //Stride if close to center, otherwise walk
+                float moveProg = (float) data.get("moveProgress");
+                float strideNess = MiscFunctions.clamp(1f - (float) Math.pow(2*Math.abs(moveProg-0.5f), 3f), 0, 1);
+                Pose walkStride = walkPoints.interpolate(stridePoints, strideNess);
+
+                player.hip.setPos(stridePoints.get("hip"));
+                player.chest.setPos(stridePoints.get("chest"));
 
                 BodyPoint mfHand = player.getActiveHand(moving);
                 BodyPoint pfHand = player.getOtherHand(planted);
 
 //                System.out.println("mfHand before: "+mfHand.getPos());
-                mfHand.setPos(walkPoints.get("mf_hand"));
+                mfHand.setPos(stridePoints.get("mf_hand"));
 //                System.out.println("mfHand: "+mfHand.getPos());
-                pfHand.setPos(walkPoints.get("pf_hand"));
+                pfHand.setPos(stridePoints.get("pf_hand"));
 //                System.out.println("mfHand after setting pfHand: "+mfHand.getPos());
 //                System.out.println("Front foot relative: "+movingRelPos+", planted: "+plantedPos+", hip: "+player.hip.getPos()+", chest: "+ player.chest.getPos()+", mfHand: "+mfHand.getPos()+", pfHand: "+pfHand.getPos());
             }
