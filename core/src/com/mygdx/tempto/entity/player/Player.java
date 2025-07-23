@@ -478,23 +478,25 @@ public class Player extends InputAdapter implements Entity, RendersToWorld, Rend
                 Pose walkPoints = walk.getPoseForInput(movingRelPos).scale(dirMult, 1).shift(plantedPos);
 
                 movingRelPos.x *= dirMult;
-                Pose stridePoints = PoseCatalog.PLAYER_STRIDE.getPoseForInput(movingRelPos).shift(plantedPos);
+                Vector2 strideInput = new Vector2(moving.getPos()).sub(planted.getPos());
+                System.out.println("Input: " + strideInput);
+                Pose stridePoints = PoseCatalog.PLAYER_STRIDE.getPoseForInput(strideInput).shift(plantedPos);
 
                 //Stride if close to center, otherwise walk
                 float moveProg = (float) data.get("moveProgress");
                 float strideNess = MiscFunctions.clamp(1f - (float) Math.pow(2*Math.abs(moveProg-0.5f), 3f), 0, 1);
                 Pose walkStride = walkPoints.interpolate(stridePoints, strideNess);
 
-                player.hip.setPos(stridePoints.get("hip"));
-                player.chest.setPos(stridePoints.get("chest"));
+                player.hip.setPos(walkStride.get("hip"));
+                player.chest.setPos(walkStride.get("chest"));
 
                 BodyPoint mfHand = player.getActiveHand(moving);
                 BodyPoint pfHand = player.getOtherHand(planted);
 
 //                System.out.println("mfHand before: "+mfHand.getPos());
-                mfHand.setPos(stridePoints.get("mf_hand"));
+                mfHand.setPos(walkStride.get("mf_hand"));
 //                System.out.println("mfHand: "+mfHand.getPos());
-                pfHand.setPos(stridePoints.get("pf_hand"));
+                pfHand.setPos(walkStride.get("pf_hand"));
 //                System.out.println("mfHand after setting pfHand: "+mfHand.getPos());
 //                System.out.println("Front foot relative: "+movingRelPos+", planted: "+plantedPos+", hip: "+player.hip.getPos()+", chest: "+ player.chest.getPos()+", mfHand: "+mfHand.getPos()+", pfHand: "+pfHand.getPos());
             }
