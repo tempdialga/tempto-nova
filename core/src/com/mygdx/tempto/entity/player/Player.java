@@ -69,6 +69,10 @@ public class Player extends InputAdapter implements Entity, RendersToWorld, Rend
     /**The position and velocity of the center of mass. These are controlled first, and then the specific movements of body parts follow.*/
     BodyPoint massCenter;
 
+    /**The energy the player has stored up, which is directional. You could think of it to how they crouch to jump in a certain direction.*/
+    Vector2 pentUpEnergy = new Vector2();
+    static final float MAX_PENT_ENERGY = 40; //Kind of an arbitrary amount
+
     //// Physical components of the body ////
     BodyPoint leftFoot, rightFoot;
     BodyPoint leftHand, rightHand;
@@ -124,7 +128,7 @@ public class Player extends InputAdapter implements Entity, RendersToWorld, Rend
         PoseCatalog.PLAYER_STAND.writeToFile();
 
 
-        this.currentState = MovementState.WALK;
+        this.currentState = MovementState.STAND;
         this.currentState.switchToState(null, this);
     }
 
@@ -132,17 +136,10 @@ public class Player extends InputAdapter implements Entity, RendersToWorld, Rend
     @Override
     public void update(float deltaTime, WorldMap world) {
 
-
-//        System.out.println("Start of frame active: "+activeFoot.getPos() + ", other: "+otherFoot.getPos());
-
-
         this.overallVel.sub(0, world.getGravity()*deltaTime);
         for (BodyPoint point : this.points) {
             point.applyVelocity(this.overallVel, deltaTime);
         }
-//        this.leftFoot.applyVelocity(this.overallVel, deltaTime);
-//        this.rightFoot.applyVelocity(this.overallVel, deltaTime);
-//        this.massCenter.applyVelocity(this.overallVel, deltaTime);
 
         // State based movement
         MovementState newState = this.currentState.nextMoveState(this);
@@ -156,7 +153,6 @@ public class Player extends InputAdapter implements Entity, RendersToWorld, Rend
 //        BodyPoint activeFoot = this.getActiveFoot();
         BodyPoint contactFoot = this.getActiveFoot();
         BodyPoint otherFoot = this.getOtherFoot(contactFoot);
-        System.out.println("Before physics: contact: " + contactFoot.getPos() + ", other: " + otherFoot.getPos());
 
 
         //See if the foot collided with anything, for now (2025-1-17) no slipping
@@ -175,9 +171,6 @@ public class Player extends InputAdapter implements Entity, RendersToWorld, Rend
         contactFoot.resolveOverlap(world.getCollidables(), this.points);
 
         // Repeat for other foot if necessary
-
-        System.out.println("After resolving contact foot foot: contact: " + contactFoot.getPos() + ", other: " + otherFoot.getPos());
-
         BodyPoint.PointCollision secondaryCollision = otherFoot.findCollision(world.getCollidables());
         if (secondaryCollision != null) {
             Vector2 obstruction = new Vector2(secondaryCollision.pointPos()).sub(otherFoot.getPos());
@@ -189,8 +182,6 @@ public class Player extends InputAdapter implements Entity, RendersToWorld, Rend
             }
         }
         otherFoot.resolveOverlap(world.getCollidables(), this.points);
-        System.out.println("After resolving other foot: contact: " + contactFoot.getPos() + ", other: " + otherFoot.getPos());
-
 
         for (BodyPoint point : this.points) point.endFrame();
     }
@@ -268,8 +259,10 @@ public class Player extends InputAdapter implements Entity, RendersToWorld, Rend
 
         drawer.setColor(Color.GOLD);
         ArrayList<Vector2> points = (ArrayList<Vector2>) this.poseData.get("steps");
-        for (Vector2 point : points) {
-            drawer.circle(point.x, point.y, 1.3f);
+        if (points != null) {
+            for (Vector2 point : points) {
+                drawer.circle(point.x, point.y, 1.3f);
+            }
         }
 
         // Debug draw input direction to make sure we set it up right
@@ -501,8 +494,45 @@ public class Player extends InputAdapter implements Entity, RendersToWorld, Rend
 //                System.out.println("Front foot relative: "+movingRelPos+", planted: "+plantedPos+", hip: "+player.hip.getPos()+", chest: "+ player.chest.getPos()+", mfHand: "+mfHand.getPos()+", pfHand: "+pfHand.getPos());
             }
 
-        }
+        },
 
+        STAND() {
+            @Override
+            public void movePlayer(float deltaTime, Player player) {
+
+                // For now just snap to direction, handle this smoothly later
+                Vector2 targetEnergy = new Vector2(player.input.inputDirection).nor().scl(MAX_PENT_ENERGY);
+                float energyApproachPerSec = 0.98f;
+                player.pentUpEnergy.lerp(targetEnergy, (float) Math.pow(energyApproachPerSec, 1/deltaTime));
+
+                Vector2 defaultHipPose = new Vector2(0, LEG_LENGTH);
+                float maxHipShift = 7f;
+                Vector2 targetHipPos = new Vector2(player.pentUpEnergy).scl(-maxHipShift / MAX_PENT_ENERGY).add(defaultHipPose);
+
+                BodyPoint currentFoot = player.getActiveFoot();
+                Vector2 relHipPos = new Vector2(player.hip.getPos()).sub(currentFoot.getPos());
+
+//                float approachPerSec = 0.99f;
+//                relHipPos.lerp(targetHipPos, (float) Math.pow(approachPerSec, 1/deltaTime));
+                relHipPos.set(targetHipPos);
+                if (relHipPos.len() > LEG_LENGTH) relHipPos.nor().scl(LEG_LENGTH);
+
+                player.hip.setPos(currentFoot.getPos()).add(relHipPos);
+
+
+            }
+
+            @Override
+            public MovementState nextMoveState(Player player) {
+                return super.nextMoveState(player);
+            }
+
+            @Override
+            public void switchToState(MovementState previousState, Player player) {
+                HashMap<String, Object> data = player.poseData;
+//                data.put("steps", WALK.(player));
+            }
+        },
         ;
         public void movePlayer(float deltaTime, Player player){}
 
