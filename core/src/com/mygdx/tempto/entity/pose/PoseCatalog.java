@@ -275,20 +275,12 @@ public enum PoseCatalog {
         this.massageInputSpace();
 
         int idx = this.getOutputIndex(toGet);
-        System.out.println("Idx found: "+idx);
         if (idx == -1) throw new IllegalArgumentException("Output point '"+toGet+"' not found. Available output points: "+ Arrays.toString(this.outputIDs));
 
         SimpleMatrix input = MiscFunctions.concatVector2sColumn(inputs, true);
-        System.out.println("Input space: "+this.inputSpace);
-        System.out.println("Input: "+input);
-        System.out.println("Inverted input: "+this.inputSpace.invert());
         SimpleMatrix caseMixVector = this.inputSpace.solve(input);
-//        System.out.println("Case mix: "+caseMixVector);
-//        System.out.println("Output space: "+this.outputSpace);
         SimpleMatrix correspondingOutput = this.outputSpace.mult(caseMixVector);
-        System.out.println("Case mix output: "+correspondingOutput);
         Vector2 outputPoint = new Vector2((float) correspondingOutput.get(idx*2, 0), (float) correspondingOutput.get(idx*2+1, 0));
-        System.out.println("Output for "+toGet+": "+outputPoint);
         return outputPoint;
     }
 
