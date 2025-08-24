@@ -36,6 +36,8 @@ public class KeyboardMapper {
                 Keys.S, GameInputs.DOWN,
                 Keys.D, GameInputs.RIGHT,
 
+                Keys.SHIFT_LEFT, GameInputs.CROUCH,
+
                 Keys.SPACE, GameInputs.JUMP,
 
                 Keys.BACKSLASH, GameInputs.DEBUG_SAVE,
@@ -58,6 +60,8 @@ public class KeyboardMapper {
                 Keys.LEFT, GameInputs.LEFT,
                 Keys.DOWN, GameInputs.DOWN,
                 Keys.RIGHT, GameInputs.RIGHT,
+
+                Keys.SHIFT_RIGHT, GameInputs.CROUCH,
         });
     }
 

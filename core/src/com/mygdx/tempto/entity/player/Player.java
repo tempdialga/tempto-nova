@@ -265,6 +265,18 @@ public class Player extends InputAdapter implements Entity, RendersToWorld, Rend
             }
         }
 
+        if (this.poseData.containsKey("hipTarget")) {
+            drawer.setColor(Color.LIME);
+            Vector2 hipTarget = (Vector2) this.poseData.get("hipTarget");
+            drawer.circle(hipTarget.x, hipTarget.y, 2f);
+        }
+
+        if (this.poseData.containsKey("nextTarget")) {
+            drawer.setColor(Color.GREEN);
+            Vector2 nextTarget = (Vector2) this.poseData.get("nextTarget");
+            drawer.circle(nextTarget.x, nextTarget.y, 2.5f);
+        }
+
         // Debug draw input direction to make sure we set it up right
         float inputVecLen = 3;
         Vector2 hipPos = this.massCenter.getPos();
@@ -394,14 +406,23 @@ public class Player extends InputAdapter implements Entity, RendersToWorld, Rend
             }
 
             public static Vector2 bestHipPos(BodyPoint frontFoot, BodyPoint backFoot) {
-                return new Vector2(frontFoot.getPos()).add(backFoot.getPos()).scl(0.5f).add(0, LEG_LENGTH*0.6f);
+                return bestHipPos(frontFoot.getPos(), backFoot.getPos());
+            }
+
+            public static Vector2 bestHipPos(Vector2 frontFootPos, Vector2 backFootPos) {
+                return new Vector2(frontFootPos).add(backFootPos).scl(0.5f).add(0, LEG_LENGTH*0.6f);
             }
 
             @Override
             public MovementState nextMoveState(Player player) {
-                // If calling for a new step, reset by switching to this state again
-                if (Gdx.input.isKeyJustPressed(Input.Keys.RIGHT) || Gdx.input.isKeyJustPressed(Input.Keys.LEFT)) {
-                    return this;
+                HashMap<String, Object> data = player.poseData;
+                boolean newStepNecessary = data.containsKey("alrMoved") && (boolean) data.get("alrMoved");
+
+                if (newStepNecessary) {
+                    return WALK;
+                } else if (player.input.inputDirection.x == 0) {
+                    System.out.println("Player input vector is not horizontal");
+                    return STAND;
                 }
                 return null;
             }
@@ -420,16 +441,14 @@ public class Player extends InputAdapter implements Entity, RendersToWorld, Rend
                 BodyPoint planted = player.getOtherFoot(moving);
                 Vector2 newPos = bestWalkStep((ArrayList<Vector2>) data.get("steps"), planted, moving, player);
                 newPos.add(0, moving.getRadius());
-//                if (new Vector2(newPos).sub(planted.getPos()).len() < LEG_LENGTH || true) {
-//                    moving.getPos().set(newPos).add(0, 0.1f);
-//                    moving.endFrame();
-//                    Vector2 hipPos = bestHipPos(moving, planted);
-//                    player.massCenter.getPos().set(hipPos);
-//                }
 
                 data.put("moveStart", new Vector2(player.getActiveFoot().getPos()));
                 data.put("moveProgress", 0f);
                 data.put("nextTarget", newPos);
+
+                Vector2 hipTarget = bestHipPos(planted.getPos(), newPos);
+                data.put("hipStart", new Vector2(player.hip.getPos()));
+                data.put("hipTarget", hipTarget);
             }
 
             @Override
@@ -440,57 +459,55 @@ public class Player extends InputAdapter implements Entity, RendersToWorld, Rend
                     // Do nothing?
                 } else {
                     float lastMoveProg = (float) data.get("moveProgress");
-                    float speed = 1.2f;
+                    float speed = 3.2f;
                     float newMoveProg = MiscFunctions.clamp(lastMoveProg + deltaTime*speed, 0, 1);
 
                     data.put("moveProgress", newMoveProg);
 
-                    Vector2 resultPos = new Vector2((Vector2) data.get("moveStart")).lerp((Vector2) data.get("nextTarget"), newMoveProg);
-
-                    float maxExtraHeight = 5;
-                    float extraHeight = 1f - (float) Math.pow(2*Math.abs(newMoveProg-0.5f), 10f); //Go almost straight up and then down again at the end
-                    extraHeight *= maxExtraHeight;
-
-                    resultPos.add(0, extraHeight);
-                    player.getActiveFoot().setPos(resultPos);
-                    player.getActiveFoot().endFrame();
-
-                    if (newMoveProg >= 1f) data.put("alrMoved", true);
+                    Vector2 resultHip = new Vector2((Vector2) data.get("hipStart")).lerp((Vector2) data.get("hipTarget"), newMoveProg);
+                    player.hip.setPos(resultHip);
+                    if (newMoveProg >= 1f) {
+                        data.put("alrMoved", true);
+                        BodyPoint active = player.getActiveFoot();
+                        BodyPoint planted = player.getOtherFoot(active);
+                        active.setPos((Vector2) data.get("nextTarget")).add(0, 1f);
+                        active.endFrame();
+                    }
                 }
 
                 //Set other points based on pose
-                PoseCatalog walk = PoseCatalog.PLAYER_WALK1;
-                BodyPoint moving = player.getActiveFoot();
-                BodyPoint planted = player.getOtherFoot(moving);
-                Vector2 plantedPos = planted.getPos();
-                System.out.println("Right before applying pose; Planted foot: "+plantedPos+", Moving foot: "+moving.getPos());
-                Vector2 movingRelPos = new Vector2(moving.getPos()).sub(plantedPos);
-                int dirMult = movingRelPos.x>=0? 1 : -1;
-                movingRelPos.x *= dirMult;
-
-                Pose walkPoints = walk.getPoseForInput(movingRelPos).scale(dirMult, 1).shift(plantedPos);
-
-                movingRelPos.x *= dirMult;
-                Vector2 strideInput = new Vector2(moving.getPos()).sub(planted.getPos());
-                System.out.println("Input: " + strideInput);
-                Pose stridePoints = PoseCatalog.PLAYER_STRIDE.getPoseForInput(strideInput).shift(plantedPos);
-
-                //Stride if close to center, otherwise walk
-                float moveProg = (float) data.get("moveProgress");
-                float strideNess = MiscFunctions.clamp(1f - (float) Math.pow(2*Math.abs(moveProg-0.5f), 3f), 0, 1);
-                Pose walkStride = walkPoints.interpolate(stridePoints, strideNess);
-
-                player.hip.setPos(walkStride.get("hip"));
-                player.chest.setPos(walkStride.get("chest"));
-
-                BodyPoint mfHand = player.getActiveHand(moving);
-                BodyPoint pfHand = player.getOtherHand(planted);
-
-//                System.out.println("mfHand before: "+mfHand.getPos());
-                mfHand.setPos(walkStride.get("mf_hand"));
-//                System.out.println("mfHand: "+mfHand.getPos());
-                pfHand.setPos(walkStride.get("pf_hand"));
-//                System.out.println("mfHand after setting pfHand: "+mfHand.getPos());
+//                PoseCatalog walk = PoseCatalog.PLAYER_WALK1;
+//                BodyPoint moving = player.getActiveFoot();
+//                BodyPoint planted = player.getOtherFoot(moving);
+//                Vector2 plantedPos = planted.getPos();
+//                System.out.println("Right before applying pose; Planted foot: "+plantedPos+", Moving foot: "+moving.getPos());
+//                Vector2 movingRelPos = new Vector2(moving.getPos()).sub(plantedPos);
+//                int dirMult = movingRelPos.x>=0? 1 : -1;
+//                movingRelPos.x *= dirMult;
+//
+//                Pose walkPoints = walk.getPoseForInput(movingRelPos).scale(dirMult, 1).shift(plantedPos);
+//
+//                movingRelPos.x *= dirMult;
+//                Vector2 strideInput = new Vector2(moving.getPos()).sub(planted.getPos());
+//                System.out.println("Input: " + strideInput);
+//                Pose stridePoints = PoseCatalog.PLAYER_STRIDE.getPoseForInput(strideInput).shift(plantedPos);
+//
+//                //Stride if close to center, otherwise walk
+//                float moveProg = (float) data.get("moveProgress");
+//                float strideNess = MiscFunctions.clamp(1f - (float) Math.pow(2*Math.abs(moveProg-0.5f), 3f), 0, 1);
+//                Pose walkStride = walkPoints.interpolate(stridePoints, strideNess);
+//
+//                player.hip.setPos(walkStride.get("hip"));
+//                player.chest.setPos(walkStride.get("chest"));
+//
+//                BodyPoint mfHand = player.getActiveHand(moving);
+//                BodyPoint pfHand = player.getOtherHand(planted);
+//
+////                System.out.println("mfHand before: "+mfHand.getPos());
+//                mfHand.setPos(walkStride.get("mf_hand"));
+////                System.out.println("mfHand: "+mfHand.getPos());
+//                pfHand.setPos(walkStride.get("pf_hand"));
+////                System.out.println("mfHand after setting pfHand: "+mfHand.getPos());
 //                System.out.println("Front foot relative: "+movingRelPos+", planted: "+plantedPos+", hip: "+player.hip.getPos()+", chest: "+ player.chest.getPos()+", mfHand: "+mfHand.getPos()+", pfHand: "+pfHand.getPos());
             }
 
@@ -524,13 +541,16 @@ public class Player extends InputAdapter implements Entity, RendersToWorld, Rend
 
             @Override
             public MovementState nextMoveState(Player player) {
-                return super.nextMoveState(player);
+                HashMap<String, Object> data = player.poseData;
+                Vector2 inputDir = player.input.inputDirection;
+                if ((!inputDir.isZero()) && (!player.input.crouchHeld)){ //If moving without crouching, switch to walking
+                    return WALK;
+                }
+                return null;
             }
 
             @Override
             public void switchToState(MovementState previousState, Player player) {
-                HashMap<String, Object> data = player.poseData;
-//                data.put("steps", WALK.(player));
             }
         },
         ;
@@ -549,7 +569,7 @@ public class Player extends InputAdapter implements Entity, RendersToWorld, Rend
 
         /**Tracking booleans for if each button is pressed, since we just get input about when one goes up or down.
          * (e.g., if you hold down left and then right, but then let go of right, it should know to go back to left)*/
-        private boolean leftHeld, rightHeld, upHeld, downHeld;
+        private boolean leftHeld, rightHeld, upHeld, downHeld, crouchHeld;
 
         /**A vector corresponding to the directions of buttons being pressed, i.e. x is -1, 1, or 0 if left/right/neither buttons are pressed, and likewise for y*/
         public Vector2 inputDirection;
@@ -577,6 +597,7 @@ public class Player extends InputAdapter implements Entity, RendersToWorld, Rend
                     this.downHeld = true;
                     this.inputDirection.y = -1;
                 }
+                case CROUCH -> this.crouchHeld = true;
                 default -> {return false;}
             }
             return true;
@@ -601,6 +622,7 @@ public class Player extends InputAdapter implements Entity, RendersToWorld, Rend
                     this.downHeld = false;
                     this.inputDirection.y = this.upHeld? 1 : 0;
                 }
+                case CROUCH -> this.crouchHeld = false;
                 default -> {return false;}
             }
             return true;
