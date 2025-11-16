@@ -9,7 +9,6 @@ import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.assets.loaders.resolvers.LocalFileHandleResolver;
 import com.badlogic.gdx.files.FileHandle;
-import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -38,8 +37,6 @@ import com.badlogic.gdx.utils.JsonReader;
 import com.badlogic.gdx.utils.JsonValue;
 import com.badlogic.gdx.utils.JsonWriter;
 import com.badlogic.gdx.utils.ScreenUtils;
-import com.badlogic.gdx.utils.viewport.ExtendViewport;
-import com.badlogic.gdx.utils.viewport.FillViewport;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.mygdx.tempto.TemptoNova;
@@ -59,9 +56,12 @@ import com.mygdx.tempto.rendering.AltDepthBatch;
 import com.mygdx.tempto.rendering.AltFinalBatch;
 import com.mygdx.tempto.rendering.AltLightBatch;
 import com.mygdx.tempto.rendering.AltShadeBatch;
+import com.mygdx.tempto.rendering.BaseColorBatch;
+import com.mygdx.tempto.rendering.FinalLitBatch;
 import com.mygdx.tempto.rendering.LightSource;
 import com.mygdx.tempto.rendering.RendersToDebug;
 import com.mygdx.tempto.rendering.ShadowCaster;
+import com.mygdx.tempto.rendering.TileLayerColorRenderer;
 import com.mygdx.tempto.rendering.TileLayerDepthRenderer;
 import com.mygdx.tempto.rendering.TileLayerFinalRenderer;
 import com.mygdx.tempto.rendering.RendersToScreen;
@@ -142,9 +142,11 @@ public class WorldMap implements RendersToScreen {
     AltLightBatch lightBatch;
     AltShadeBatch shadeBatch;
     AltFinalBatch finalPassBatch;
+    BaseColorBatch baseColorBatch;
+    FinalLitBatch finalLitBatch;
     public ShapeDrawer editorShapeDrawer;
     public ShapeDrawer tempDepthShapeDrawer;
-    public ShapeDrawer tempFinalPassShapeDrawer;
+    public ShapeDrawer tempColorShapeDrawer;
     public Texture blankTexture = new Texture("blank.png");
     public TextureRegion blank = CentralTextureData.getRegion("misc/blank");
 
@@ -156,8 +158,15 @@ public class WorldMap implements RendersToScreen {
     Texture lightMap;
     FrameBuffer finalPassBuffer;
     Texture finalPass;
+
+    //```// V2: Base color then final with lights //```//
+    FrameBuffer baseColorBuffer;
+    Texture baseColorMap;
+    FrameBuffer finalLitBuffer;
+    Texture finalLitPass;
     public TileLayerFinalRenderer tileFinalRenderer;
     public TileLayerDepthRenderer tileDepthRenderer;
+    public TileLayerColorRenderer tileColorRenderer;
 
     boolean debugRender;//
 
@@ -323,14 +332,17 @@ public class WorldMap implements RendersToScreen {
         this.lightBatch = new AltLightBatch();
         this.shadeBatch = new AltShadeBatch();
         this.finalPassBatch = new AltFinalBatch();
+        //```// V2: Base color then final with lighting //```//
+        this.baseColorBatch = new BaseColorBatch();
+        this.finalLitBatch = new FinalLitBatch();
 
         // Create a centralized shape renderer to use for stuff
         this.editorShapeDrawer = new ShapeDrawer(this.miscWorldBatch);
         this.editorShapeDrawer.setTextureRegion(this.blank);
         // TODO: Figure out our own shapedrawer situation, since this wont work with the custom shaders and whatnot
-        this.tempFinalPassShapeDrawer = new ShapeDrawer(this.finalPassBatch);
+        this.tempColorShapeDrawer = new ShapeDrawer(this.baseColorBatch);
         this.tempDepthShapeDrawer = new ShapeDrawer(this.depthMapBatch);
-        this.tempFinalPassShapeDrawer.setTextureRegion(this.blank);
+        this.tempColorShapeDrawer.setTextureRegion(this.blank);
         this.tempDepthShapeDrawer.setTextureRegion(this.blank);
 
         //Create a debug texture for testing things
@@ -346,6 +358,11 @@ public class WorldMap implements RendersToScreen {
         //Initialize the light map
         this.lightBuffer = new FrameBuffer(Pixmap.Format.RGBA8888, TemptoNova.PIXEL_GAME_WIDTH, TemptoNova.PIXEL_GAME_HEIGHT, false);
 //        this.lightBuffer = new FrameBuffer(Pixmap.Format.RGBA8888, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), false);
+
+        //```// V2: Base color, then light //```//
+        this.baseColorBuffer = new FrameBuffer(Pixmap.Format.RGBA8888, TemptoNova.PIXEL_GAME_WIDTH, TemptoNova.PIXEL_GAME_HEIGHT, false);
+        this.finalLitBuffer  = new FrameBuffer(Pixmap.Format.RGBA8888, TemptoNova.PIXEL_GAME_WIDTH, TemptoNova.PIXEL_GAME_HEIGHT, false);
+
 
         this.lightSources = new ArrayList<>();
         this.lightSources.add(new LightSource(new Vector3(), new Color(1,0.9f, 0.5f, 1), 250, LightSource.SPHERE_APPROX, 1));
@@ -367,9 +384,10 @@ public class WorldMap implements RendersToScreen {
         this.finalPassBuffer = new FrameBuffer(Pixmap.Format.RGBA8888, TemptoNova.PIXEL_GAME_WIDTH, TemptoNova.PIXEL_GAME_HEIGHT, false);
 //        this.finalPassBuffer = new FrameBuffer(Pixmap.Format.RGBA8888, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), false);
 
-        //Initialize tilemap renderer
-        this.tileFinalRenderer = new TileLayerFinalRenderer(this.tiledMap, this.finalPassBatch);
+        //Initialize tilemap renderers
+//        this.tileFinalRenderer = new TileLayerFinalRenderer(this.tiledMap, this.finalPassBatch);
         this.tileDepthRenderer = new TileLayerDepthRenderer(this.tiledMap, this.depthMapBatch);
+        this.tileColorRenderer = new TileLayerColorRenderer(this.tiledMap, this.baseColorBatch);
 
 
         this.mapWriter = new TmxMapWriter();
@@ -439,7 +457,6 @@ public class WorldMap implements RendersToScreen {
 
     /**Renders contents of the map to the screen*/
     public void render(){
-        ScreenUtils.clear(0.2f,0,0.2f,1);
 
         //Update tile animations
         AnimatedTiledMapTile.updateAnimationBaseTime();
@@ -501,7 +518,7 @@ public class WorldMap implements RendersToScreen {
         this.depthMap.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
         Gdx.gl.glDisable(GL20.GL_DEPTH_TEST);
 
-        //Render lights ! :D
+        //```// Render shadows to shadow map //```//
         this.shadeBatch.switchShadowShader((int)(elapsedTime*0.5f) % (AltShadeBatch.NINE_SAMPLE+1)); //Debug: switch shadow shaders every 2 seconds
         this.shadowBuffer.begin();
 
@@ -602,28 +619,137 @@ public class WorldMap implements RendersToScreen {
         this.shadowMap = this.shadowBuffer.getColorBufferTexture();
         this.shadowMap.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
 
+        //```// Draw lights to light map //```//
+//        this.lightBuffer.begin();
+//
+//        this.lightBatch.setProjectionMatrix(this.camera.combined);
+//        Gdx.gl.glColorMask(true, true, true, true);
+//        Color amb = new Color(0.3f, 0.4f, 0.9f, 1).mul(0.8f).mul(AltLightBatch.BASE_LIGHT_ENCODING_FACTOR);
+//
+//        ScreenUtils.clear(amb.r,amb.g,amb.b,1f);
+//        Gdx.gl.glColorMask(true, true, true, false);
+////        this.lightBatch.setBlendFunctionSeparate(GL20.GL_DST_COLOR, GL20.GL_ZERO, GL20.GL_ONE, GL20.GL_ZERO);
+//        Gdx.gl.glBlendEquation(GL20.GL_FUNC_ADD);
+//        this.lightBatch.adjustChannelDims(shadMapHTotal, shadMapVTotal);
+//        this.lightBatch.setBlendFunction(GL20.GL_ONE, GL20.GL_ONE);
+//        this.lightBatch.enableBlending();
+//        this.lightBatch.begin();
+//        this.lightBatch.setViewport(this.worldViewport);
+//        shadMapRow = 0;
+//        shadMapCol = 0;
+//        color_channel = RED;
+//        for (int i = 0; i < this.lightSources.size(); i++) {
+//            float color_channel_float = color_channel + 0.01f;
+//            this.lightBatch.drawLight(this.lightSources.get(i), this.depthMap, this.shadowMap, this.camera, viewBounds, color_channel, shadMapCol, shadMapRow);
+//
+//            shadMapCol++;//Iterate position
+//            if (shadMapCol >= shadMapHTotal) {
+//                shadMapCol = 0;
+//                shadMapRow++;
+//            }
+//            if (shadMapRow >= shadMapVTotal) {//Loop to first position and switch color channel
+//                shadMapRow = 0;
+//                shadMapCol = 0;
+//                color_channel++;
+//            }
+//        }
+//        this.lightBatch.end();
+//
+//        this.lightBuffer.end();
+//        this.lightMap = this.lightBuffer.getColorBufferTexture();
+//        this.lightMap.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Nearest);
 
-        this.lightBuffer.begin();
 
-        this.lightBatch.setProjectionMatrix(this.camera.combined);
+
+//        //```// Render final pass
+//
+//        this.finalPassBuffer.begin();
+//        Gdx.gl.glBlendEquation(GL20.GL_FUNC_ADD);
+//        Gdx.gl.glDisable(GL20.GL_DEPTH_TEST);
+//        this.finalPassBatch.setRenderTargetDims(this.camera.viewportWidth, this.camera.viewportHeight);
+////        this.finalPassBatch.setRenderToScreenDims();
+//        this.finalPassBatch.switchLightTexture(this.lightMap);
+//        this.finalPassBatch.switchDepthTexture(this.depthMap);
+//        this.finalPassBatch.setProjectionMatrix(this.camera.combined);
+//        this.finalPassBatch.setSensitivity(0.5f);
+//        this.finalPassBatch.setBlendFunction(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+//
+//        this.finalPassBatch.begin();
+////        float hw = this.camera.viewportWidth * this.camera.zoom / 2f, hh = this.camera.viewportHeight * this.camera.zoom / 2f;
+////        float x = this.camera.position.x - hw, y = this.camera.position.y;
+//        this.finalPassBatch.flush();
+////        this.finalPassBatch.draw(blankTexture, x, y+hh, hw*2, -hh*2);
+//
+//
+//        for (Entity entity : this.entities) {
+//            if (entity instanceof RendersToWorld renderable) {
+//                renderable.renderToWorld(this.finalPassBatch, this.camera);
+//            }
+//        }
+//
+//
+//        this.finalPassBatch.end();
+//
+//        this.finalPassBuffer.end();
+//
+//        this.finalPass = this.finalPassBuffer.getColorBufferTexture();
+
+        //```// V2: Render base color map //```//
+        this.baseColorBuffer.begin();
+
         Gdx.gl.glColorMask(true, true, true, true);
-        Color amb = new Color(0.3f, 0.4f, 0.9f, 1).mul(0.8f).mul(AltLightBatch.BASE_LIGHT_ENCODING_FACTOR);
+        Gdx.gl.glBlendEquation(GL20.GL_FUNC_ADD);
+        Gdx.gl.glDisable(GL20.GL_DEPTH_TEST);
+        this.baseColorBatch.setRenderTargetDims(this.camera.viewportWidth, this.camera.viewportHeight);
+        this.baseColorBatch.switchDepthTexture(this.depthMap);
+        this.baseColorBatch.setProjectionMatrix(this.camera.combined);
+        this.baseColorBatch.setBlendFunction(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+
+        this.baseColorBatch.begin();
+
+        float hw = this.camera.viewportWidth * this.camera.zoom / 2f, hh = this.camera.viewportHeight * this.camera.zoom / 2f;
+        float x = this.camera.position.x - hw, y = this.camera.position.y;
+        this.baseColorBatch.flush();
+        this.baseColorBatch.draw(blankTexture, x, y+hh, hw*2, -hh*2);
+
+
+        for (Entity entity : this.entities) {
+            if (entity instanceof RendersToWorld renderable) {
+                renderable.renderToWorld(this.baseColorBatch, this.camera);
+            }
+        }
+
+
+        this.baseColorBatch.end();
+
+        this.baseColorBuffer.end();
+        this.baseColorMap = this.baseColorBuffer.getColorBufferTexture();
+
+
+        //```// V2: Render lights as the final pass, sampling from base color map //```//
+        this.finalLitBuffer.begin();
+
+        this.finalLitBatch.setProjectionMatrix(this.camera.combined);
+        Gdx.gl.glColorMask(true, true, true, true);
+        Color amb = new Color(0.3f, 0.4f, 0.9f, 1).mul(0.5f).mul(FinalLitBatch.BASE_EXPOSURE);
 
         ScreenUtils.clear(amb.r,amb.g,amb.b,1f);
         Gdx.gl.glColorMask(true, true, true, false);
-//        this.lightBatch.setBlendFunctionSeparate(GL20.GL_DST_COLOR, GL20.GL_ZERO, GL20.GL_ONE, GL20.GL_ZERO);
+//        this.finalLitBatch.setBlendFunctionSeparate(GL20.GL_DST_COLOR, GL20.GL_ZERO, GL20.GL_ONE, GL20.GL_ZERO);
         Gdx.gl.glBlendEquation(GL20.GL_FUNC_ADD);
-        this.lightBatch.adjustChannelDims(shadMapHTotal, shadMapVTotal);
-        this.lightBatch.setBlendFunction(GL20.GL_ONE, GL20.GL_ONE);
-        this.lightBatch.enableBlending();
-        this.lightBatch.begin();
-        this.lightBatch.setViewport(this.worldViewport);
+        this.finalLitBatch.adjustChannelDims(shadMapHTotal, shadMapVTotal);
+        this.finalLitBatch.setBlendFunction(GL20.GL_ONE, GL20.GL_ONE);
+        this.finalLitBatch.enableBlending();
+        this.finalLitBatch.begin();
+        this.finalLitBatch.setViewport(this.worldViewport);
+        this.finalLitBatch.switchShadowTexture(this.shadowMap);
+        this.finalLitBatch.switchColorTexture(this.baseColorMap);
         shadMapRow = 0;
         shadMapCol = 0;
         color_channel = RED;
         for (int i = 0; i < this.lightSources.size(); i++) {
             float color_channel_float = color_channel + 0.01f;
-            this.lightBatch.drawLight(this.lightSources.get(i), this.depthMap, this.shadowMap, this.camera, viewBounds, color_channel, shadMapCol, shadMapRow);
+            this.finalLitBatch.drawLight(this.lightSources.get(i), this.depthMap, this.camera, viewBounds, color_channel, shadMapCol, shadMapRow);
 
             shadMapCol++;//Iterate position
             if (shadMapCol >= shadMapHTotal) {
@@ -636,48 +762,22 @@ public class WorldMap implements RendersToScreen {
                 color_channel++;
             }
         }
-        this.lightBatch.end();
+        this.finalLitBatch.end();
 
-        this.lightBuffer.end();
-        this.lightMap = this.lightBuffer.getColorBufferTexture();
-        this.lightMap.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Nearest);
+        this.finalLitBuffer.end();
+        this.finalLitPass = this.finalLitBuffer.getColorBufferTexture();
+        this.finalLitPass.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Nearest);
+//        this.baseColorMap.bind(0);
 
         Gdx.gl.glColorMask(true, true, true, true);
-
-
-
-
-        this.finalPassBuffer.begin();
         Gdx.gl.glBlendEquation(GL20.GL_FUNC_ADD);
         Gdx.gl.glDisable(GL20.GL_DEPTH_TEST);
-        this.finalPassBatch.setRenderTargetDims(this.camera.viewportWidth, this.camera.viewportHeight);
-//        this.finalPassBatch.setRenderToScreenDims();
-        this.finalPassBatch.switchLightTexture(this.lightMap);
-        this.finalPassBatch.switchDepthTexture(this.depthMap);
-        this.finalPassBatch.setProjectionMatrix(this.camera.combined);
-        this.finalPassBatch.setSensitivity(0.5f);
-        this.finalPassBatch.setBlendFunction(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
 
-        this.finalPassBatch.begin();
-        float hw = this.camera.viewportWidth * this.camera.zoom / 2f, hh = this.camera.viewportHeight * this.camera.zoom / 2f;
-        float x = this.camera.position.x - hw, y = this.camera.position.y;
-        this.finalPassBatch.flush();
-        this.finalPassBatch.draw(blankTexture, x, y+hh, hw*2, -hh*2);
-
-        for (Entity entity : this.entities) {
-            if (entity instanceof RendersToWorld renderable) {
-                renderable.renderToWorld(this.finalPassBatch, this.camera);
-            }
-        }
-
-
-        this.finalPassBatch.end();
-
-        this.finalPassBuffer.end();
-
-        this.finalPass = this.finalPassBuffer.getColorBufferTexture();
+        ScreenUtils.clear(0.2f,0,0.2f,1);
 
         this.worldViewport.apply();
+//        this.miscWorldBatch.setBlendFunction(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+//        this.miscWorldBatch.enableBlending();
         if (this.debugRender) {
             this.miscWorldBatch.setProjectionMatrix(this.camera.combined);
             this.miscWorldBatch.begin();
@@ -685,14 +785,14 @@ public class WorldMap implements RendersToScreen {
 
             this.miscWorldBatch.draw(this.depthMap, x, y, hw, -hh);
             this.miscWorldBatch.draw(this.shadowMap, x, y + hh, hw, -hh);
-            this.miscWorldBatch.draw(this.lightMap, x + hw, y, hw, -hh);
-            this.miscWorldBatch.draw(this.finalPass, x + hw, y + hh, hw, -hh);
+            this.miscWorldBatch.draw(this.baseColorMap, x + hw, y + hh, hw, -hh);
+            this.miscWorldBatch.draw(this.finalLitPass, x + hw, y, hw, -hh);
 //            this.miscWorldBatch.draw(this.lightMap, x, y+hh, hw*2, -hh*2);
             this.miscWorldBatch.end();
         } else {
             this.miscWorldBatch.setProjectionMatrix(this.camera.combined);
             this.miscWorldBatch.begin();
-            this.miscWorldBatch.draw(this.finalPass, x, y+hh, hw*2, -hh*2);
+            this.miscWorldBatch.draw(this.finalLitPass, x, y+hh, hw*2, -hh*2);
             this.editor.renderToWorld(this.miscWorldBatch, camera);
             this.miscWorldBatch.end();
         }
@@ -770,12 +870,18 @@ public class WorldMap implements RendersToScreen {
         this.lightBatch.dispose();
         this.shadeBatch.dispose();
         this.finalPassBatch.dispose();
+        this.baseColorBatch.dispose();
+        this.finalLitBatch.dispose();
 
         this.depthBuffer.dispose();
         this.depthMap.dispose();
         this.shadowBuffer.dispose();
         this.shadowMap.dispose();
         this.finalPassBuffer.dispose();
+        this.finalLitBuffer.dispose();
+        this.finalLitPass.dispose();
+        this.baseColorBuffer.dispose();
+        this.baseColorMap.dispose();
         if (this.finalPass != null) this.finalPass.dispose();
 
 

@@ -12,8 +12,8 @@ import com.mygdx.tempto.entity.Entity;
 import com.mygdx.tempto.maps.WorldMap;
 import com.mygdx.tempto.rendering.AltDepthBatch;
 import com.mygdx.tempto.rendering.ShadowCaster;
+import com.mygdx.tempto.rendering.TileLayerColorRenderer;
 import com.mygdx.tempto.rendering.TileLayerDepthRenderer;
-import com.mygdx.tempto.rendering.TileLayerFinalRenderer;
 import com.mygdx.tempto.rendering.RendersToWorld;
 
 import org.eclipse.collections.impl.map.mutable.primitive.IntBooleanHashMap;
@@ -107,7 +107,7 @@ public class TileLayer implements Entity, RendersToWorld {
 
     @Override
     public void renderToWorld(Batch batch, OrthographicCamera worldCamera) {
-        TileLayerFinalRenderer renderer = this.parent.tileFinalRenderer;
+        TileLayerColorRenderer renderer = this.parent.tileColorRenderer;
         renderer.setView(worldCamera);
         renderer.renderTileLayer(this);
     }

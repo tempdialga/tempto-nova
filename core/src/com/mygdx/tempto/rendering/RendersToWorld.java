@@ -8,6 +8,9 @@ import java.util.List;
 /**An interface entities or other items should implement in order to be rendered using world coordinates.*/
 public interface RendersToWorld {
 
+    /**
+     * Render to the base color batch
+     */
     void renderToWorld(Batch batch, OrthographicCamera worldCamera);
 
     /**Renders this item to an active FrameBuffer representing the depth map of the visible world, with the following channels:
