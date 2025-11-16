@@ -727,11 +727,13 @@ public class WorldMap implements RendersToScreen {
 
 
         //```// V2: Render lights as the final pass, sampling from base color map //```//
+        FinalLitBatch.exposureModifier = 0.7f * (1.3f + (float) Math.sin(elapsedTime*2));
+        float finalExposure = FinalLitBatch.BASE_EXPOSURE*FinalLitBatch.exposureModifier;
         this.finalLitBuffer.begin();
 
         this.finalLitBatch.setProjectionMatrix(this.camera.combined);
         Gdx.gl.glColorMask(true, true, true, true);
-        Color amb = new Color(0.3f, 0.4f, 0.9f, 1).mul(0.5f).mul(FinalLitBatch.BASE_EXPOSURE);
+        Color amb = new Color(0.3f, 0.4f, 0.9f, 1).mul(0.5f).mul(finalExposure);
 
         ScreenUtils.clear(amb.r,amb.g,amb.b,1f);
         Gdx.gl.glColorMask(true, true, true, false);

@@ -21,6 +21,8 @@ public class FinalLitBatch extends AltBatch{
     public static final float BASE_LIGHT_ENCODING_FACTOR = 0.125f;//All intensities multiplied by this going into the light map, and then divided coming out, to allow light to exceed 1 effectively and wash out
     public static final float BASE_EXPOSURE = 0.5f;
 
+    public static float exposureModifier = 0.5f;
+
 
     public static final String LIGHTCOORD_ATTRIBUTE = "a_lightCoord";
     public static final String SHADOWCHANNEL_ATTRIBUTE = "a_shadowChannel";
@@ -92,7 +94,7 @@ public class FinalLitBatch extends AltBatch{
         }
         shaderToSet.setUniformMatrix("u_projTrans", combinedMatrix);
         shaderToSet.setUniform2fv(POSDIMS_UNIFORM, this.posChannelDims, 0, 2);
-        shaderToSet.setUniformf(EXPOSURE_UNIFORM, BASE_EXPOSURE);
+        shaderToSet.setUniformf(EXPOSURE_UNIFORM, BASE_EXPOSURE*exposureModifier);
         shaderToSet.setUniformi(DMAPTEX_UNIFORM, 2);
         shaderToSet.setUniformi(SHADMAP_UNIFORM, 1);
         shaderToSet.setUniformi(CMAPTEX_UNIFORM, 0);
