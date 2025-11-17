@@ -371,13 +371,21 @@ public class StaticTerrainElement implements Entity, SavesToFile, Collidable, Re
 
     @Override
     public void addShadowCastersToList(List<ShadowCaster> centralList) {
+        float edgeExtend = 0.3f;
         //Front face
         float[] tris = this.triangles;
         for (int i = 0; i < tris.length-4; i+= 6) {
             float x1 = tris[i], y1 = tris[i+1],
                     x2 = tris[i+2], y2 = tris[i+3],
                     x3 = tris[i+4], y3 = tris[i+5];
-
+            Vector3 o = new Vector3(x1, y1, this.depth);
+            Vector3 u = new Vector3(x3-x1, y3-y1, 0);
+            Vector3 v = new Vector3(x2-x1, y2-y1, 0);
+            Vector3 u_e = new Vector3(u).nor().scl(edgeExtend);
+            Vector3 v_e = new Vector3(v).nor().scl(edgeExtend);
+            o.sub(u_e).sub(v_e);
+            u.add(u_e.scl(2));
+            v.add(v_e.scl(2));
             ShadowCaster caster = new ShadowCaster(CentralTextureData.getRegion("maps/collisionTexture"), new Vector3(x1, y1, this.depth), new Vector3(x3-x1, y3-y1, 0), new Vector3(x2-x1,y2-y1,0), true, true);
             centralList.add(caster);
         }
@@ -389,7 +397,7 @@ public class StaticTerrainElement implements Entity, SavesToFile, Collidable, Re
             if (j >= verts.length) j = 0;
             float x1 = verts[i], y1 = verts[i+1],
                     x2 = verts[j], y2 = verts[j+1];
-            ShadowCaster caster = new ShadowCaster(CentralTextureData.getRegion("maps/collisionTexture"), new Vector3(x1, y1, this.depth), new Vector3(x2-x1,y2-y1,0), new Vector3(0,0, 16), true, false);
+            ShadowCaster caster = new ShadowCaster(CentralTextureData.getRegion("maps/collisionTexture"), new Vector3(x1, y1, this.depth-edgeExtend), new Vector3(x2-x1,y2-y1,0), new Vector3(0,0, 16), true, false);
             centralList.add(caster);
             numSides++;
         }

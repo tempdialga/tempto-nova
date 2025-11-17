@@ -130,7 +130,7 @@ public class WorldMap implements RendersToScreen {
     //Rendering utilities:
 
     public static final float SUN_DIST = 150_000;
-    public static final float SUN_RADIUS = 600;
+    public static final float SUN_RADIUS = 1800;
 
     Viewport worldViewport;
     OrthographicCamera camera;
@@ -139,9 +139,7 @@ public class WorldMap implements RendersToScreen {
     ArrayList<LightSource> lightSources;
     LightSource sun;
     final int debugLightCount = 4;
-    AltLightBatch lightBatch;
     AltShadeBatch shadeBatch;
-    AltFinalBatch finalPassBatch;
     BaseColorBatch baseColorBatch;
     FinalLitBatch finalLitBatch;
     public ShapeDrawer editorShapeDrawer;
@@ -753,9 +751,7 @@ public class WorldMap implements RendersToScreen {
     public void dispose() {
         this.miscWorldBatch.dispose();
         this.depthMapBatch.dispose();
-        this.lightBatch.dispose();
         this.shadeBatch.dispose();
-        this.finalPassBatch.dispose();
         this.baseColorBatch.dispose();
         this.finalLitBatch.dispose();
 
