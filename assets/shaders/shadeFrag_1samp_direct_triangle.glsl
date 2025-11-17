@@ -76,11 +76,12 @@ bool intersectionValid(in vec3 uvt, float t_mod) {
     float t = uvt.z;
 
     float t_fudge = 0.0;
-    float coord_fudge = 0.001;
+    float coord_fudge = 0.1;
 
     return (t+t_mod > t_fudge && t+t_mod < 1-t_fudge &&
     u >= 0-coord_fudge && u <= 1+coord_fudge &&
-    v >= 0-coord_fudge && v <= 1+coord_fudge);
+    v >= 0-coord_fudge && v <= 1+coord_fudge) &&
+    u + v <= 1+coord_fudge;
 }
 
 void main()
@@ -100,23 +101,7 @@ void main()
     vec3 ac = vec3(v_ac.xy*u_viewDims, v_ac.z);
 
     float z_mod = 10*sin(3*u_elapsedTime);
-    //    S.z += z_mod;
-    //    T.z += z_mod;
-    //    vec3 laS = S - a; //Vector from a to light source S
-    //    vec3 lST = T - S; //Vector from light source S to target T
-
     vec3 nA = cross(ab, ac);//This value is reused, and coincides with the normal area vector to the parallelogram
-    //    float det = dot(-lST,nA);
-    //
-    //    float det_recip = 1/det;
-    //    float t = det_recip*dot(nA, laS); //I think this is from S to T, so 0 should mean at the light and 1 should mean at the surface
-    //    float u = det_recip*dot(cross(ac, -lST), laS);
-    //    float v = det_recip*dot(cross(-lST, ab), laS);
-    //
-    //    vec2 shadCoordCenter = v_shadUV + (v_shadWH*vec2(u,1-v));
-    //    vec2 shadDepCoordCenter = v_shadDE + (v_shadWH*vec2(u,1-v));
-    //    vec4 shadColorCenter = texture2D(u_shadTex, shadCoordCenter);
-    //    vec4 shadDep = texture2D(u_shadTex, shadDepCoordCenter);
 
 
 
@@ -124,11 +109,6 @@ void main()
     float t_fudge = 0.00;
     float coord_fudge = 0.001;
 
-    //Define center properties first so we can approximate depth of the shadow caster using just the center
-
-    //    caster_dep_center = 0;
-    //    caster_dep_center = 10;
-    //    float t_mod = (3*(shadDep.r-0.5))/abs(lST.z);
     float t_mod_base = t_fudge;
 
 
@@ -141,28 +121,17 @@ void main()
     vec3 S_mm = S;
     vec3 T_mm = T;
     vec3 uvt_mm = intersectionRayPlane(S_mm, T_mm, a, ab, ac);
-    vec4 C_mm = vec4(1);
+    vec4 C_mm = texture2D(u_shadTex, v_shadUV + v_shadWH*vec2(uvt_mm.x, 1-uvt_mm.y));
+    vec4 Dmap_mm = texture2D(u_shadTex, v_shadDE + v_shadWH*vec2(uvt_mm.x, 1-uvt_mm.y));
+    float d_mm = zMod(Dmap_mm.r);
+    uvt_mm.z = tOfIRP(S_mm, T_mm, a+vec3(0,0,d_mm), ab, ac);
     if (!intersectionValid(uvt_mm, 0)) C_mm = vec4(0);
 
-
-    //    shadColor *= 0.25;
-//    vec4 shadColor = (
-//    C_01 + C_m1 + C_11 +
-//    C_0m + C_mm + C_1m +
-//    C_00 + C_m0 + C_10
-//    )*shadFudge/9.0;
     vec4 shadColor = C_mm;
 
     gl_FragColor = vec4(shadColor.aaaa);
-    //    gl_FragColor = vec4(-(S-T).zzz/40.0, 0);
-    //    gl_FragColor = vec4(vec3(-d_mm/depth_mod_max), 0);
-    //    gl_FragColor = vec4(vec3(t_mod_mm*20), 0);
-    //    gl_FragColor = vec4(vec3(uvt_mm.z+t_mod_mm)*2-1.5, 0);
-
 
     vec2 r_redundant = u_shadPxDims*0.25;
-    //    float fu0 = u_shadPxDims.x*floor(u*u_shadTexWidth);
-    //    float fv0 = u_shadPxDims.y*floor(v*u_shadTexHeight);
 }
 
 

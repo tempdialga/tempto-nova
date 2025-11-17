@@ -33,14 +33,18 @@ public class AltShadeBatch extends AltBatch {
     protected final static String SHADOWFRAG_PATH_INTERNAL = "shaders/shadeFrag_1samp_direct.glsl";
 
     protected final static String   FRAGPATH_1F = "shaders/shadeFrag_1flat_direct.glsl",
+                                    FRAGPATH_1F_T = "shaders/shadeFrag_1flat_direct_triangle.glsl",
                                     FRAGPATH_1S = "shaders/shadeFrag_1samp_direct.glsl",
+                                    FRAGPATH_1S_T = "shaders/shadeFrag_1samp_direct_triangle.glsl",
                                     FRAGPATH_9F = "shaders/shadeFrag_9flat_direct.glsl",
                                     FRAGPATH_9S = "shaders/shadeFrag_9samp_direct.glsl",
                                     FRAGPATH_9S_T = "shaders/shadeFrag_9samp_direct_triangle.glsl";
 
     private static int numShadowShaders = 0;
     public final static int ONE_FLAT = numShadowShaders++,
+                            ONE_FLAT_TRI = numShadowShaders++,
                             ONE_SAMPLE = numShadowShaders++,
+                            ONE_SAMPLE_TRI = numShadowShaders++,
                             NINE_FLAT = numShadowShaders++,
 //                            UNUSED = numShadowShaders++,
                             NINE_SAMPLE = numShadowShaders++,
@@ -51,7 +55,9 @@ public class AltShadeBatch extends AltBatch {
 
     protected final static ShaderProgram[] shadowShaders = new ShaderProgram[]{
             new ShaderProgram(Gdx.files.internal(SHADOWVERT_PATH_INTERNAL), Gdx.files.internal(FRAGPATH_1F)),
+            new ShaderProgram(Gdx.files.internal(SHADOWVERT_PATH_INTERNAL), Gdx.files.internal(FRAGPATH_1S_T)),
             new ShaderProgram(Gdx.files.internal(SHADOWVERT_PATH_INTERNAL), Gdx.files.internal(FRAGPATH_1S)),
+            new ShaderProgram(Gdx.files.internal(SHADOWVERT_PATH_INTERNAL), Gdx.files.internal(FRAGPATH_1S_T)),
             new ShaderProgram(Gdx.files.internal(SHADOWVERT_PATH_INTERNAL), Gdx.files.internal(FRAGPATH_9F)),
 //            new ShaderProgram(Gdx.files.internal(SHADOWVERT_PATH_INTERNAL), Gdx.files.internal(FRAGPATH_1F)),
             new ShaderProgram(Gdx.files.internal(SHADOWVERT_PATH_INTERNAL), Gdx.files.internal(FRAGPATH_9S)),
@@ -138,7 +144,7 @@ public class AltShadeBatch extends AltBatch {
         return lineEnd.x*point.y - lineEnd.y*point.x;
     }
     public void drawShadow(ShadowCaster caster, LightSource source, Texture depthMap, OrthographicCamera camera, Rectangle viewBounds, Polygon viewPolygonClockwise, int horizontal_idx, int horizontal_total, int vertical_idx, int vertical_total) {
-        
+
         Vector3 cPos = caster.origin();
         Vector3 cU = caster.u();
         Vector3 cV = caster.v();
@@ -256,7 +262,7 @@ public class AltShadeBatch extends AltBatch {
                 0,0,1
         });
 
-        if (caster.triangle() && false) {
+        if ((caster.triangle() && false)) { // DEBUG: Run calculations across entire screen for this shadow caster
             this.pushConvexShadowPolygon(new float[]{
                     S.x - r, S.y - r,
                     S.x - r, S.y + r,

@@ -21,7 +21,6 @@ varying vec3 v_ab; //Vector from point a to b, corresponding to u on the texture
 varying vec3 v_ac; //Vector
 varying vec3 v_S; //Location of light source S, in depth map coordinates (x = screen[0-1], y = screen[0-1], z is pixels away from camera)
 varying float v_R; //Radius of the light casting body
-//uniform vec3 u_laS; //Vector from a to the light source (S - a)
 
 vec3 intersectionRayPlane(in vec3 S, in vec3 T,
 in vec3 a, in vec3 ab, in vec3 ac);
@@ -80,7 +79,8 @@ bool intersectionValid(in vec3 uvt, float t_mod) {
 
     return (t+t_mod > t_fudge && t+t_mod < 1-t_fudge &&
     u >= 0-coord_fudge && u <= 1+coord_fudge &&
-    v >= 0-coord_fudge && v <= 1+coord_fudge);
+    v >= 0-coord_fudge && v <= 1+coord_fudge) &&
+    u + v <= 1+coord_fudge;
 }
 
 void main()

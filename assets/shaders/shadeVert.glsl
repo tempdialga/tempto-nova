@@ -41,5 +41,4 @@ void main()
     gl_Position.xy += vec2(1)+2*a_positionChannel;
     gl_Position.xy *= u_positionChannelDimensions;
     gl_Position.xy -= vec2(1);
-//    gl_Position.xy += a_positionChannel.xy*a_positionChannel.zw;
 }

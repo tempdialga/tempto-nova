@@ -85,40 +85,6 @@ bool intersectionValid(in vec3 uvt, float t_mod) {
     u+v <= 1+coord_fudge);
 }
 
-
-vec4 shadowFromS(in vec3 S, in vec3 T,
-in vec3 a, in vec3 ab, in vec3 ac, float t_mod);
-
-vec4 shadowFromS(in vec3 S, in vec3 T,
-in vec3 a, in vec3 ab, in vec3 ac, float t_mod) {
-    vec3 laS = S - a; //Vector from a to light source S
-    vec3 lST = T - S; //Vector from light source S to target T
-
-    vec3 nA = cross(ab, ac);//This value is reused, and coincides with the normal area vector to the parallelogram
-    float det = dot(-lST,nA);
-
-    float det_recip = 1/det;
-    float t = det_recip*dot(nA, laS); //I think this is from S to T, so 0 should mean at the light and 1 should mean at the surface
-    float u = det_recip*dot(cross(ac, -lST), laS);
-    float v = det_recip*dot(cross(-lST, ab), laS);
-
-    float t_fudge = 0.0;
-    float coord_fudge = 0.001;
-    float shadFudge = 1.01;
-
-    vec2 shadCoord = v_shadUV + v_shadWH*vec2(u, 1-v);
-    vec4 shadCol = shadFudge*texture2D(u_shadTex, shadCoord);
-    //Repeat original sampling process for each point
-    if (t+t_mod > t_fudge && t+t_mod < 1-t_fudge &&
-    u >= 0-coord_fudge && u <= 1+coord_fudge &&
-    v >= 0-coord_fudge && v <= 1+coord_fudge) {
-
-        return shadCol;
-    } else {
-        return vec4(0);
-    }
-}
-
 void main()
 {
 
@@ -169,7 +135,6 @@ void main()
 
 
 
-    float shadFudge = 1.01f; //i.e. if there is already a shadow make it a little more opaque
 
     float depth_mod_max = 2; //Since per pixel modifier is on a linear range instead of 1/z (so you can modify it), this is the maximum depth that can be added or subtracted
 
@@ -267,6 +232,7 @@ void main()
     //    float t_mod_11 = t_mod_base-d_11/abs(S_11.z-T_11.z);
     if (!intersectionValid(uvt_11, 0)) C_11 = vec4(0);
 
+    float shadFudge = 1.05f; //i.e. if there is already a shadow make it a little more opaque
     vec4 shadColor = (
     C_01 + C_m1 + C_11 +
     C_0m + C_mm + C_1m +
