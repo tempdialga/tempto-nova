@@ -68,9 +68,6 @@ void main()
 
 
     vec4 surfColor = texture2D(u_baseColTex, v_depCoords);
-//    surfColor = vec4(v_depCoords, 1, 1);
 
     gl_FragColor = vec4(surfColor.xyz*light_color_eff*shadTint*shadValue*u_exposure,1);
-//    gl_FragColor = surfColor;
-    //    gl_FragColor = vec4(channelMask)*0.5;
 }

@@ -162,6 +162,7 @@ public class WorldMap implements RendersToScreen {
     //```// V2: Base color then final with lights //```//
     FrameBuffer baseColorBuffer;
     Texture baseColorMap;
+    Sprite ambientLighting;
     FrameBuffer finalLitBuffer;
     Texture finalLitPass;
     public TileLayerFinalRenderer tileFinalRenderer;
@@ -217,29 +218,15 @@ public class WorldMap implements RendersToScreen {
         //This map has never been loaded before; load using defaults of the internal map file
         String probableMap = "data/"+this.pathDirFromData + mapID + ".tmx";//Convention for internal map files
         FileHandle localMapFile = Gdx.files.local(probableMap); //Find where it would be locally
-//        NewAtlasTmxMapLoader loader;
-        TmxMapLoader oldLoader;
         if (localMapFile.exists()) {
             this.mapLoader = new NewAtlasTmxMapLoader(new LocalFileHandleResolver()); //If there's a local file with the right name, create a local file to load from that
-            oldLoader = new TmxMapLoader(new LocalFileHandleResolver());
         } else {
             this.mapLoader = new NewAtlasTmxMapLoader(); //And if not, load from assets
-            oldLoader = new TmxMapLoader();
         }
         this.mapLoader.setParent(this);
 
         this.tiledMap = this.mapLoader.load(probableMap);//Attempt to load from what would be assumed to be the map file name
-//        XmlReader.Element mapRoot = new XmlReader().parse(Gdx.files.internal(probableMap));
-//        System.out.println(mapRoot.toString());
-//        for (int i = 0, j = mapRoot.getChildCount(); i < j; i++) {
-//            XmlReader.Element element = mapRoot.getChild(i);
-//            System.out.println(element.toString());
-//        }
-//        String mapStr = this.tiledMap.toString();
-//        System.out.println(mapStr);
 
-        System.out.println(SpriteBatch.createDefaultShader().getVertexShaderSource());
-        System.out.println(SpriteBatch.createDefaultShader().getFragmentShaderSource());
         //TODO: Generalize and clean up this process
         MapProperties mapProps = this.tiledMap.getProperties();
         for (Iterator<String> it = mapProps.getKeys(); it.hasNext();) {
@@ -324,14 +311,11 @@ public class WorldMap implements RendersToScreen {
 
         // Create a viewport to go with the world
         this.worldViewport = new FitViewport(TemptoNova.PIXEL_GAME_WIDTH, TemptoNova.PIXEL_GAME_HEIGHT, this.camera);
-//        this.worldViewport = new FillViewport(TemptoNova.PIXEL_GAME_WIDTH, TemptoNova.PIXEL_GAME_HEIGHT, this.camera);
 
         // Create a spritebatch (also mostly for testing things)
         this.miscWorldBatch = new SpriteBatch();
         this.depthMapBatch = new AltDepthBatch();
-        this.lightBatch = new AltLightBatch();
         this.shadeBatch = new AltShadeBatch();
-        this.finalPassBatch = new AltFinalBatch();
         //```// V2: Base color then final with lighting //```//
         this.baseColorBatch = new BaseColorBatch();
         this.finalLitBatch = new FinalLitBatch();
@@ -355,14 +339,10 @@ public class WorldMap implements RendersToScreen {
         //Initialize the shadow map TODO: Work out the camera with resolutions of the buffers and whatnot
         this.shadowBuffer = new FrameBuffer(Pixmap.Format.RGBA4444,TemptoNova.PIXEL_GAME_WIDTH*SHADMAP_ROWS, TemptoNova.PIXEL_GAME_HEIGHT*SHADMAP_COLS, false);
 
-        //Initialize the light map
-        this.lightBuffer = new FrameBuffer(Pixmap.Format.RGBA8888, TemptoNova.PIXEL_GAME_WIDTH, TemptoNova.PIXEL_GAME_HEIGHT, false);
-//        this.lightBuffer = new FrameBuffer(Pixmap.Format.RGBA8888, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), false);
-
         //```// V2: Base color, then light //```//
         this.baseColorBuffer = new FrameBuffer(Pixmap.Format.RGBA8888, TemptoNova.PIXEL_GAME_WIDTH, TemptoNova.PIXEL_GAME_HEIGHT, false);
         this.finalLitBuffer  = new FrameBuffer(Pixmap.Format.RGBA8888, TemptoNova.PIXEL_GAME_WIDTH, TemptoNova.PIXEL_GAME_HEIGHT, false);
-
+        this.ambientLighting = new Sprite();
 
         this.lightSources = new ArrayList<>();
         this.lightSources.add(new LightSource(new Vector3(), new Color(1,0.9f, 0.5f, 1), 250, LightSource.SPHERE_APPROX, 1));
@@ -380,12 +360,8 @@ public class WorldMap implements RendersToScreen {
         this.sun = new LightSource(sunRelPos, sunColor, SUN_DIST *8, LightSource.SPHERE_APPROX, SUN_RADIUS);
         this.lightSources.add(this.sun);
 
-        //Buffer for capturing the final pass
-        this.finalPassBuffer = new FrameBuffer(Pixmap.Format.RGBA8888, TemptoNova.PIXEL_GAME_WIDTH, TemptoNova.PIXEL_GAME_HEIGHT, false);
-//        this.finalPassBuffer = new FrameBuffer(Pixmap.Format.RGBA8888, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), false);
 
         //Initialize tilemap renderers
-//        this.tileFinalRenderer = new TileLayerFinalRenderer(this.tiledMap, this.finalPassBatch);
         this.tileDepthRenderer = new TileLayerDepthRenderer(this.tiledMap, this.depthMapBatch);
         this.tileColorRenderer = new TileLayerColorRenderer(this.tiledMap, this.baseColorBatch);
 
@@ -487,7 +463,6 @@ public class WorldMap implements RendersToScreen {
         this.sun.pos().set(cos,sin*sin,-0.5f).nor().scl(SUN_DIST);
         this.sun.color().g = 0.95f*(0.5f + 0.5f*sin*sin);
         this.sun.color().b = 0.88f*(0.3f + 0.7f*sin*sin);
-//        LightSource mouseLight = new LightSource(mouseCoords, Color.YELLOW, 250, LightSource.SPHERE_APPROX, 0.9f);
 
         // Render depth buffer
         this.depthBuffer.begin();
@@ -504,9 +479,6 @@ public class WorldMap implements RendersToScreen {
         this.depthMapBatch.begin();
         for (Entity entity : this.entities) {
             if (entity instanceof TileLayer renderable) { //Currently only tile layer bc this is the only one the batch supports atm
-//                if (renderable.isWaver()) {
-//                    renderable.setBaseDepth(mouseCoords.z + 20 + 10);
-//                }
                 renderable.renderToDepthMap(this.depthMapBatch, this.camera);
             }
         }
@@ -559,26 +531,22 @@ public class WorldMap implements RendersToScreen {
         int shadMapVTotal = this.shadowBuffer.getHeight() / TemptoNova.PIXEL_GAME_HEIGHT;
         ScreenUtils.clear(1, 1, 1, 1);
         this.shadeBatch.setBlendFunctionSeparate(GL20.GL_DST_COLOR, GL20.GL_ZERO, GL20.GL_ONE, GL20.GL_ZERO);//Mult
-//        this.shadeBatch.setBlendFunctionSeparate(GL20.GL_ONE, GL20.GL_ONE, GL20.GL_SRC_ALPHA, GL20.GL_DST_ALPHA);//Add
         this.shadeBatch.setBlendFunction(GL20.GL_ONE, GL20.GL_ONE);
         this.shadeBatch.adjustChannelDims(shadMapHTotal, shadMapVTotal);
-        Gdx.gl.glBlendEquation(GL20.GL_FUNC_REVERSE_SUBTRACT); //naturally switch to subtracting actually
-//        this.shadeBatch.begin();
+        Gdx.gl.glBlendEquation(GL20.GL_FUNC_REVERSE_SUBTRACT); //Subtracting from white
         this.shadeBatch.setViewport(this.worldViewport);
 
 
 
-        Collections.sort(casters);
+        Collections.sort(casters); //TODO: Investigate / reaffirm why we need to sort these by depth
 
         for (int shadowShader = 0; shadowShader < AltShadeBatch.NUM_SHADOW_SHADERS; shadowShader++) {
             this.shadeBatch.switchShadowShader(shadowShader);
             this.shadeBatch.begin();
             this.shadeBatch.setViewport(this.worldViewport);
-//            System.out.println(this.shadeBatch.getShader().getFragmentShaderSource());
             color_channel = RED;
             shadMapCol = 0;
             shadMapRow = 0;
-            Gdx.gl.glColorMask(color_channel == RED, color_channel == GREEN, color_channel == BLUE, color_channel == ALPHA);
             for (int i = 0; i < this.lightSources.size(); i++) {
                 Gdx.gl.glColorMask(color_channel == RED, color_channel == GREEN, color_channel == BLUE, color_channel == ALPHA);
 
@@ -593,7 +561,6 @@ public class WorldMap implements RendersToScreen {
                         num_shads_this_shader++;
                     }
                 }
-//                System.out.println("Number of shadows for shader " + shadowShader + ": " + num_shads_this_shader);
 
 
                 shadMapCol++; //Iterate position
@@ -613,86 +580,11 @@ public class WorldMap implements RendersToScreen {
             this.shadeBatch.flush();
             this.shadeBatch.end();
         }
-//        this.shadeBatch.end();
 
         this.shadowBuffer.end();
         this.shadowMap = this.shadowBuffer.getColorBufferTexture();
         this.shadowMap.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
 
-        //```// Draw lights to light map //```//
-//        this.lightBuffer.begin();
-//
-//        this.lightBatch.setProjectionMatrix(this.camera.combined);
-//        Gdx.gl.glColorMask(true, true, true, true);
-//        Color amb = new Color(0.3f, 0.4f, 0.9f, 1).mul(0.8f).mul(AltLightBatch.BASE_LIGHT_ENCODING_FACTOR);
-//
-//        ScreenUtils.clear(amb.r,amb.g,amb.b,1f);
-//        Gdx.gl.glColorMask(true, true, true, false);
-////        this.lightBatch.setBlendFunctionSeparate(GL20.GL_DST_COLOR, GL20.GL_ZERO, GL20.GL_ONE, GL20.GL_ZERO);
-//        Gdx.gl.glBlendEquation(GL20.GL_FUNC_ADD);
-//        this.lightBatch.adjustChannelDims(shadMapHTotal, shadMapVTotal);
-//        this.lightBatch.setBlendFunction(GL20.GL_ONE, GL20.GL_ONE);
-//        this.lightBatch.enableBlending();
-//        this.lightBatch.begin();
-//        this.lightBatch.setViewport(this.worldViewport);
-//        shadMapRow = 0;
-//        shadMapCol = 0;
-//        color_channel = RED;
-//        for (int i = 0; i < this.lightSources.size(); i++) {
-//            float color_channel_float = color_channel + 0.01f;
-//            this.lightBatch.drawLight(this.lightSources.get(i), this.depthMap, this.shadowMap, this.camera, viewBounds, color_channel, shadMapCol, shadMapRow);
-//
-//            shadMapCol++;//Iterate position
-//            if (shadMapCol >= shadMapHTotal) {
-//                shadMapCol = 0;
-//                shadMapRow++;
-//            }
-//            if (shadMapRow >= shadMapVTotal) {//Loop to first position and switch color channel
-//                shadMapRow = 0;
-//                shadMapCol = 0;
-//                color_channel++;
-//            }
-//        }
-//        this.lightBatch.end();
-//
-//        this.lightBuffer.end();
-//        this.lightMap = this.lightBuffer.getColorBufferTexture();
-//        this.lightMap.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Nearest);
-
-
-
-//        //```// Render final pass
-//
-//        this.finalPassBuffer.begin();
-//        Gdx.gl.glBlendEquation(GL20.GL_FUNC_ADD);
-//        Gdx.gl.glDisable(GL20.GL_DEPTH_TEST);
-//        this.finalPassBatch.setRenderTargetDims(this.camera.viewportWidth, this.camera.viewportHeight);
-////        this.finalPassBatch.setRenderToScreenDims();
-//        this.finalPassBatch.switchLightTexture(this.lightMap);
-//        this.finalPassBatch.switchDepthTexture(this.depthMap);
-//        this.finalPassBatch.setProjectionMatrix(this.camera.combined);
-//        this.finalPassBatch.setSensitivity(0.5f);
-//        this.finalPassBatch.setBlendFunction(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
-//
-//        this.finalPassBatch.begin();
-////        float hw = this.camera.viewportWidth * this.camera.zoom / 2f, hh = this.camera.viewportHeight * this.camera.zoom / 2f;
-////        float x = this.camera.position.x - hw, y = this.camera.position.y;
-//        this.finalPassBatch.flush();
-////        this.finalPassBatch.draw(blankTexture, x, y+hh, hw*2, -hh*2);
-//
-//
-//        for (Entity entity : this.entities) {
-//            if (entity instanceof RendersToWorld renderable) {
-//                renderable.renderToWorld(this.finalPassBatch, this.camera);
-//            }
-//        }
-//
-//
-//        this.finalPassBatch.end();
-//
-//        this.finalPassBuffer.end();
-//
-//        this.finalPass = this.finalPassBuffer.getColorBufferTexture();
 
         //```// V2: Render base color map //```//
         this.baseColorBuffer.begin();
@@ -727,17 +619,18 @@ public class WorldMap implements RendersToScreen {
 
 
         //```// V2: Render lights as the final pass, sampling from base color map //```//
-        FinalLitBatch.exposureModifier = 0.7f * (1.3f + (float) Math.sin(elapsedTime*2));
+        float exposureAdjFactor = 1.2f;
+        if (Gdx.input.isKeyJustPressed(Input.Keys.Y)) FinalLitBatch.exposureModifier *= exposureAdjFactor;
+        if (Gdx.input.isKeyJustPressed(Input.Keys.H)) FinalLitBatch.exposureModifier /= exposureAdjFactor;
         float finalExposure = FinalLitBatch.BASE_EXPOSURE*FinalLitBatch.exposureModifier;
         this.finalLitBuffer.begin();
 
-        this.finalLitBatch.setProjectionMatrix(this.camera.combined);
         Gdx.gl.glColorMask(true, true, true, true);
-        Color amb = new Color(0.3f, 0.4f, 0.9f, 1).mul(0.5f).mul(finalExposure);
+        Color amb = new Color(0.3f, 0.4f, 0.9f, 1).mul(2f).mul(finalExposure);
+        ScreenUtils.clear(0,0,0,1f);
 
-        ScreenUtils.clear(amb.r,amb.g,amb.b,1f);
+        this.finalLitBatch.setProjectionMatrix(this.camera.combined);
         Gdx.gl.glColorMask(true, true, true, false);
-//        this.finalLitBatch.setBlendFunctionSeparate(GL20.GL_DST_COLOR, GL20.GL_ZERO, GL20.GL_ONE, GL20.GL_ZERO);
         Gdx.gl.glBlendEquation(GL20.GL_FUNC_ADD);
         this.finalLitBatch.adjustChannelDims(shadMapHTotal, shadMapVTotal);
         this.finalLitBatch.setBlendFunction(GL20.GL_ONE, GL20.GL_ONE);
@@ -746,11 +639,13 @@ public class WorldMap implements RendersToScreen {
         this.finalLitBatch.setViewport(this.worldViewport);
         this.finalLitBatch.switchShadowTexture(this.shadowMap);
         this.finalLitBatch.switchColorTexture(this.baseColorMap);
+        this.finalLitBatch.setShader(FinalLitBatch.ambientShader);
+        this.finalLitBatch.drawAmbient(amb, this.depthMap, viewBounds);
+        this.finalLitBatch.setShader(FinalLitBatch.pointShader);
         shadMapRow = 0;
         shadMapCol = 0;
         color_channel = RED;
         for (int i = 0; i < this.lightSources.size(); i++) {
-            float color_channel_float = color_channel + 0.01f;
             this.finalLitBatch.drawLight(this.lightSources.get(i), this.depthMap, this.camera, viewBounds, color_channel, shadMapCol, shadMapRow);
 
             shadMapCol++;//Iterate position
@@ -769,7 +664,6 @@ public class WorldMap implements RendersToScreen {
         this.finalLitBuffer.end();
         this.finalLitPass = this.finalLitBuffer.getColorBufferTexture();
         this.finalLitPass.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Nearest);
-//        this.baseColorMap.bind(0);
 
         Gdx.gl.glColorMask(true, true, true, true);
         Gdx.gl.glBlendEquation(GL20.GL_FUNC_ADD);
@@ -778,8 +672,6 @@ public class WorldMap implements RendersToScreen {
         ScreenUtils.clear(0.2f,0,0.2f,1);
 
         this.worldViewport.apply();
-//        this.miscWorldBatch.setBlendFunction(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
-//        this.miscWorldBatch.enableBlending();
         if (this.debugRender) {
             this.miscWorldBatch.setProjectionMatrix(this.camera.combined);
             this.miscWorldBatch.begin();
@@ -789,7 +681,6 @@ public class WorldMap implements RendersToScreen {
             this.miscWorldBatch.draw(this.shadowMap, x, y + hh, hw, -hh);
             this.miscWorldBatch.draw(this.baseColorMap, x + hw, y + hh, hw, -hh);
             this.miscWorldBatch.draw(this.finalLitPass, x + hw, y, hw, -hh);
-//            this.miscWorldBatch.draw(this.lightMap, x, y+hh, hw*2, -hh*2);
             this.miscWorldBatch.end();
         } else {
             this.miscWorldBatch.setProjectionMatrix(this.camera.combined);
@@ -843,13 +734,6 @@ public class WorldMap implements RendersToScreen {
 
     /**Cycles through entities and, if they have changes to be reflected to the base map file, compiles those changes*/
     public void writeToCoreFile() {
-        // Check if the map data needs to be changed
-//        for (Entity entity : this.entities) {
-//            if (entity.needToEditBaseFile()) {
-//                entity.updateBaseFile(this.tiledMap, this.entityLayer);
-//            }
-//        }
-
         // Write the map data to file TODO: Could we do this and guarantee non-destruction of the existing map data, in case it wasn't read properly?
         String mapXML = this.mapWriter.writeTiledMapToString(this.tiledMap, this.mapLoader);
 
@@ -903,13 +787,6 @@ public class WorldMap implements RendersToScreen {
     }
     public void toggleEditing() {
         this.editor.active = !this.editor.active; //Toggle whether the editor is active
-//        if (this.editing) { // Switch back to normal gameplay
-//            this.worldInput.removeProcessor(this.editor);
-//            this.editing = false;
-//        } else { // Switch to editing
-//            this.worldInput.addProcessor(0, this.editor);
-//            this.editing = true;
-//        }
     }
 
     public Vector2 mouseWorldCoords() {
